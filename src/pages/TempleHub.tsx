@@ -42,7 +42,6 @@ import {
 } from "lucide-react";
 import DemoVideoModal from "@/components/DemoVideoModal";
 import UpgradeModal from "@/components/UpgradeModal";
-import LotusBloom from "@/components/LotusBloom";
 import { isModuleAccessible, getMinimumPlan, formatPrice } from "@/lib/plans";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -200,12 +199,6 @@ const TempleHub = () => {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectedLockedModule, setSelectedLockedModule] = useState<typeof allModules[0] | null>(null);
 
-  // Lotus bloom state
-  const [lotusVisible, setLotusVisible] = useState(false);
-  const [lotusState, setLotusState] = useState<"blooming" | "locked" | "idle">("idle");
-  const [pendingModule, setPendingModule] = useState<typeof allModules[0] | null>(null);
-  const [lotusTargetRect, setLotusTargetRect] = useState<DOMRect | null>(null);
-
   const currentPlanId = tenantData.planId;
 
   const isSuspended = tenantData.status === "suspended";
@@ -216,35 +209,17 @@ const TempleHub = () => {
     return "enabled";
   };
 
-  const handleModuleClick = (module: typeof allModules[0], event: React.MouseEvent) => {
+  const handleModuleClick = (module: typeof allModules[0], _event: React.MouseEvent) => {
     const state = getModuleState(module);
     if (state === "suspended") return;
 
-    // Capture the clicked element's rect for positioning lotus on the card
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    setLotusTargetRect(rect);
-    setPendingModule(module);
-
     if (state === "locked") {
-      setLotusState("locked");
-      setLotusVisible(true);
       setSelectedLockedModule(module);
+      setUpgradeModalOpen(true);
     } else {
-      setLotusState("blooming");
-      setLotusVisible(true);
       setActiveModuleId(module.id);
+      navigate(module.path);
     }
-  };
-
-  const handleLotusComplete = () => {
-    setLotusVisible(false);
-    if (pendingModule) {
-      navigate(pendingModule.path);
-    }
-  };
-
-  const handleLotusLockedComplete = () => {
-    setLotusVisible(false);
   };
 
   return (
@@ -639,15 +614,6 @@ const TempleHub = () => {
       </main>
 
       <DemoVideoModal open={helpVideoOpen} onOpenChange={setHelpVideoOpen} />
-
-      {/* Lotus Bloom Animation */}
-      <LotusBloom
-        isVisible={lotusVisible}
-        state={lotusState}
-        targetRect={lotusTargetRect}
-        onComplete={handleLotusComplete}
-        onLockedComplete={handleLotusLockedComplete}
-      />
 
       {/* Upgrade Modal */}
       {selectedLockedModule && (
