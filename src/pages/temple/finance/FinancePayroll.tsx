@@ -586,7 +586,7 @@ const FinancePayroll = () => {
 
       {/* Bulk Pay Confirmation */}
       <Dialog open={showBulkConfirm} onOpenChange={setShowBulkConfirm}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-500" /> Bulk Salary Payment
@@ -638,7 +638,7 @@ const FinancePayroll = () => {
 
       {/* Run All Confirmation */}
       <Dialog open={showRunAllConfirm} onOpenChange={setShowRunAllConfirm}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <PlayCircle className="h-5 w-5 text-primary" /> Run Full Payroll
