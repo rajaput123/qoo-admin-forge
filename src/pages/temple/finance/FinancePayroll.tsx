@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, IndianRupee, Search, Download, RefreshCw, PlayCircle, CheckCircle2, AlertTriangle, Eye, CalendarDays, UserCheck } from "lucide-react";
+import { Users, IndianRupee, Search, Download, RefreshCw, PlayCircle, CheckCircle2, AlertTriangle, Eye, CalendarDays, UserCheck, Banknote, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { exportToCSV } from "@/utils/exportCSV";
 import { financeSelectors, financeActions } from "@/modules/finance/financeStore";
@@ -38,6 +38,11 @@ const FinancePayroll = () => {
   const [viewDetail, setViewDetail] = useState<PayrollRecord | null>(null);
 
   const employees = financeSelectors.getPayroll();
+  const accounts = financeSelectors.getAccounts();
+  const payableAccounts = accounts.filter(a => a.type === "Asset" && (a.accountCategory === "Bank" || a.accountCategory === "Cash"));
+  const defaultBankId = payableAccounts.find(a => a.accountCategory === "Bank")?.id || payableAccounts[0]?.id || "ACC-002";
+  const [sourceAccountId, setSourceAccountId] = useState<string>(defaultBankId);
+  const sourceAccount = accounts.find(a => a.id === sourceAccountId);
 
   const filtered = employees.filter(e => {
     if (statusFilter !== "all" && e.status !== statusFilter) return false;
@@ -73,7 +78,7 @@ const FinancePayroll = () => {
 
   const handleSinglePay = () => {
     if (!showSingleConfirm) return;
-    financeActions.payrollMarkPaid(showSingleConfirm.id);
+    financeActions.payrollMarkPaid(showSingleConfirm.id, sourceAccountId, sourceAccount?.name);
     toast.success(`${showSingleConfirm.name} salary paid — ${formatCurrency(showSingleConfirm.amount)} expense created`);
     setShowSingleConfirm(null);
     setSelectedIds(prev => { const n = new Set(prev); n.delete(showSingleConfirm.id); return n; });
@@ -83,7 +88,7 @@ const FinancePayroll = () => {
   const handleBulkPay = () => {
     let count = 0;
     for (const rec of selectedPending) {
-      financeActions.payrollMarkPaid(rec.id);
+      financeActions.payrollMarkPaid(rec.id, sourceAccountId, sourceAccount?.name);
       count++;
     }
     toast.success(`${count} salaries paid — ${formatCurrency(selectedAmount)} total expense created`);
@@ -93,7 +98,7 @@ const FinancePayroll = () => {
   };
 
   const handleRunAll = () => {
-    const count = financeActions.payrollBulkPay();
+    const count = financeActions.payrollBulkPay(sourceAccountId, sourceAccount?.name);
     if (count === 0) {
       toast.info("No pending payroll to process");
     } else {
@@ -109,6 +114,36 @@ const FinancePayroll = () => {
     const count = financeActions.refreshPayrollFromHR(monthShort, selectedYear);
     toast.success(`Synced ${count} employee(s) for ${selectedMonth} ${selectedYear}`);
     setTick(t => t + 1);
+  };
+
+  /** Generate a generic bank-advice CSV (NEFT bulk upload format).
+   *  Works as universal template — uploads to most Indian bank corporate portals
+   *  (SBI CINB, HDFC ENet, ICICI CIB) after minor column header tweak. */
+  const downloadBankAdvice = (records: PayrollRecord[], label: string) => {
+    const bankRecs = records.filter(r => (r.paymentMode || "bank").toLowerCase() !== "cash" && r.bankAccountNumber);
+    const cashRecs = records.filter(r => (r.paymentMode || "bank").toLowerCase() === "cash" || !r.bankAccountNumber);
+    if (bankRecs.length === 0) {
+      toast.warning("No bank-payable employees in selection. Cash payouts use the disbursement sheet.");
+      return;
+    }
+    const refDate = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    exportToCSV(
+      `bank-advice-${label}-${refDate}`,
+      ["Sl No", "Beneficiary Name", "Beneficiary A/c No", "IFSC Code", "Bank Name", "Amount (INR)", "Payment Mode", "Reference / Narration", "Email"],
+      bankRecs.map((r, i) => [
+        String(i + 1),
+        r.employeeName,
+        r.bankAccountNumber || "",
+        r.ifscCode || "",
+        r.bankName || "",
+        r.netPay.toFixed(2),
+        r.netPay >= 200000 ? "RTGS" : "NEFT",
+        `Salary ${r.month} ${r.year} - ${r.id}`,
+        "",
+      ]),
+    );
+    const total = bankRecs.reduce((s, r) => s + r.netPay, 0);
+    toast.success(`Bank advice ready — ${bankRecs.length} beneficiaries, ${formatCurrency(total)}. Upload to your bank portal.${cashRecs.length ? ` (${cashRecs.length} cash payout(s) excluded.)` : ""}`);
   };
 
   return (
@@ -139,6 +174,11 @@ const FinancePayroll = () => {
           {pendingCount > 0 && (
             <Button size="sm" className="gap-1.5" onClick={() => setShowRunAllConfirm(true)}>
               <PlayCircle className="h-3.5 w-3.5" /> Run All ({pendingCount})
+            </Button>
+          )}
+          {pendingCount > 0 && (
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadBankAdvice(employees.filter(e => e.status !== "Paid"), `pending-${selectedMonth}-${selectedYear}`)}>
+              <FileDown className="h-3.5 w-3.5" /> Bank Advice
             </Button>
           )}
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
@@ -223,6 +263,9 @@ const FinancePayroll = () => {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadBankAdvice(selectedPending, `selected-${selectedMonth}-${selectedYear}`)}>
+                <FileDown className="h-3.5 w-3.5" /> Bank Advice
+              </Button>
               <Button size="sm" className="gap-1.5" onClick={() => setShowBulkConfirm(true)}>
                 <IndianRupee className="h-3.5 w-3.5" /> Pay Selected
               </Button>
@@ -508,9 +551,27 @@ const FinancePayroll = () => {
                 <span className="text-muted-foreground">Net Pay</span>
                 <span className="font-bold text-primary">{formatCurrency(showSingleConfirm.amount)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Account</span>
-                <span>SBI Main Account (Bank)</span>
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground">Pay From Account</span>
+                <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {payableAccounts.map(a => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name} ({a.accountCategory}) — Bal {formatCurrency(a.currentBalance)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {showSingleConfirm && (() => {
+                  const r = employees.find(e => e.id === showSingleConfirm.id);
+                  const isCash = (r?.paymentMode || "bank").toLowerCase() === "cash";
+                  return (
+                    <p className="text-[11px] text-muted-foreground">
+                      Employee pay mode: <span className="font-medium">{isCash ? "Cash" : `Bank — ${r?.bankName || "—"} ${r?.bankAccountNumber || ""}`}</span>
+                    </p>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -549,9 +610,25 @@ const FinancePayroll = () => {
                 </div>
               ))}
             </div>
+            <div className="space-y-1.5">
+              <span className="text-xs text-muted-foreground">Pay From Account</span>
+              <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {payableAccounts.map(a => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name} ({a.accountCategory}) — Bal {formatCurrency(a.currentBalance)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowBulkConfirm(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => downloadBankAdvice(selectedPending, `selected-${selectedMonth}-${selectedYear}`)} className="gap-1.5">
+              <FileDown className="h-4 w-4" /> Download Bank File
+            </Button>
             <Button onClick={handleBulkPay} className="gap-1.5">
               <PlayCircle className="h-4 w-4" /> Pay All {selectedPending.length}
             </Button>
@@ -590,13 +667,35 @@ const FinancePayroll = () => {
                 </div>
               ))}
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Payment Account</span>
-              <span>SBI Main Account (Bank)</span>
+            <div className="space-y-1.5">
+              <span className="text-xs text-muted-foreground">Pay From Account</span>
+              <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {payableAccounts.map(a => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name} ({a.accountCategory}) — Bal {formatCurrency(a.currentBalance)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {(() => {
+                const pending = employees.filter(e => e.status === "Pending" || e.status === "Processing");
+                const bankCount = pending.filter(e => (e.paymentMode || "bank").toLowerCase() !== "cash").length;
+                const cashCount = pending.length - bankCount;
+                return (
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <Banknote className="h-3 w-3" /> {bankCount} bank transfer(s), {cashCount} cash payout(s). Cash items always settle from Cash on Hand.
+                  </p>
+                );
+              })()}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRunAllConfirm(false)}>Cancel</Button>
+            <Button variant="outline" className="gap-1.5" onClick={() => downloadBankAdvice(employees.filter(e => e.status !== "Paid"), `runall-${selectedMonth}-${selectedYear}`)}>
+              <FileDown className="h-4 w-4" /> Download Bank File
+            </Button>
             <Button onClick={handleRunAll} className="gap-1.5">
               <CheckCircle2 className="h-4 w-4" /> Confirm & Pay All
             </Button>
