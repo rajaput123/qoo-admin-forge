@@ -550,15 +550,20 @@ export const financeActions = {
     return newRecords.length;
   },
 
-  payrollMarkPaid(payrollId: string) {
+  payrollMarkPaid(payrollId: string, sourceAccountId?: string, sourceAccountName?: string) {
     const st = getFinanceState();
     const rec = st.payroll.find(p => p.id === payrollId);
     if (!rec || rec.status === "Paid") return;
 
+    const isCashEmp = (rec.paymentMode || "bank").toLowerCase() === "cash";
+    const accId = sourceAccountId || (isCashEmp ? "ACC-001" : "ACC-002");
+    const accName = sourceAccountName || (isCashEmp ? "Cash on Hand" : "SBI Main Account");
+    const payMethod = isCashEmp ? "Cash" : "Bank";
+
     // Create expense transaction
     const txn = financeActions.createTransaction({
       type: "Expense", amount: rec.netPay, date: today(), category: "Salary",
-      paymentMethod: "Bank", account: "ACC-002", accountName: "SBI Main Account",
+      paymentMethod: payMethod as any, account: accId, accountName: accName,
       fund: "FND-001", fundName: "General Fund", referenceId: payrollId,
       referenceType: "Payroll", status: "Completed",
       description: `Salary - ${rec.employeeName} (${rec.month} ${rec.year})`,
@@ -574,14 +579,14 @@ export const financeActions = {
   },
 
   /** Bulk pay all pending payroll records */
-  payrollBulkPay(): number {
+  payrollBulkPay(sourceAccountId?: string, sourceAccountName?: string): number {
     const st = getFinanceState();
     const pending = st.payroll.filter(p => p.status === "Pending" || p.status === "Processing");
     if (pending.length === 0) return 0;
 
     let count = 0;
     for (const rec of pending) {
-      financeActions.payrollMarkPaid(rec.id);
+      financeActions.payrollMarkPaid(rec.id, sourceAccountId, sourceAccountName);
       count++;
     }
     return count;
