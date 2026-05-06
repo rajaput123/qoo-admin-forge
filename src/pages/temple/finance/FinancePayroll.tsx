@@ -610,9 +610,25 @@ const FinancePayroll = () => {
                 </div>
               ))}
             </div>
+            <div className="space-y-1.5">
+              <span className="text-xs text-muted-foreground">Pay From Account</span>
+              <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {payableAccounts.map(a => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name} ({a.accountCategory}) — Bal {formatCurrency(a.currentBalance)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowBulkConfirm(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => downloadBankAdvice(selectedPending, `selected-${selectedMonth}-${selectedYear}`)} className="gap-1.5">
+              <FileDown className="h-4 w-4" /> Download Bank File
+            </Button>
             <Button onClick={handleBulkPay} className="gap-1.5">
               <PlayCircle className="h-4 w-4" /> Pay All {selectedPending.length}
             </Button>
