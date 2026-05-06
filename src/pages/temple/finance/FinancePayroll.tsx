@@ -693,6 +693,9 @@ const FinancePayroll = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRunAllConfirm(false)}>Cancel</Button>
+            <Button variant="outline" className="gap-1.5" onClick={() => downloadBankAdvice(employees.filter(e => e.status !== "Paid"), `runall-${selectedMonth}-${selectedYear}`)}>
+              <FileDown className="h-4 w-4" /> Download Bank File
+            </Button>
             <Button onClick={handleRunAll} className="gap-1.5">
               <CheckCircle2 className="h-4 w-4" /> Confirm & Pay All
             </Button>
