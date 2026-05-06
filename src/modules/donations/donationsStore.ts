@@ -1,0 +1,908 @@
+import { DonationsState, Donor, Donation, Allocation, Certificate80G, DonationAuditEntry, DonationChannel, DonationSourceModule, DonationNature, NonCashAssetDetails, Fund, FundExpense, DonorCategory, DonorVipInfo } from "./types";
+
+const LS_KEY = "qoo.donations.v1";
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function isoDate(d = new Date()) {
+  return d.toISOString().slice(0, 10);
+}
+
+function displayTime(d = new Date()) {
+  return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+}
+
+function displayTimestamp(d = new Date()) {
+  return `${isoDate(d)} ${d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`;
+}
+
+function safeJsonParse<T>(raw: string | null): T | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+}
+
+function getMaxNumericSuffix(values: string[], prefix: string) {
+  let max = 0;
+  for (const v of values) {
+    if (!v.startsWith(prefix)) continue;
+    const n = Number(v.slice(prefix.length));
+    if (Number.isFinite(n)) max = Math.max(max, n);
+  }
+  return max;
+}
+
+function nextDonorId(state: DonationsState) {
+  // DNR-001 style
+  const nums = state.donors
+    .map(d => d.donorId)
+    .filter(id => id.startsWith("DNR-"))
+    .map(id => Number(id.replace("DNR-", "")))
+    .filter(n => Number.isFinite(n));
+  const next = (nums.length ? Math.max(...nums) : 0) + 1;
+  return `DNR-${String(next).padStart(3, "0")}`;
+}
+
+function nextDonationPair(state: DonationsState, year: number) {
+  // DON-YYYY-NNNN and REC-YYYY-NNNN
+  const prefix = `DON-${year}-`;
+  const existing = state.donations.map(d => d.donationId).filter(id => id.startsWith(prefix));
+  const max = getMaxNumericSuffix(existing, prefix);
+  const next = max + 1;
+  const suffix = String(next).padStart(4, "0");
+  return {
+    donationId: `DON-${year}-${suffix}`,
+    receiptNo: `REC-${year}-${suffix}`,
+  };
+}
+
+function nextAuditId(state: DonationsState) {
+  const prefix = "AUD-";
+  const existing = state.audit.map(a => a.id);
+  const max = getMaxNumericSuffix(existing, prefix);
+  return `AUD-${String(max + 1).padStart(3, "0")}`;
+}
+
+function next80GId(state: DonationsState, year: number) {
+  const prefix = `80G-${year}-`;
+  const existing = state.certificates80G.map(c => c.certificateId).filter(id => id.startsWith(prefix));
+  const max = getMaxNumericSuffix(existing, prefix);
+  return `80G-${year}-${String(max + 1).padStart(4, "0")}`;
+}
+
+function seedState(): DonationsState {
+  const createdAt = nowIso();
+
+  const donors: Donor[] = [
+    { donorId: "DNR-001", name: "Sri Ramesh Agarwal", phone: "+91 98765 43210", email: "ramesh@email.com", city: "Hyderabad", pan: "ABCPA1234R", category: "Patron", eligible80G: true, createdAt },
+    { donorId: "DNR-002", name: "Smt. Padma Foundation", phone: "+91 87654 32109", email: "info@padma.org", city: "Chennai", pan: "AAATA5678B", category: "Trust", eligible80G: true, createdAt },
+    { donorId: "DNR-003", name: "Sri Venkatesh Trust", phone: "+91 76543 21098", email: "trust@venkatesh.org", city: "Tirupati", pan: "BBBTV9012C", category: "Trust", eligible80G: true, createdAt },
+    { donorId: "DNR-004", name: "Karthik Reddy", phone: "+91 65432 10987", email: "karthik@email.com", city: "Bangalore", pan: "CCCPK3456D", category: "Regular", eligible80G: true, createdAt },
+    { donorId: "DNR-005", name: "Village Dev Committee", phone: "+91 54321 09876", email: "-", city: "Anantapur", pan: "DDDPV7890E", category: "Organization", eligible80G: false, createdAt },
+    { donorId: "DNR-006", name: "Anonymous Devotee", phone: "-", email: "-", city: "-", pan: "-", category: "Anonymous", eligible80G: false, createdAt },
+    { donorId: "DNR-007", name: "Lakshmi Narasimha Bhakta Mandali", phone: "+91 43210 98765", email: "lnbm@email.com", city: "Vijayawada", pan: "EEEPN1234F", category: "Patron", eligible80G: true, createdAt },
+  ];
+
+  const donations: Donation[] = [
+    { donationId: "DON-2025-0891", receiptNo: "REC-2025-0891", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-001", donorName: "Sri Ramesh Agarwal", nature: "Cash", amount: 500000, purpose: "Project-linked", channel: "Bank Transfer", mode: "NEFT", sourceModule: "Manual", date: "2025-02-10", time: "10:30 AM", status: "Recorded", createdAt },
+    { donationId: "DON-2025-0890", receiptNo: "REC-2025-0890", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-006", donorName: "Anonymous Devotee", nature: "Cash", amount: 25000, purpose: "General / Hundi", channel: "Cash", mode: "Cash", sourceModule: "Counter", counterId: "CTR-001", date: "2025-02-10", time: "09:15 AM", status: "Recorded", createdAt },
+    { donationId: "DON-2025-0889", receiptNo: "REC-2025-0889", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-004", donorName: "Karthik Reddy", nature: "Cash", amount: 100000, purpose: "Annadanam Sponsorship", channel: "UPI", mode: "GPay", sourceModule: "Online Portal", date: "2025-02-09", time: "04:45 PM", status: "Recorded", createdAt },
+    { donationId: "DON-2025-0888", receiptNo: "REC-2025-0888", templeId: "TMPL-001", branchId: "BR-TIRUCHANUR", donorId: "DNR-003", donorName: "Sri Venkatesh Trust", nature: "Cash", amount: 1000000, purpose: "Project-linked", channel: "Bank Transfer", mode: "RTGS", sourceModule: "Manual", date: "2025-02-09", time: "11:00 AM", status: "Recorded", createdAt },
+    { donationId: "DON-2025-0887", receiptNo: "REC-2025-0887", templeId: "TMPL-001", donorId: "DNR-004", donorName: "Karthik Reddy", nature: "Cash", amount: 15000, purpose: "Prasadam Sponsorship", channel: "Online", mode: "Razorpay", sourceModule: "Online Portal", date: "2025-02-08", time: "06:20 PM", status: "Recorded", createdAt },
+    { donationId: "DON-2025-0886", receiptNo: "REC-2025-0886", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-002", donorName: "Smt. Padma Foundation", nature: "Cash", amount: 2500000, purpose: "Event-linked", channel: "Bank Transfer", mode: "NEFT", sourceModule: "Event", sourceRecordId: "EVT-2025-003", date: "2025-02-07", time: "02:00 PM", status: "Recorded", createdAt },
+    { donationId: "DON-2025-0885", receiptNo: "REC-2025-0885", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-007", donorName: "Lakshmi Narasimha Bhakta Mandali", nature: "Cash", amount: 50000, purpose: "Seva Sponsorship", channel: "Cash", mode: "Cash", sourceModule: "Booking", sourceRecordId: "BKG-2025-0142", counterId: "CTR-002", date: "2025-02-06", time: "08:30 AM", status: "Recorded", createdAt },
+    { donationId: "DON-2025-0884", receiptNo: "REC-2025-0884", templeId: "TMPL-001", branchId: "BR-TIRUCHANUR", donorId: "DNR-005", donorName: "Village Dev Committee", nature: "Non-Cash", amount: 75000, purpose: "Corpus Fund", channel: "In-Kind", mode: "In-Kind", sourceModule: "Campaign", sourceRecordId: "CMP-2025-001", date: "2025-02-05", time: "11:45 AM", status: "Recorded", nonCashDetails: { assetName: "Rice Bags", quantity: 50, unit: "bags", estimatedValue: 75000 }, createdAt },
+  ];
+
+  const allocations: Allocation[] = [
+    { donationId: "DON-2025-0891", purpose: "Project-linked", linkedTo: "Gopuram Renovation", linkedType: "Project", allocated: 500000, utilized: 410000 },
+    { donationId: "DON-2025-0889", purpose: "Annadanam", linkedTo: "Daily Annadanam", linkedType: "Kitchen", allocated: 100000, utilized: 100000 },
+    { donationId: "DON-2025-0888", purpose: "Project-linked", linkedTo: "New Hall Construction", linkedType: "Project", allocated: 1000000, utilized: 280000 },
+    { donationId: "DON-2025-0887", purpose: "Prasadam Sponsorship", linkedTo: "Laddu Prasadam - Vaikunta Ekadashi", linkedType: "Prasadam", allocated: 15000, utilized: 15000 },
+  ];
+
+  const certificates80G: Certificate80G[] = [
+    { certificateId: "80G-2025-0045", donorId: "DNR-001", donorName: "Sri Ramesh Agarwal", pan: "ABCPA1234R", fy: "2024-25", receiptNos: Array.from({ length: 8 }, (_, i) => `REC-2025-${String(800 + i).padStart(4, "0")}`), totalAmount: 2500000, status: "Generated", generatedDate: "2025-02-01", createdAt },
+    { certificateId: "80G-2025-0044", donorId: "DNR-002", donorName: "Smt. Padma Foundation", pan: "AAATA5678B", fy: "2024-25", receiptNos: Array.from({ length: 3 }, (_, i) => `REC-2025-${String(700 + i).padStart(4, "0")}`), totalAmount: 10000000, status: "Generated", generatedDate: "2025-01-28", createdAt },
+    { certificateId: "80G-2025-0043", donorId: "DNR-003", donorName: "Sri Venkatesh Trust", pan: "BBBTV9012C", fy: "2024-25", receiptNos: Array.from({ length: 12 }, (_, i) => `REC-2025-${String(600 + i).padStart(4, "0")}`), totalAmount: 5000000, status: "Pending", generatedDate: "-", createdAt },
+    { certificateId: "80G-2025-0042", donorId: "DNR-004", donorName: "Karthik Reddy", pan: "CCCPK3456D", fy: "2024-25", receiptNos: Array.from({ length: 5 }, (_, i) => `REC-2025-${String(500 + i).padStart(4, "0")}`), totalAmount: 350000, status: "Generated", generatedDate: "2025-01-15", createdAt },
+  ];
+
+  const audit: DonationAuditEntry[] = [
+    { id: "AUD-001", action: "Donation Recorded", entity: "DON-2025-0891", user: "System", timestamp: "2025-02-10 10:30", details: "₹5L from Sri Ramesh Agarwal via Bank Transfer" },
+    { id: "AUD-002", action: "Fund Allocated", entity: "DON-2025-0891", user: "System", timestamp: "2025-02-10 10:35", details: "Allocated to Gopuram Renovation project" },
+    { id: "AUD-003", action: "Receipt Generated", entity: "REC-2025-0891", user: "System", timestamp: "2025-02-10 10:30", details: "Auto-generated receipt for DON-2025-0891" },
+  ];
+
+  // Seed funds from existing donation purposes
+  const funds: Fund[] = [
+    { id: "fund-general-hundi", name: "General / Hundi", description: "General donations and hundi collections", openingBalance: 0, createdAt, isActive: true },
+    { id: "fund-annadanam", name: "Annadanam Sponsorship", description: "Food sponsorship and feeding programs", openingBalance: 0, createdAt, isActive: true },
+    { id: "fund-prasadam", name: "Prasadam Sponsorship", description: "Prasadam distribution sponsorship", openingBalance: 0, createdAt, isActive: true },
+    { id: "fund-seva", name: "Seva Sponsorship", description: "Seva and ritual sponsorship", openingBalance: 0, createdAt, isActive: true },
+    { id: "fund-project", name: "Project-linked", description: "Donations for specific projects", openingBalance: 0, createdAt, isActive: true },
+    { id: "fund-event", name: "Event-linked", description: "Donations for events and festivals", openingBalance: 0, createdAt, isActive: true },
+    { id: "fund-corpus", name: "Corpus Fund", description: "Corpus and endowment funds", openingBalance: 0, createdAt, isActive: true },
+  ];
+
+  const fundExpenses: FundExpense[] = [];
+
+  return { donors, donations, allocations, certificates80G, audit, funds, fundExpenses };
+}
+
+let stateCache: DonationsState | null = null;
+const listeners = new Set<() => void>();
+
+function emit() {
+  for (const l of listeners) l();
+}
+
+function persist() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(stateCache));
+  } catch {
+    // ignore
+  }
+}
+
+function isValidDonationsState(state: any): state is DonationsState {
+  if (!state || typeof state !== 'object') return false;
+  // Check if all required properties exist and are arrays
+  return (
+    Array.isArray(state.donors) &&
+    Array.isArray(state.donations) &&
+    Array.isArray(state.allocations) &&
+    Array.isArray(state.certificates80G) &&
+    Array.isArray(state.audit) &&
+    Array.isArray(state.funds) &&
+    Array.isArray(state.fundExpenses)
+  );
+}
+
+export function getDonationsState(): DonationsState {
+  if (stateCache) return stateCache;
+  try {
+    const fromLS = safeJsonParse<DonationsState>(typeof window !== "undefined" ? localStorage.getItem(LS_KEY) : null);
+    // Validate the structure before using it
+    if (fromLS && isValidDonationsState(fromLS)) {
+      stateCache = fromLS;
+      return stateCache;
+    } else {
+      // If corrupted, reset to seed state
+      console.warn('Donations state in localStorage is corrupted, resetting to default');
+      stateCache = seedState();
+      return stateCache;
+    }
+  } catch (error) {
+    console.error('Error loading donations state from localStorage:', error);
+    stateCache = seedState();
+    return stateCache;
+  }
+}
+
+export function subscribeDonationsStore(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+function setState(next: DonationsState) {
+  stateCache = next;
+  persist();
+  emit();
+}
+
+// Safe wrapper to get state with fallback - prevents crashes
+function getSafeDonationsState(): DonationsState {
+  try {
+    return getDonationsState();
+  } catch (error) {
+    console.error('Critical error getting donations state, using seed state:', error);
+    // Reset cache and return seed state
+    stateCache = null;
+    try {
+      return seedState();
+    } catch (seedError) {
+      console.error('Critical error creating seed state:', seedError);
+      // Return minimal valid state as last resort
+      const createdAt = nowIso();
+      return {
+        donors: [],
+        donations: [],
+        allocations: [],
+        certificates80G: [],
+        audit: [],
+        funds: [],
+        fundExpenses: [],
+      };
+    }
+  }
+}
+
+export const donationSelectors = {
+  getDonors(): Donor[] {
+    try {
+      const state = getSafeDonationsState();
+      return Array.isArray(state?.donors) ? state.donors : [];
+    } catch (error) {
+      console.error('Error in getDonors selector:', error);
+      return [];
+    }
+  },
+  getDonations(): Donation[] {
+    try {
+      const state = getSafeDonationsState();
+      return Array.isArray(state?.donations) ? state.donations : [];
+    } catch {
+      return [];
+    }
+  },
+  getAllocations(): Allocation[] {
+    try {
+      const state = getSafeDonationsState();
+      return Array.isArray(state?.allocations) ? state.allocations : [];
+    } catch {
+      return [];
+    }
+  },
+  getCertificates(): Certificate80G[] {
+    try {
+      const state = getSafeDonationsState();
+      return Array.isArray(state?.certificates80G) ? state.certificates80G : [];
+    } catch {
+      return [];
+    }
+  },
+  getAudit(): DonationAuditEntry[] {
+    try {
+      const state = getSafeDonationsState();
+      return Array.isArray(state?.audit) ? state.audit : [];
+    } catch {
+      return [];
+    }
+  },
+  getFunds(): Fund[] {
+    try {
+      const state = getSafeDonationsState();
+      return Array.isArray(state?.funds) ? state.funds : [];
+    } catch {
+      return [];
+    }
+  },
+  getDonorById(donorId: string) {
+    return getDonationsState().donors.find(d => d.donorId === donorId) ?? null;
+  },
+  getDonationsForDonor(donorId: string) {
+    return getDonationsState().donations.filter(d => d.donorId === donorId);
+  },
+  getDonationById(donationId: string) {
+    return getDonationsState().donations.find(d => d.donationId === donationId) ?? null;
+  },
+  getAllocationForDonation(donationId: string) {
+    return getDonationsState().allocations.find(a => a.donationId === donationId) ?? null;
+  },
+  getPendingAllocationAmount() {
+    const st = getDonationsState();
+    const allocatedSet = new Set(st.allocations.map(a => a.donationId));
+    return st.donations.filter(d => !allocatedSet.has(d.donationId)).reduce((sum, d) => sum + d.amount, 0);
+  },
+  getFundExpenses(): FundExpense[] {
+    try {
+      const state = getSafeDonationsState();
+      return Array.isArray(state?.fundExpenses) ? state.fundExpenses : [];
+    } catch {
+      return [];
+    }
+  },
+  getExpensesForFund(fundId: string): FundExpense[] {
+    return getDonationsState().fundExpenses.filter(e => e.fundId === fundId);
+  },
+};
+
+function normalizePhone(phone: string) {
+  return phone.replace(/\s+/g, "").trim();
+}
+
+function findOrCreateDonor(params: { name: string; phone?: string; email?: string; city?: string; pan?: string; category?: DonorCategory }): { nextState: DonationsState; donor: Donor } {
+  const st = getDonationsState();
+  const name = params.name.trim() || "Anonymous Devotee";
+  const phone = params.phone?.trim() || "-";
+  const pan = params.pan?.trim() || "-";
+
+  const isAnonymous = name.toLowerCase() === "anonymous" || name.toLowerCase().includes("anonymous");
+  let category: DonorCategory = params.category || (isAnonymous ? "Anonymous" : "Regular");
+
+  if (isAnonymous && !params.category) {
+    const anon = st.donors.find(d => d.category === "Anonymous") ?? st.donors.find(d => d.name.toLowerCase().includes("anonymous"));
+    if (anon) return { nextState: st, donor: anon };
+  }
+
+  const byPhone = phone !== "-" ? st.donors.find(d => d.phone !== "-" && normalizePhone(d.phone) === normalizePhone(phone)) : undefined;
+  const byPan = pan !== "-" ? st.donors.find(d => d.pan !== "-" && d.pan.toUpperCase() === pan.toUpperCase()) : undefined;
+  const byName = st.donors.find(d => d.name.toLowerCase() === name.toLowerCase());
+  const existing = byPan ?? byPhone ?? byName;
+  if (existing) {
+    const updated: Donor = {
+      ...existing,
+      name,
+      phone: phone === "-" ? existing.phone : phone,
+      email: params.email?.trim() || existing.email,
+      city: params.city?.trim() || existing.city,
+      pan: pan === "-" ? existing.pan : pan,
+      category: params.category || existing.category,
+      eligible80G: (pan !== "-" && pan.length >= 10) ? true : existing.eligible80G,
+    };
+    const nextState: DonationsState = {
+      ...st,
+      donors: st.donors.map(d => (d.donorId === existing.donorId ? updated : d)),
+    };
+    return { nextState, donor: updated };
+  }
+
+  const donorId = nextDonorId(st);
+  const donor: Donor = {
+    donorId,
+    name,
+    phone,
+    email: params.email?.trim() || "-",
+    city: params.city?.trim() || "-",
+    pan,
+    category,
+    eligible80G: pan !== "-" && pan.length >= 10,
+    createdAt: nowIso(),
+  };
+  const nextState: DonationsState = { ...st, donors: [donor, ...st.donors] };
+  return { nextState, donor };
+}
+
+export function createDonor(input: Omit<Donor, "donorId" | "createdAt">) {
+  const st = getDonationsState();
+  const donor: Donor = { ...input, donorId: nextDonorId(st), createdAt: nowIso() };
+  const nextState = { ...st, donors: [donor, ...st.donors] };
+  setState(nextState);
+  return donor;
+}
+
+export function recordDonation(input: {
+  donorName: string;
+  phone?: string;
+  email?: string;
+  city?: string;
+  pan?: string;
+  category?: DonorCategory;
+  nature?: DonationNature;
+  amount: number;
+  purpose: string;
+  channel: DonationChannel;
+  mode: string;
+  referenceNo?: string;
+  remarks?: string;
+  nonCashDetails?: NonCashAssetDetails;
+  sourceModule?: DonationSourceModule;
+  sourceRecordId?: string;
+  counterId?: string;
+  templeId?: string;
+  branchId?: string;
+  date?: string;
+  time?: string;
+  createdBy?: string;
+}) {
+  const createdBy = input.createdBy ?? "System";
+  const date = input.date ?? isoDate();
+  const time = input.time ?? displayTime();
+  const year = Number(date.slice(0, 4)) || new Date().getFullYear();
+
+  const { nextState: afterDonor, donor } = findOrCreateDonor({
+    name: input.donorName,
+    phone: input.phone,
+    email: input.email,
+    city: input.city,
+    pan: input.pan,
+    category: input.category,
+  });
+
+  const ids = nextDonationPair(afterDonor, year);
+  // 80G Rule: Cash donations above ₹2,000 are NOT eligible for 80G
+  const isCashAboveLimit = input.channel === "Cash" && input.amount > 2000;
+  const hasPan = input.pan !== undefined && input.pan !== "-" && input.pan.length >= 10;
+  const is80G = hasPan && !isCashAboveLimit;
+  const receiptFilePath = `/receipts/${ids.receiptNo}.pdf`;
+  
+  const nature: DonationNature = input.nature ?? "Cash";
+  
+  const donation: Donation = {
+    donationId: ids.donationId,
+    receiptNo: ids.receiptNo,
+    templeId: input.templeId ?? "TMPL-001",
+    branchId: input.branchId,
+    donorId: donor.donorId,
+    donorName: donor.name,
+    nature,
+    amount: input.amount,
+    purpose: input.purpose,
+    channel: input.channel,
+    mode: input.mode,
+    referenceNo: input.referenceNo,
+    remarks: input.remarks,
+    nonCashDetails: nature === "Non-Cash" ? input.nonCashDetails : undefined,
+    sourceModule: input.sourceModule ?? "Manual",
+    sourceRecordId: input.sourceRecordId,
+    counterId: input.counterId,
+    date,
+    time,
+    status: "Recorded",
+    receiptFilePath,
+    is80G,
+    createdAt: nowIso(),
+  };
+
+  const auditDonation: DonationAuditEntry = {
+    id: nextAuditId(afterDonor),
+    timestamp: displayTimestamp(),
+    action: "Donation Recorded",
+    entity: donation.donationId,
+    user: createdBy,
+    details: `₹${donation.amount.toLocaleString()} from ${donation.donorName} via ${donation.channel}`,
+  };
+  const auditReceipt: DonationAuditEntry = {
+    id: `AUD-${String(Number(auditDonation.id.replace("AUD-", "")) + 1).padStart(3, "0")}`,
+    timestamp: auditDonation.timestamp,
+    action: "Receipt Generated",
+    entity: donation.receiptNo,
+    user: "System",
+    details: `Auto-generated receipt for ${donation.donationId}`,
+  };
+
+  const nextState: DonationsState = {
+    ...afterDonor,
+    donations: [donation, ...afterDonor.donations],
+    audit: [auditReceipt, auditDonation, ...afterDonor.audit],
+  };
+  setState(nextState);
+  return donation;
+}
+
+export function allocateFund(input: {
+  donationId: string;
+  purpose: string;
+  linkedType: Allocation["linkedType"];
+  linkedTo: string;
+  allocated: number;
+  utilized?: number;
+  createdBy?: string;
+}) {
+  const st = getDonationsState();
+  const existing = st.allocations.find(a => a.donationId === input.donationId);
+  const allocation: Allocation = {
+    donationId: input.donationId,
+    purpose: input.purpose,
+    linkedTo: input.linkedTo,
+    linkedType: input.linkedType,
+    allocated: input.allocated,
+    utilized: input.utilized ?? (existing?.utilized ?? 0),
+  };
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "Fund Allocated",
+    entity: input.donationId,
+    user: input.createdBy ?? "System",
+    details: `Allocated to ${input.linkedTo} (${input.linkedType})`,
+  };
+
+  const nextState: DonationsState = {
+    ...st,
+    allocations: existing ? st.allocations.map(a => (a.donationId === input.donationId ? allocation : a)) : [allocation, ...st.allocations],
+    audit: [audit, ...st.audit],
+  };
+  setState(nextState);
+  return allocation;
+}
+
+export function generate80GCertificate(input: { donorId: string; fy: string; createdBy?: string }) {
+  const st = getDonationsState();
+  const donor = st.donors.find(d => d.donorId === input.donorId);
+  if (!donor) return null;
+
+  const fyYear = Number(input.fy.slice(0, 4)) || new Date().getFullYear();
+  const receiptNos = st.donations
+    .filter(d => d.donorId === donor.donorId)
+    .map(d => d.receiptNo);
+  const totalAmount = st.donations.filter(d => d.donorId === donor.donorId).reduce((s, d) => s + d.amount, 0);
+
+  const status: Certificate80G["status"] =
+    donor.pan === "-" ? "PAN Missing" : donor.eligible80G ? "Generated" : "Pending";
+
+  const cert: Certificate80G = {
+    certificateId: next80GId(st, fyYear),
+    donorId: donor.donorId,
+    donorName: donor.name,
+    pan: donor.pan,
+    fy: input.fy,
+    receiptNos,
+    totalAmount,
+    status,
+    generatedDate: status === "Generated" ? isoDate() : "-",
+    createdAt: nowIso(),
+  };
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "80G Certificate Generated",
+    entity: cert.certificateId,
+    user: input.createdBy ?? "System",
+    details: `${cert.fy} certificate for ${donor.name}`,
+  };
+
+  const nextState: DonationsState = {
+    ...st,
+    certificates80G: [cert, ...st.certificates80G],
+    audit: [audit, ...st.audit],
+  };
+  setState(nextState);
+  return cert;
+}
+
+function nextFundId(state: DonationsState) {
+  const prefix = "fund-";
+  const existing = state.funds.map(f => f.id).filter(id => id.startsWith(prefix));
+  const max = getMaxNumericSuffix(existing, prefix);
+  return `fund-${String(max + 1).padStart(3, "0")}`;
+}
+
+export function createFund(input: { name: string; description?: string; openingBalance?: number; isActive?: boolean; createdBy?: string }) {
+  const st = getDonationsState();
+  
+  // Check if fund with same name already exists
+  const existing = st.funds.find(f => f.name.toLowerCase() === input.name.toLowerCase().trim());
+  if (existing) {
+    throw new Error(`Fund "${input.name}" already exists`);
+  }
+
+  const fund: Fund = {
+    id: nextFundId(st),
+    name: input.name.trim(),
+    description: input.description?.trim(),
+    openingBalance: input.openingBalance ?? 0,
+    createdAt: nowIso(),
+    isActive: input.isActive ?? true,
+  };
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "Fund Created",
+    entity: fund.id,
+    user: input.createdBy ?? "System",
+    details: `Created fund: ${fund.name}`,
+  };
+
+  const nextState: DonationsState = {
+    ...st,
+    funds: [fund, ...st.funds],
+    audit: [audit, ...st.audit],
+  };
+
+  setState(nextState);
+  return fund;
+}
+
+export function updateFund(fundId: string, input: { name?: string; description?: string; openingBalance?: number; isActive?: boolean; updatedBy?: string }) {
+  const st = getDonationsState();
+  const existing = st.funds.find(f => f.id === fundId);
+  if (!existing) {
+    throw new Error(`Fund with ID ${fundId} not found`);
+  }
+
+  // Check if name change conflicts with another fund
+  if (input.name && input.name.trim().toLowerCase() !== existing.name.toLowerCase()) {
+    const nameConflict = st.funds.find(f => f.id !== fundId && f.name.toLowerCase() === input.name.toLowerCase().trim());
+    if (nameConflict) {
+      throw new Error(`Fund "${input.name}" already exists`);
+    }
+  }
+
+  const updated: Fund = {
+    ...existing,
+    ...(input.name !== undefined && { name: input.name.trim() }),
+    ...(input.description !== undefined && { description: input.description.trim() || undefined }),
+    ...(input.openingBalance !== undefined && { openingBalance: input.openingBalance }),
+    ...(input.isActive !== undefined && { isActive: input.isActive }),
+  };
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "Fund Updated",
+    entity: fundId,
+    user: input.updatedBy ?? "System",
+    details: `Updated fund: ${updated.name}`,
+  };
+
+  const nextState: DonationsState = {
+    ...st,
+    funds: st.funds.map(f => f.id === fundId ? updated : f),
+    audit: [audit, ...st.audit],
+  };
+
+  setState(nextState);
+  return updated;
+}
+
+export function deleteFund(fundId: string, deletedBy?: string) {
+  const st = getDonationsState();
+  const fund = st.funds.find(f => f.id === fundId);
+  if (!fund) {
+    throw new Error(`Fund with ID ${fundId} not found`);
+  }
+
+  // Check if fund is used in any donations
+  const hasDonations = st.donations.some(d => d.purpose === fund.name);
+  if (hasDonations) {
+    // Deactivate instead of delete
+    return updateFund(fundId, { isActive: false, updatedBy: deletedBy });
+  }
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "Fund Deleted",
+    entity: fundId,
+    user: deletedBy ?? "System",
+    details: `Deleted fund: ${fund.name}`,
+  };
+
+  const nextState: DonationsState = {
+    ...st,
+    funds: st.funds.filter(f => f.id !== fundId),
+    audit: [audit, ...st.audit],
+  };
+
+  setState(nextState);
+  return fund;
+}
+
+function nextExpenseId(state: DonationsState) {
+  const prefix = "EXP-";
+  const existing = state.fundExpenses.map(e => e.id).filter(id => id.startsWith(prefix));
+  const max = getMaxNumericSuffix(existing, prefix);
+  return `EXP-${String(max + 1).padStart(3, "0")}`;
+}
+
+export function createFundExpense(input: {
+  fundId: string;
+  fundName: string;
+  description: string;
+  amount: number;
+  date?: string;
+  category?: string;
+  vendor?: string;
+  referenceNo?: string;
+  createdBy?: string;
+}) {
+  const st = getDonationsState();
+  const fund = st.funds.find(f => f.id === input.fundId);
+  if (!fund) {
+    throw new Error(`Fund with ID ${input.fundId} not found`);
+  }
+
+  const expense: FundExpense = {
+    id: nextExpenseId(st),
+    fundId: input.fundId,
+    fundName: input.fundName,
+    description: input.description.trim(),
+    amount: input.amount,
+    date: input.date ?? isoDate(),
+    category: input.category?.trim(),
+    vendor: input.vendor?.trim(),
+    referenceNo: input.referenceNo?.trim(),
+    createdAt: nowIso(),
+  };
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "Fund Expense Recorded",
+    entity: expense.id,
+    user: input.createdBy ?? "System",
+    details: `₹${expense.amount.toLocaleString()} expense for ${fund.name}: ${expense.description}`,
+  };
+
+  const nextState: DonationsState = {
+    ...st,
+    fundExpenses: [expense, ...st.fundExpenses],
+    audit: [audit, ...st.audit],
+  };
+
+  setState(nextState);
+  return expense;
+}
+
+export function updateFundExpense(expenseId: string, input: {
+  description?: string;
+  amount?: number;
+  date?: string;
+  category?: string;
+  vendor?: string;
+  referenceNo?: string;
+  updatedBy?: string;
+}) {
+  const st = getDonationsState();
+  const existing = st.fundExpenses.find(e => e.id === expenseId);
+  if (!existing) {
+    throw new Error(`Expense with ID ${expenseId} not found`);
+  }
+
+  const updated: FundExpense = {
+    ...existing,
+    ...(input.description !== undefined && { description: input.description.trim() }),
+    ...(input.amount !== undefined && { amount: input.amount }),
+    ...(input.date !== undefined && { date: input.date }),
+    ...(input.category !== undefined && { category: input.category.trim() }),
+    ...(input.vendor !== undefined && { vendor: input.vendor.trim() }),
+    ...(input.referenceNo !== undefined && { referenceNo: input.referenceNo.trim() }),
+  };
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "Fund Expense Updated",
+    entity: expenseId,
+    user: input.updatedBy ?? "System",
+    details: `Updated expense: ${updated.description}`,
+  };
+
+  const nextState: DonationsState = {
+    ...st,
+    fundExpenses: st.fundExpenses.map(e => e.id === expenseId ? updated : e),
+    audit: [audit, ...st.audit],
+  };
+
+  setState(nextState);
+  return updated;
+}
+
+export function deleteFundExpense(expenseId: string, deletedBy?: string) {
+  const st = getDonationsState();
+  const expense = st.fundExpenses.find(e => e.id === expenseId);
+  if (!expense) {
+    throw new Error(`Expense with ID ${expenseId} not found`);
+  }
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "Fund Expense Deleted",
+    entity: expenseId,
+    user: deletedBy ?? "System",
+    details: `Deleted expense: ${expense.description}`,
+  };
+
+  const nextState: DonationsState = {
+    ...st,
+    fundExpenses: st.fundExpenses.filter(e => e.id !== expenseId),
+    audit: [audit, ...st.audit],
+  };
+
+  setState(nextState);
+  return expense;
+}
+
+export function markDonorAsVip(input: {
+  donorId: string;
+  level: string;
+  validFrom: string;
+  validTill: string;
+  approvedBy?: string;
+  notes?: string;
+}) {
+  const st = getDonationsState();
+  const donor = st.donors.find(d => d.donorId === input.donorId);
+  if (!donor) {
+    throw new Error(`Donor with ID ${input.donorId} not found`);
+  }
+
+  const now = new Date();
+  const validFrom = new Date(input.validFrom);
+  const validTill = new Date(input.validTill);
+  
+  let status: "Active" | "Expired" | "Inactive" = "Active";
+  if (validTill < now) {
+    status = "Expired";
+  }
+
+  const vipInfo: DonorVipInfo = {
+    level: input.level,
+    validFrom: input.validFrom,
+    validTill: input.validTill,
+    status,
+    approvedBy: input.approvedBy,
+    notes: input.notes,
+  };
+
+  const updated: Donor = {
+    ...donor,
+    vipInfo,
+  };
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "Donor Marked as VIP",
+    entity: input.donorId,
+    user: input.approvedBy ?? "System",
+    details: `Marked as VIP ${input.level} (valid till ${input.validTill})`,
+  };
+
+  const nextState: DonationsState = {
+    ...st,
+    donors: st.donors.map(d => d.donorId === input.donorId ? updated : d),
+    audit: [audit, ...st.audit],
+  };
+
+  setState(nextState);
+  return updated;
+}
+
+export function updateDonorVip(input: {
+  donorId: string;
+  level?: string;
+  validFrom?: string;
+  validTill?: string;
+  status?: "Active" | "Expired" | "Inactive";
+  approvedBy?: string;
+  notes?: string;
+}) {
+  const st = getDonationsState();
+  const donor = st.donors.find(d => d.donorId === input.donorId);
+  if (!donor || !donor.vipInfo) {
+    throw new Error(`Donor with ID ${input.donorId} is not marked as VIP`);
+  }
+
+  const now = new Date();
+  const validTill = input.validTill ? new Date(input.validTill) : new Date(donor.vipInfo.validTill);
+  
+  let status = input.status || donor.vipInfo.status;
+  if (!input.status && validTill < now) {
+    status = "Expired";
+  }
+
+  const updatedVipInfo: DonorVipInfo = {
+    ...donor.vipInfo,
+    ...(input.level && { level: input.level }),
+    ...(input.validFrom && { validFrom: input.validFrom }),
+    ...(input.validTill && { validTill: input.validTill }),
+    status,
+    ...(input.approvedBy && { approvedBy: input.approvedBy }),
+    ...(input.notes !== undefined && { notes: input.notes }),
+  };
+
+  const updated: Donor = {
+    ...donor,
+    vipInfo: updatedVipInfo,
+  };
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "VIP Information Updated",
+    entity: input.donorId,
+    user: input.approvedBy ?? "System",
+    details: `Updated VIP information for ${donor.name}`,
+  };
+
+  const nextState: DonationsState = {
+    ...st,
+    donors: st.donors.map(d => d.donorId === input.donorId ? updated : d),
+    audit: [audit, ...st.audit],
+  };
+
+  setState(nextState);
+  return updated;
+}
