@@ -551,9 +551,27 @@ const FinancePayroll = () => {
                 <span className="text-muted-foreground">Net Pay</span>
                 <span className="font-bold text-primary">{formatCurrency(showSingleConfirm.amount)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Account</span>
-                <span>SBI Main Account (Bank)</span>
+              <div className="space-y-1.5">
+                <span className="text-xs text-muted-foreground">Pay From Account</span>
+                <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {payableAccounts.map(a => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.name} ({a.accountCategory}) — Bal {formatCurrency(a.currentBalance)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {showSingleConfirm && (() => {
+                  const r = employees.find(e => e.id === showSingleConfirm.id);
+                  const isCash = (r?.paymentMode || "bank").toLowerCase() === "cash";
+                  return (
+                    <p className="text-[11px] text-muted-foreground">
+                      Employee pay mode: <span className="font-medium">{isCash ? "Cash" : `Bank — ${r?.bankName || "—"} ${r?.bankAccountNumber || ""}`}</span>
+                    </p>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -633,9 +651,28 @@ const FinancePayroll = () => {
                 </div>
               ))}
             </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Payment Account</span>
-              <span>SBI Main Account (Bank)</span>
+            <div className="space-y-1.5">
+              <span className="text-xs text-muted-foreground">Pay From Account</span>
+              <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {payableAccounts.map(a => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.name} ({a.accountCategory}) — Bal {formatCurrency(a.currentBalance)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {(() => {
+                const pending = employees.filter(e => e.status === "Pending" || e.status === "Processing");
+                const bankCount = pending.filter(e => (e.paymentMode || "bank").toLowerCase() !== "cash").length;
+                const cashCount = pending.length - bankCount;
+                return (
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <Banknote className="h-3 w-3" /> {bankCount} bank transfer(s), {cashCount} cash payout(s). Cash items always settle from Cash on Hand.
+                  </p>
+                );
+              })()}
             </div>
           </div>
           <DialogFooter>
