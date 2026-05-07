@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Lock, Sparkles, Crown, Globe, Star, Zap } from "lucide-react";
+import { Check, Lock, Sparkles, Crown, Globe, Star, Zap, Eye, ArrowUpRight, Palette } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import TempleWebsitePreview from "@/components/communication/TempleWebsitePreview";
@@ -21,6 +21,8 @@ interface TemplateDef {
   description: string;
   highlights: string[];
   icon: typeof Zap;
+  accent: string; // tailwind gradient classes
+  swatch: string[]; // preview colors
   theme: {
     colorScheme: string;
     fontStyle: string;
@@ -43,6 +45,8 @@ const TEMPLATES: TemplateDef[] = [
     description: "A clean single-page Saffron site covering temple identity, timings and contact.",
     highlights: ["Hero + about", "Darshan timings", "Contact & map", "Saffron theme only"],
     icon: Zap,
+    accent: "from-amber-500 via-orange-500 to-amber-600",
+    swatch: ["#92400e", "#d97706", "#fbbf24"],
     theme: {
       colorScheme: "saffron",
       fontStyle: "modern",
@@ -63,6 +67,8 @@ const TEMPLATES: TemplateDef[] = [
     description: "Adds online sevas, events and donations CTA — designed for active devotee engagement.",
     highlights: ["Everything in Plus", "Sevas & online booking", "Events calendar", "Donate CTA section", "Maroon / Gold themes"],
     icon: Star,
+    accent: "from-rose-600 via-red-600 to-rose-700",
+    swatch: ["#881337", "#be123c", "#f43f5e"],
     theme: {
       colorScheme: "maroon",
       fontStyle: "modern",
@@ -83,6 +89,8 @@ const TEMPLATES: TemplateDef[] = [
     description: "Complete site with gallery, donor wall, projects and analytics-ready sections.",
     highlights: ["Everything in Featured", "Photo gallery", "Donor list on website", "Project & event P&L visibility", "All theme presets"],
     icon: Crown,
+    accent: "from-yellow-500 via-amber-500 to-yellow-600",
+    swatch: ["#713f12", "#ca8a04", "#facc15"],
     theme: {
       colorScheme: "gold",
       fontStyle: "traditional",
@@ -103,6 +111,8 @@ const TEMPLATES: TemplateDef[] = [
     description: "Bespoke design, custom domain, AI devotee insights and full integrations.",
     highlights: ["Everything in Advanced", "Custom domain & branding", "AI devotee insights", "Custom integrations / API", "Dedicated SLA & support"],
     icon: Sparkles,
+    accent: "from-teal-600 via-emerald-600 to-teal-700",
+    swatch: ["#134e4a", "#0d9488", "#5eead4"],
     theme: {
       colorScheme: "teal",
       fontStyle: "traditional",
@@ -129,114 +139,229 @@ const TempleWebsite = () => {
 
   const active = TEMPLATES.find(t => t.id === selected)!;
   const activeUnlocked = isUnlocked(active.planId);
+  const currentPlanName = PLANS.find(p => p.id === currentPlanId)?.name ?? currentPlanId;
 
   return (
-    <div className="min-h-screen p-6 max-w-7xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Globe className="h-6 w-6 text-primary" /> Temple Website
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Choose a website template — each tier unlocks a richer design and more sections.
-          </p>
-        </div>
-        <Badge variant="outline" className="text-xs border-primary/30 text-primary bg-primary/5">
-          Current plan: {PLANS.find(p => p.id === currentPlanId)?.name ?? currentPlanId}
-        </Badge>
-      </div>
-
-      {/* Template selector */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {TEMPLATES.map((t) => {
-          const Icon = t.icon;
-          const unlocked = isUnlocked(t.planId);
-          const isActive = t.id === selected;
-          return (
-            <motion.button
-              key={t.id}
-              type="button"
-              onClick={() => setSelected(t.id)}
-              whileHover={{ y: -2 }}
-              className={`text-left rounded-2xl border p-4 transition-all relative overflow-hidden ${
-                isActive
-                  ? "border-primary/60 ring-2 ring-primary/20 shadow-lg bg-card"
-                  : "border-border bg-card hover:border-primary/30 hover:shadow-md"
-              } ${!unlocked ? "opacity-80" : ""}`}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
-                  unlocked ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                }`}>
-                  <Icon className="h-5 w-5" />
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+      <div className="max-w-7xl mx-auto p-6 space-y-8">
+        {/* ── Hero header ── */}
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-card p-8 shadow-sm"
+        >
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 20% 20%, hsl(var(--primary)) 0, transparent 40%), radial-gradient(circle at 80% 80%, hsl(var(--primary)) 0, transparent 40%)",
+            }}
+          />
+          <div className="relative flex items-start justify-between gap-6 flex-wrap">
+            <div className="flex items-start gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/20">
+                <Globe className="h-7 w-7" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-primary/70">Communication</span>
+                  <span className="h-1 w-1 rounded-full bg-primary/40" />
+                  <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground">Website</span>
                 </div>
-                {unlocked ? (
-                  isActive && <Badge className="text-[10px] bg-primary text-primary-foreground">Selected</Badge>
-                ) : (
-                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
-                )}
+                <h1 className="text-3xl font-bold text-foreground tracking-tight">Temple Website Studio</h1>
+                <p className="text-sm text-muted-foreground mt-1.5 max-w-xl">
+                  Pick a beautifully crafted template. Each plan tier unlocks richer designs, more sections, and deeper devotee engagement.
+                </p>
               </div>
-              <h3 className="text-base font-bold text-foreground">{t.name}</h3>
-              <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold mt-0.5">
-                {t.tier}
-              </p>
-              <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{t.tagline}</p>
-              <div className="mt-3 space-y-1.5">
-                {t.highlights.slice(0, 3).map(h => (
-                  <div key={h} className="flex items-start gap-1.5 text-[11px] text-foreground/80">
-                    <Check className="h-3 w-3 text-primary mt-0.5 shrink-0" />
-                    <span>{h}</span>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/15 gap-1.5">
+                <Crown className="h-3 w-3" /> {currentPlanName} plan
+              </Badge>
+              <span className="text-[11px] text-muted-foreground">
+                {TEMPLATES.filter(t => isUnlocked(t.planId)).length} of {TEMPLATES.length} templates unlocked
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* ── Template gallery ── */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Palette className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Choose a template</h2>
+            </div>
+            <span className="text-xs text-muted-foreground hidden sm:block">Click any card to preview live</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {TEMPLATES.map((t, idx) => {
+              const Icon = t.icon;
+              const unlocked = isUnlocked(t.planId);
+              const isActive = t.id === selected;
+              return (
+                <motion.button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSelected(t.id)}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  whileHover={{ y: -4 }}
+                  className={`group text-left rounded-2xl border bg-card transition-all relative overflow-hidden ${
+                    isActive
+                      ? "border-primary/60 ring-2 ring-primary/20 shadow-xl shadow-primary/10"
+                      : "border-border hover:border-primary/30 hover:shadow-lg"
+                  }`}
+                >
+                  {/* Top gradient banner */}
+                  <div className={`h-24 bg-gradient-to-br ${t.accent} relative overflow-hidden`}>
+                    <div
+                      className="absolute inset-0 opacity-20"
+                      style={{
+                        backgroundImage:
+                          "radial-gradient(circle at 30% 30%, white 1px, transparent 1px)",
+                        backgroundSize: "16px 16px",
+                      }}
+                    />
+                    <div className="absolute top-3 left-3 h-10 w-10 rounded-xl bg-white/20 backdrop-blur-sm border border-white/30 flex items-center justify-center text-white">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="absolute top-3 right-3">
+                      {unlocked ? (
+                        isActive ? (
+                          <Badge className="text-[10px] bg-white text-foreground gap-1 shadow-md">
+                            <Check className="h-2.5 w-2.5" /> Active
+                          </Badge>
+                        ) : (
+                          <Badge className="text-[10px] bg-white/20 text-white border-white/30 backdrop-blur-sm">
+                            Unlocked
+                          </Badge>
+                        )
+                      ) : (
+                        <div className="h-7 w-7 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 flex items-center justify-center">
+                          <Lock className="h-3.5 w-3.5 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    {/* Color swatches */}
+                    <div className="absolute bottom-3 left-3 flex -space-x-1.5">
+                      {t.swatch.map((s, i) => (
+                        <div
+                          key={i}
+                          className="h-4 w-4 rounded-full border-2 border-white/80 shadow"
+                          style={{ background: s }}
+                        />
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </motion.button>
-          );
-        })}
-      </div>
 
-      {/* Active template details */}
-      <div className="rounded-2xl border border-border bg-card p-5">
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <h2 className="text-lg font-bold text-foreground">
-              {active.name} template preview
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">{active.description}</p>
+                  <div className="p-4">
+                    <div className="flex items-baseline justify-between gap-2 mb-1">
+                      <h3 className="text-lg font-bold text-foreground">{t.name}</h3>
+                      <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">
+                        {t.tier.split("—")[0].trim()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed mb-3 line-clamp-2">{t.tagline}</p>
+                    <div className="space-y-1.5 pt-3 border-t border-border/60">
+                      {t.highlights.slice(0, 3).map(h => (
+                        <div key={h} className="flex items-start gap-1.5 text-[11px] text-foreground/75">
+                          <Check className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+                          <span>{h}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeUnderline"
+                      className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary"
+                    />
+                  )}
+                </motion.button>
+              );
+            })}
           </div>
-          {activeUnlocked ? (
-            <Button
-              size="sm"
-              className="gap-1.5"
-              onClick={() => toast.success(`${active.name} template applied`)}
-            >
-              <Check className="h-4 w-4" /> Apply this template
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5 border-primary/40 text-primary"
-              onClick={() => toast.info(`Upgrade to ${active.tier} to unlock`)}
-            >
-              <Crown className="h-4 w-4" /> Upgrade to unlock
-            </Button>
-          )}
         </div>
-      </div>
 
-      {/* Live preview */}
-      <div className={`rounded-2xl overflow-hidden border border-border bg-white shadow-sm relative ${
-        !activeUnlocked ? "opacity-95" : ""
-      }`}>
-        {!activeUnlocked && (
-          <div className="absolute top-3 right-3 z-30">
-            <Badge className="bg-foreground/80 text-background gap-1 backdrop-blur-sm">
-              <Lock className="h-3 w-3" /> Locked preview
-            </Badge>
+        {/* ── Active template detail bar ── */}
+        <motion.div
+          key={active.id}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm"
+        >
+          <div className={`h-1 bg-gradient-to-r ${active.accent}`} />
+          <div className="p-5 flex items-start justify-between flex-wrap gap-4">
+            <div className="flex items-start gap-4 flex-1 min-w-[260px]">
+              <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${active.accent} text-white flex items-center justify-center shadow-md shrink-0`}>
+                <active.icon className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5">
+                  <h2 className="text-lg font-bold text-foreground">{active.name} template</h2>
+                  <Badge variant="outline" className="text-[10px]">{active.tier}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">{active.description}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="gap-1.5">
+                <Eye className="h-4 w-4" /> Preview
+              </Button>
+              {activeUnlocked ? (
+                <Button
+                  size="sm"
+                  className="gap-1.5 shadow-md"
+                  onClick={() => toast.success(`${active.name} template applied`)}
+                >
+                  <Check className="h-4 w-4" /> Apply template
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  className={`gap-1.5 bg-gradient-to-r ${active.accent} text-white border-0 shadow-md hover:opacity-90`}
+                  onClick={() => toast.info(`Upgrade to ${active.tier} to unlock`)}
+                >
+                  <Crown className="h-4 w-4" /> Upgrade to unlock <ArrowUpRight className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
           </div>
-        )}
-        <TempleWebsitePreview theme={active.theme} />
+        </motion.div>
+
+        {/* ── Live preview ── */}
+        <div>
+          <div className="flex items-center justify-between mb-3 px-1">
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1.5">
+                <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
+                <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+              </div>
+              <span className="text-xs text-muted-foreground font-mono ml-2">
+                yourtemple.devalaya.app
+              </span>
+            </div>
+            <span className="text-[11px] text-muted-foreground">Live preview</span>
+          </div>
+          <div
+            className={`rounded-2xl overflow-hidden border border-border bg-white shadow-2xl shadow-foreground/5 relative ${
+              !activeUnlocked ? "opacity-95" : ""
+            }`}
+          >
+            {!activeUnlocked && (
+              <div className="absolute top-4 right-4 z-30">
+                <Badge className="bg-foreground/85 text-background gap-1 backdrop-blur-sm shadow-lg">
+                  <Lock className="h-3 w-3" /> Locked preview
+                </Badge>
+              </div>
+            )}
+            <TempleWebsitePreview theme={active.theme} />
+          </div>
+        </div>
       </div>
     </div>
   );
