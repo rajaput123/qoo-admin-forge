@@ -5,6 +5,7 @@ import {
   Users, Gift, Camera, Flower2, Bell, PlayCircle, Star, Award,
   TrendingUp, Quote, ChevronDown,
 } from "lucide-react";
+import templeHero from "@/assets/temple-hero.jpg";
 
 interface ThemeConfig {
   colorScheme: string;
@@ -142,119 +143,98 @@ const TempleWebsitePreview = ({ theme }: { theme: ThemeConfig }) => {
       </nav>
 
       {/* ═══════ HERO — ASYMMETRIC EDITORIAL ═══════ */}
-      <section className="relative overflow-hidden" style={{ background: p.heroGrad }}>
-        {/* Floating ornaments */}
-        <motion.div
-          animate={{ y: [0, -15, 0], rotate: [0, 5, 0] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-12 right-10 text-7xl opacity-20 select-none"
-        >🪷</motion.div>
-        <motion.div
-          animate={{ y: [0, 12, 0], rotate: [0, -8, 0] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute bottom-20 left-8 text-5xl opacity-15 select-none"
-        >🕉️</motion.div>
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)",
-          backgroundSize: "32px 32px", color: p.text,
+      {/* ═══════ HERO — CINEMATIC FULL-BLEED ═══════ */}
+      <section className="relative overflow-hidden min-h-[640px] md:min-h-[760px] flex items-end">
+        {/* Background image with slow Ken-Burns */}
+        <motion.img
+          src={templeHero}
+          alt="Temple"
+          initial={{ scale: 1.08 }}
+          animate={{ scale: 1.18 }}
+          transition={{ duration: 18, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        {/* Color-tinted gradient overlay */}
+        <div className="absolute inset-0" style={{
+          background: `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.85) 100%), linear-gradient(135deg, ${p.accent}33 0%, transparent 60%)`,
+        }} />
+        {/* Subtle grain */}
+        <div className="absolute inset-0 opacity-[0.06] mix-blend-overlay" style={{
+          backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+          backgroundSize: "3px 3px",
         }} />
 
-        <div className="relative max-w-6xl mx-auto px-6 pt-16 pb-20 md:pt-24 md:pb-28">
-          <div className="grid md:grid-cols-12 gap-8 items-center">
-            {/* Left: text */}
-            <motion.div
-              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
-              className="md:col-span-7"
-            >
-              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 mb-6 text-[11px] font-semibold backdrop-blur-md" style={{
-                background: dark ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.6)",
-                color: p.brand,
-                border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.05)"}`,
-              }}>
-                <Sparkles className="h-3 w-3" /> Welcome to the Sacred Hills
+        {/* Floating glass info pill — top right */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
+          className="absolute top-6 right-6 hidden md:flex items-center gap-2 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 px-4 py-2 text-white text-xs font-medium shadow-2xl"
+        >
+          <span className="relative flex h-2 w-2">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+          </span>
+          Live Aarti · 12,408 watching
+        </motion.div>
+
+        {/* Content */}
+        <div className="relative w-full max-w-6xl mx-auto px-6 pb-16 md:pb-24 pt-32">
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9 }} className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 mb-6 text-[11px] font-semibold text-white backdrop-blur-md bg-white/10 border border-white/20">
+              <Sparkles className="h-3 w-3" style={{ color: p.brand }} />
+              <span className="tracking-wider uppercase">{data.short} · Est. {data.est}</span>
+            </div>
+
+            <h1 className="text-[42px] sm:text-[56px] md:text-[78px] font-black leading-[0.95] tracking-tight text-white mb-5 drop-shadow-lg">
+              Where the{" "}
+              <span className="italic font-serif" style={{
+                background: p.gradient, WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent", backgroundClip: "text",
+              }}>divine</span><br className="hidden sm:block" />
+              meets devotion.
+            </h1>
+
+            <p className="text-base md:text-xl text-white/85 leading-relaxed mb-8 max-w-2xl font-light">
+              {theme.heroTagline}
+            </p>
+
+            <div className="flex gap-3 flex-wrap">
+              <button className="px-7 py-4 rounded-full text-sm font-bold text-white shadow-2xl flex items-center gap-2 hover:scale-[1.03] transition-transform"
+                style={{ background: p.gradient, boxShadow: `0 16px 48px -8px ${p.ring}` }}>
+                <Calendar className="h-4 w-4" /> Book Darshan <ArrowRight className="h-4 w-4" />
+              </button>
+              <button className="px-7 py-4 rounded-full text-sm font-semibold text-white flex items-center gap-2 backdrop-blur-md bg-white/10 border border-white/25 hover:bg-white/20 transition-colors">
+                <PlayCircle className="h-4 w-4" /> Watch Live Aarti
+              </button>
+            </div>
+          </motion.div>
+
+          {/* Bottom info strip — glassmorphic */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.8 }}
+            className="mt-12 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-px rounded-2xl overflow-hidden backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl"
+          >
+            {[
+              { l: "Next Darshan", v: "6:00 AM", s: "Tomorrow" },
+              { l: "Today's Seva", v: "Suprabhatam", s: "₹300" },
+              { l: "Festival", v: "Brahmotsavam", s: "in 12 days" },
+              { l: "Devotees Today", v: "48,237", s: "Live count" },
+            ].map(item => (
+              <div key={item.l} className="bg-black/20 px-5 py-4">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-white/60 font-semibold mb-1">{item.l}</div>
+                <div className="text-lg md:text-xl font-bold text-white leading-tight">{item.v}</div>
+                <div className="text-[11px] mt-0.5" style={{ color: p.brand }}>{item.s}</div>
               </div>
-
-              <h1 className="text-[44px] md:text-[68px] font-black leading-[0.95] tracking-tight mb-5" style={{ color: p.text }}>
-                Where the<br />
-                <span className="italic font-serif" style={{
-                  background: p.gradient, WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent", backgroundClip: "text",
-                }}>divine</span>{" "}
-                meets devotion.
-              </h1>
-
-              <p className="text-base md:text-lg leading-relaxed mb-8 max-w-xl" style={{ color: p.muted }}>
-                {theme.heroTagline}
-              </p>
-
-              <div className="flex gap-3 flex-wrap">
-                <button className="px-6 py-3.5 rounded-full text-sm font-bold text-white shadow-xl flex items-center gap-2 hover:scale-[1.02] transition-transform" style={{ background: p.gradient, boxShadow: `0 12px 32px -8px ${p.ring}` }}>
-                  <Calendar className="h-4 w-4" /> Book Darshan <ArrowRight className="h-4 w-4" />
-                </button>
-                <button className="px-6 py-3.5 rounded-full text-sm font-semibold flex items-center gap-2 backdrop-blur-md" style={{
-                  background: dark ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.7)",
-                  color: p.text,
-                  border: `1px solid ${dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.06)"}`,
-                }}>
-                  <PlayCircle className="h-4 w-4" /> Watch Live Aarti
-                </button>
-              </div>
-
-              {/* Trust row */}
-              <div className="mt-10 flex items-center gap-6 flex-wrap">
-                <div className="flex -space-x-2">
-                  {["#fbbf24", "#f87171", "#34d399", "#60a5fa"].map((c, i) => (
-                    <div key={i} className="h-8 w-8 rounded-full border-2 flex items-center justify-center text-xs" style={{ background: c, borderColor: p.bg }}>
-                      {["🙏", "🪔", "🌸", "✨"][i]}
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <div className="flex items-center gap-1 mb-0.5">
-                    {[...Array(5)].map((_, i) => <Star key={i} className="h-3 w-3 fill-current" style={{ color: "#facc15" }} />)}
-                    <span className="text-xs font-bold ml-1" style={{ color: p.text }}>4.9</span>
-                  </div>
-                  <div className="text-[11px]" style={{ color: p.muted }}>Trusted by 50,000+ devotees daily</div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Right: stacked card composition */}
-            <motion.div
-              initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.9, delay: 0.2 }}
-              className="md:col-span-5 relative h-[400px] hidden md:block"
-            >
-              {/* Big card */}
-              <div className="absolute inset-0 rounded-3xl shadow-2xl overflow-hidden" style={{ background: p.gradient }}>
-                <div className="absolute inset-0 opacity-30" style={{
-                  backgroundImage: "radial-gradient(circle at 30% 30%, white 1px, transparent 1px)",
-                  backgroundSize: "24px 24px",
-                }} />
-                <div className="absolute inset-0 flex items-center justify-center text-[180px] opacity-40 select-none">🛕</div>
-                <div className="absolute bottom-6 left-6 right-6 text-white">
-                  <div className="text-[10px] uppercase tracking-[0.2em] opacity-80 mb-1">Today's Special</div>
-                  <div className="text-2xl font-bold">Sahasra Deepalankarana</div>
-                  <div className="text-xs opacity-80 mt-1">Thousand-lamp evening illumination at 7:00 PM</div>
-                </div>
-              </div>
-              {/* Floating mini card */}
-              <motion.div
-                animate={{ y: [0, -8, 0] }} transition={{ duration: 4, repeat: Infinity }}
-                className="absolute -bottom-6 -left-6 rounded-2xl p-4 shadow-xl backdrop-blur-md w-48"
-                style={{ background: dark ? "rgba(38,18,26,0.9)" : "rgba(255,255,255,0.95)", border: `1px solid ${dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}` }}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ background: p.accentSoft }}>
-                    <Bell className="h-4 w-4" style={{ color: p.accent }} />
-                  </div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: p.muted }}>Live now</div>
-                </div>
-                <div className="text-sm font-bold" style={{ color: p.text }}>Suprabhatam Seva</div>
-                <div className="text-[11px]" style={{ color: p.muted }}>Streaming · 12K watching</div>
-              </motion.div>
-            </motion.div>
-          </div>
+            ))}
+          </motion.div>
         </div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          animate={{ y: [0, 6, 0] }} transition={{ duration: 2, repeat: Infinity }}
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/60"
+        >
+          <ChevronDown className="h-5 w-5" />
+        </motion.div>
       </section>
 
       {/* ═══════ STATS BAR ═══════ */}
