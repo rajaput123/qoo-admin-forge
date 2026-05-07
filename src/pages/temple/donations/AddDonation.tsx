@@ -183,7 +183,7 @@ const AddDonation = () => {
     let channel: "Cash" | "UPI" | "Bank Transfer" | "Online" | "Cheque" | "In-Kind" = "Cash";
     if (!isCashNature) {
       channel = "In-Kind";
-    } else if (formData.donationType === "Counter") {
+    } else {
       channel = formData.paymentMode;
     }
 
