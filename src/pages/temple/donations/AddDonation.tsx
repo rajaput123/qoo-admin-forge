@@ -587,9 +587,8 @@ const AddDonation = () => {
                       <SelectContent>
                         <SelectItem value="Cash">Cash</SelectItem>
                         <SelectItem value="UPI">UPI</SelectItem>
-                        <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                        <SelectItem value="Online">Online (Card / Net Banking)</SelectItem>
-                        <SelectItem value="Cheque">Cheque / DD</SelectItem>
+                        <SelectItem value="QR">QR Code</SelectItem>
+                        <SelectItem value="Cheque">Cheque</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -597,15 +596,13 @@ const AddDonation = () => {
                     <div className="space-y-2">
                       <Label>
                         {formData.paymentMode === "UPI" && "UPI Reference / Txn ID *"}
-                        {formData.paymentMode === "Bank Transfer" && "UTR / NEFT Reference *"}
-                        {formData.paymentMode === "Online" && "Transaction / Approval Code *"}
+                        {formData.paymentMode === "QR" && "QR Txn / UPI Ref *"}
                         {formData.paymentMode === "Cheque" && "Cheque Number *"}
                       </Label>
                       <Input
                         placeholder={
                           formData.paymentMode === "UPI" ? "e.g. 4XXXXXXXXXXX" :
-                          formData.paymentMode === "Bank Transfer" ? "e.g. SBIN0XXXXXXXX" :
-                          formData.paymentMode === "Online" ? "e.g. last 4 digits / approval code" :
+                          formData.paymentMode === "QR" ? "e.g. UPI ref from QR scan" :
                           "e.g. 123456 — Bank, Date"
                         }
                         value={formData.paymentReference}
