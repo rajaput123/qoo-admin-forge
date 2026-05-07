@@ -234,8 +234,8 @@ const TempleWebsitePreview = ({ theme }: { theme: ThemeConfig }) => {
             </h1>
 
             <p
-              className="text-base md:text-lg text-white/90 leading-relaxed mb-8 max-w-xl font-light"
-              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}
+              className="text-base md:text-lg text-white leading-relaxed mb-8 max-w-xl font-normal"
+              style={{ textShadow: "0 2px 16px rgba(0,0,0,0.8), 0 1px 3px rgba(0,0,0,0.6)" }}
             >
               {theme.heroTagline}
             </p>
