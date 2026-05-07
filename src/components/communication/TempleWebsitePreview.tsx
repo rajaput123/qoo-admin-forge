@@ -172,6 +172,14 @@ const TempleWebsitePreview = ({ theme }: { theme: ThemeConfig }) => {
           className="absolute inset-0 mix-blend-soft-light opacity-60"
           style={{ background: `linear-gradient(135deg, ${p.accent} 0%, transparent 70%)` }}
         />
+        {/* Left-side readability gradient */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(90deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 40%, transparent 70%)",
+          }}
+        />
 
         {/* Floating glass info pill — top right */}
         <motion.div
