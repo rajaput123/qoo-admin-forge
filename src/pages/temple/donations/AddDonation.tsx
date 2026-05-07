@@ -47,7 +47,7 @@ const AddDonation = () => {
     
     // Step 4: Channel Details (conditional based on donation type)
     counterId: "",
-    paymentMode: "Cash" as "Cash" | "UPI" | "Bank Transfer" | "Online" | "Cheque" | "In-Kind",
+    paymentMode: "Cash" as "Cash" | "UPI" | "QR" | "Cheque" | "In-Kind",
     paymentReference: "",
     eventName: "",
     projectName: "",
@@ -184,7 +184,8 @@ const AddDonation = () => {
     if (!isCashNature) {
       channel = "In-Kind";
     } else {
-      channel = formData.paymentMode;
+      // QR maps to UPI channel (it's UPI under the hood)
+      channel = formData.paymentMode === "QR" ? "UPI" : formData.paymentMode;
     }
 
     const donationAmount = isCashNature
@@ -587,9 +588,8 @@ const AddDonation = () => {
                       <SelectContent>
                         <SelectItem value="Cash">Cash</SelectItem>
                         <SelectItem value="UPI">UPI</SelectItem>
-                        <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                        <SelectItem value="Online">Online (Card / Net Banking)</SelectItem>
-                        <SelectItem value="Cheque">Cheque / DD</SelectItem>
+                        <SelectItem value="QR">QR Code</SelectItem>
+                        <SelectItem value="Cheque">Cheque</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -597,15 +597,13 @@ const AddDonation = () => {
                     <div className="space-y-2">
                       <Label>
                         {formData.paymentMode === "UPI" && "UPI Reference / Txn ID *"}
-                        {formData.paymentMode === "Bank Transfer" && "UTR / NEFT Reference *"}
-                        {formData.paymentMode === "Online" && "Transaction / Approval Code *"}
+                        {formData.paymentMode === "QR" && "QR Txn / UPI Ref *"}
                         {formData.paymentMode === "Cheque" && "Cheque Number *"}
                       </Label>
                       <Input
                         placeholder={
                           formData.paymentMode === "UPI" ? "e.g. 4XXXXXXXXXXX" :
-                          formData.paymentMode === "Bank Transfer" ? "e.g. SBIN0XXXXXXXX" :
-                          formData.paymentMode === "Online" ? "e.g. last 4 digits / approval code" :
+                          formData.paymentMode === "QR" ? "e.g. UPI ref from QR scan" :
                           "e.g. 123456 — Bank, Date"
                         }
                         value={formData.paymentReference}
