@@ -478,7 +478,26 @@ const CounterBooking = () => {
                       ))}
                     </div>
                   </div>
-                  <div><Label>Reference Number</Label><Input value={refNumber} onChange={e => setRefNumber(e.target.value)} placeholder="Transaction / receipt reference" /></div>
+                  {paymentMode !== "Cash" && (
+                    <div>
+                      <Label>
+                        {paymentMode === "UPI" && "UPI Reference / Txn ID"}
+                        {paymentMode === "Card" && "Card Txn / Approval Code"}
+                        {paymentMode === "Cheque" && "Cheque Number"}
+                        {paymentMode === "Other" && "Reference Number"}
+                      </Label>
+                      <Input
+                        value={refNumber}
+                        onChange={e => setRefNumber(e.target.value)}
+                        placeholder={
+                          paymentMode === "UPI" ? "e.g. 4XXXXXXXXXXX (UTR / UPI ref)" :
+                          paymentMode === "Card" ? "e.g. last 4 digits or approval code" :
+                          paymentMode === "Cheque" ? "e.g. 123456 — Bank, Date" :
+                          "Reference"
+                        }
+                      />
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <Button variant="outline" onClick={() => setCurrentStep(1)}>Back</Button>
                     <Button onClick={() => setCurrentStep(3)}>Continue</Button>
