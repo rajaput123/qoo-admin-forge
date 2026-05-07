@@ -176,7 +176,7 @@ const SubscriptionBilling = () => {
       {/* Plan Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-16">
         {PLANS.map((plan, i) => {
-          const meta = planMeta[plan.id] || planMeta.prarambh;
+          const meta = planMeta[plan.id] || planMeta.seva;
           const Icon = meta.icon;
           const isCurrent = plan.id === currentPlanId;
           const isRecommended = plan.recommended;
@@ -353,7 +353,7 @@ const SubscriptionBilling = () => {
                     Feature
                   </th>
                   {PLANS.map((p) => {
-                    const meta = planMeta[p.id] || planMeta.prarambh;
+                    const meta = planMeta[p.id] || planMeta.seva;
                     return (
                       <th
                         key={p.id}
@@ -379,7 +379,7 @@ const SubscriptionBilling = () => {
                     <td className="px-5 py-3 text-foreground font-medium text-sm">{row.feature}</td>
                     {PLANS.map((p) => {
                       const hasAll = row.modules.every(m => p.modules.includes(m));
-                      const meta = planMeta[p.id] || planMeta.prarambh;
+                      const meta = planMeta[p.id] || planMeta.seva;
                       return (
                         <td
                           key={p.id}
@@ -429,7 +429,7 @@ const SubscriptionBilling = () => {
       <Dialog open={!!checkoutPlan} onOpenChange={(open) => !open && setCheckoutPlan(null)}>
         <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden bg-card border-border rounded-2xl">
           {checkoutPlan && (() => {
-            const meta = planMeta[checkoutPlan.id] || planMeta.prarambh;
+            const meta = planMeta[checkoutPlan.id] || planMeta.seva;
             const price = annual
               ? Math.round(checkoutPlan.price * (1 - annualDiscount))
               : checkoutPlan.price;
