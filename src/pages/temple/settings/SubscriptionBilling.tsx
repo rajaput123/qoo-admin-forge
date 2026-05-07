@@ -29,16 +29,14 @@ import {
 } from "lucide-react";
 import { PLANS, formatPrice, type Plan } from "@/lib/plans";
 import { toast } from "sonner";
-import planPrarambh from "@/assets/plans/plan-prarambh.png";
 import planSeva from "@/assets/plans/plan-seva.png";
 import planShraddha from "@/assets/plans/plan-shraddha.png";
 import planSampoorna from "@/assets/plans/plan-sampoorna.png";
 import planSanskriti from "@/assets/plans/plan-sanskriti.png";
 
-const currentPlanId = "prarambh";
+const currentPlanId = "seva";
 
 const planImages: Record<string, string> = {
-  prarambh: planPrarambh,
   seva: planSeva,
   shraddha: planShraddha,
   sampoorna: planSampoorna,
@@ -51,12 +49,6 @@ const planMeta: Record<string, {
   iconBg: string;
   accent: string;
 }> = {
-  prarambh: {
-    icon: Zap,
-    gradient: "from-[hsl(220,15%,96%)] to-[hsl(220,10%,92%)]",
-    iconBg: "bg-[hsl(220,12%,88%)]",
-    accent: "hsl(220, 12%, 55%)",
-  },
   seva: {
     icon: Sparkles,
     gradient: "from-[hsl(142,45%,94%)] to-[hsl(142,35%,88%)]",
