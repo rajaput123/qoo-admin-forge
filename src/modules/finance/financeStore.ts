@@ -508,13 +508,13 @@ export const financeActions = {
   /** Refresh payroll records from HR employee data with optional month/year */
   refreshPayrollFromHR(monthName?: string, year?: string) {
     const st = getFinanceState();
-    const paidRecords = st.payroll.filter(p => p.status === "Paid");
-    const paidEmployeeIds = new Set(paidRecords.map(p => p.employeeId));
-    
-    const eligible = getEligibleEmployees().filter(e => !paidEmployeeIds.has(e.employeeId));
-    
     const targetMonth = monthName || MONTH_NAMES[new Date().getMonth()].slice(0, 3);
     const targetYear = year || String(new Date().getFullYear());
+    // Keep records for OTHER months as-is. Only regenerate for the selected month/year.
+    const otherMonthRecords = st.payroll.filter(p => !(p.month === targetMonth && p.year === targetYear));
+    const sameMonthPaid = st.payroll.filter(p => p.month === targetMonth && p.year === targetYear && p.status === "Paid");
+    const paidEmployeeIds = new Set(sameMonthPaid.map(p => p.employeeId));
+    const eligible = getEligibleEmployees().filter(e => !paidEmployeeIds.has(e.employeeId));
     const monthIdx = MONTH_NAMES.findIndex(m => m.startsWith(targetMonth));
     const yearNum = parseInt(targetYear);
     
@@ -524,7 +524,7 @@ export const financeActions = {
       const calc = calculateNetPay(basicSalary, attendance);
       
       return {
-        id: simpleId("PAY", [...paidRecords, ...eligible.slice(0, idx).map(() => ({ id: "" }))]),
+        id: simpleId("PAY", [...st.payroll, ...eligible.slice(0, idx).map((_, i) => ({ id: `PAY-${900 + i}` }))]),
         employeeId: emp.employeeId,
         employeeName: emp.name,
         role: emp.designation,
@@ -546,7 +546,7 @@ export const financeActions = {
       };
     });
     
-    setState({ ...st, payroll: [...paidRecords, ...newRecords] });
+    setState({ ...st, payroll: [...otherMonthRecords, ...sameMonthPaid, ...newRecords] });
     return newRecords.length;
   },
 
