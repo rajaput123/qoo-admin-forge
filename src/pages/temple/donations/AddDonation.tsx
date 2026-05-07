@@ -184,7 +184,8 @@ const AddDonation = () => {
     if (!isCashNature) {
       channel = "In-Kind";
     } else {
-      channel = formData.paymentMode;
+      // QR maps to UPI channel (it's UPI under the hood)
+      channel = formData.paymentMode === "QR" ? "UPI" : formData.paymentMode;
     }
 
     const donationAmount = isCashNature
