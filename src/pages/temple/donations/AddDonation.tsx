@@ -47,7 +47,7 @@ const AddDonation = () => {
     
     // Step 4: Channel Details (conditional based on donation type)
     counterId: "",
-    paymentMode: "Cash" as "Cash" | "UPI" | "Bank Transfer" | "Online" | "Cheque" | "In-Kind",
+    paymentMode: "Cash" as "Cash" | "UPI" | "QR" | "Cheque" | "In-Kind",
     paymentReference: "",
     eventName: "",
     projectName: "",
