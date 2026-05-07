@@ -592,6 +592,16 @@ export const financeActions = {
     return count;
   },
 
+  /** Reset (delete) all payroll records for a given month/year — for testing/re-runs */
+  resetPayrollMonth(monthName: string, year: string): number {
+    const st = getFinanceState();
+    const monthShort = monthName.slice(0, 3);
+    const removed = st.payroll.filter(p => p.month === monthShort && p.year === year);
+    const remaining = st.payroll.filter(p => !(p.month === monthShort && p.year === year));
+    setState({ ...st, payroll: remaining });
+    return removed.length;
+  },
+
   /** Toggle attendance mode for a payroll record and recalculate */
   toggleAttendanceMode(payrollId: string) {
     const st = getFinanceState();

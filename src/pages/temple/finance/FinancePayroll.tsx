@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, IndianRupee, Search, Download, RefreshCw, PlayCircle, CheckCircle2, AlertTriangle, Eye, CalendarDays, UserCheck, Banknote, FileDown } from "lucide-react";
+import { Users, IndianRupee, Search, Download, RefreshCw, PlayCircle, CheckCircle2, AlertTriangle, Eye, CalendarDays, UserCheck, Banknote, FileDown, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { exportToCSV } from "@/utils/exportCSV";
 import { financeSelectors, financeActions } from "@/modules/finance/financeStore";
@@ -116,6 +116,17 @@ const FinancePayroll = () => {
     setTick(t => t + 1);
   };
 
+  const handleResetMonth = () => {
+    const removed = financeActions.resetPayrollMonth(selectedMonth, selectedYear);
+    if (removed === 0) {
+      toast.info(`No records for ${selectedMonth} ${selectedYear}`);
+    } else {
+      toast.success(`Cleared ${removed} record(s) for ${selectedMonth} ${selectedYear}. Click Sync HR to regenerate.`);
+    }
+    setSelectedIds(new Set());
+    setTick(t => t + 1);
+  };
+
   /** Generate a generic bank-advice CSV (NEFT bulk upload format).
    *  Works as universal template — uploads to most Indian bank corporate portals
    *  (SBI CINB, HDFC ENet, ICICI CIB) after minor column header tweak. */
@@ -170,6 +181,9 @@ const FinancePayroll = () => {
           </div>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSync}>
             <RefreshCw className="h-3.5 w-3.5" /> Sync HR
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:text-destructive" onClick={handleResetMonth}>
+            <RotateCcw className="h-3.5 w-3.5" /> Reset Month
           </Button>
           {pendingCount > 0 && (
             <Button size="sm" className="gap-1.5" onClick={() => setShowRunAllConfirm(true)}>
