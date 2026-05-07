@@ -37,7 +37,10 @@ const FinancePayroll = () => {
   const [showSingleConfirm, setShowSingleConfirm] = useState<{ id: string; name: string; amount: number } | null>(null);
   const [viewDetail, setViewDetail] = useState<PayrollRecord | null>(null);
 
-  const employees = financeSelectors.getPayroll();
+  const allPayroll = financeSelectors.getPayroll();
+  const monthShort = selectedMonth.slice(0, 3);
+  // Scope page to selected month/year so Bank Advice / KPIs / table reflect that period
+  const employees = allPayroll.filter(e => e.month === monthShort && e.year === selectedYear);
   const accounts = financeSelectors.getAccounts();
   const payableAccounts = accounts.filter(a => a.type === "Asset" && (a.accountCategory === "Bank" || a.accountCategory === "Cash"));
   const defaultBankId = payableAccounts.find(a => a.accountCategory === "Bank")?.id || payableAccounts[0]?.id || "ACC-002";
