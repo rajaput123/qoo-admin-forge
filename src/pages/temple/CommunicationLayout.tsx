@@ -1,7 +1,7 @@
 import { Megaphone, LayoutDashboard, Bell, Newspaper, Video, MessageSquare, Users, Globe, Lock } from "lucide-react";
 import TempleLayout from "@/components/TempleLayout";
 
-const currentPlanId = "prarambh"; // TODO: get from context
+const currentPlanId = "seva"; // TODO: get from context
 
 const allNavItems = [
   { label: "Control Center", path: "/temple/communication", icon: LayoutDashboard, description: "Central communication hub", freePlan: false },
@@ -15,7 +15,7 @@ const allNavItems = [
 
 const navItems = allNavItems.map(({ freePlan, ...rest }) => ({
   ...rest,
-  locked: currentPlanId === "prarambh" && !freePlan,
+  locked: false,
 }));
 
 const CommunicationLayout = () => {

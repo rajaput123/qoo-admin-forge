@@ -67,9 +67,9 @@ type AccountStatus = "active" | "trial" | "expired" | "suspended" | "compliance_
 const tenantData = {
   templeName: "Sri Venkateswara Temple",
   tenantId: "TNT-2024-001234",
-  plan: "Prarambh",
-  planId: "prarambh", // Current plan ID for access control
-  tier: "Free",
+  plan: "Seva",
+  planId: "seva", // Current plan ID for access control
+  tier: "T1",
   status: "active" as AccountStatus,
   trialDaysLeft: 0,
   region: "Karnataka",
@@ -320,7 +320,7 @@ const TempleHub = () => {
       )}
 
       {/* Upgrade Banner */}
-      {showBanner && currentPlanId === "prarambh" && !isSuspended && (
+      {showBanner && currentPlanId === "seva" && !isSuspended && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -463,7 +463,7 @@ const TempleHub = () => {
               >
                 Manage Plan
               </Button>
-              {currentPlanId === "prarambh" && (
+              {currentPlanId === "seva" && (
                 <Button
                   size="sm"
                   className="text-xs h-8 gap-1 bg-gradient-to-r from-primary to-amber-500 hover:opacity-90 text-primary-foreground border-0"

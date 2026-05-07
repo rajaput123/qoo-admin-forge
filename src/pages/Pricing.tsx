@@ -33,7 +33,6 @@ import {
 } from "@/lib/plans";
 
 const planIcons: Record<string, typeof Zap> = {
-  prarambh: Leaf,
   seva: Zap,
   shraddha: Star,
   sampoorna: Crown,
@@ -48,74 +47,56 @@ interface FeatureGroup {
 }
 
 const planFeatureGroups: Record<string, FeatureGroup[]> = {
-  prarambh: [
-    {
-      title: "Temple foundation",
-      items: ["Temple profile & structure", "Single admin login", "Free temple website"],
-    },
-    {
-      title: "Communication",
-      items: ["Announcements", "Devotee notices"],
-    },
-  ],
   seva: [
     {
-      title: "Seva operations",
-      items: ["Online seva bookings", "Counter & cart workflow", "Priest assignment"],
+      title: "Digital presence",
+      items: ["Temple website (Plus template)", "Online seva booking — up to 500", "Online donation — up to 500", "Payment gateway"],
     },
     {
-      title: "Prasadam kitchen",
-      items: ["Production planning", "Annadanam tracking"],
+      title: "Devotee interactions",
+      items: ["Push notifications (App)", "PR & event notifications", "WhatsApp messaging", "Basic event management"],
     },
     {
-      title: "Team",
-      items: ["Up to 5 staff users"],
+      title: "Operations",
+      items: ["Prasadam & kitchen", "Counter & cart workflow", "Up to 5 staff users"],
     },
   ],
   shraddha: [
     {
-      title: "Donations & receipts",
-      items: ["Donor CRM", "80G certificates", "Fund allocation"],
+      title: "Digital presence (Featured)",
+      items: ["Featured website template", "Online seva booking — up to 2,500", "Online donation — up to 2,500"],
     },
     {
-      title: "Events",
-      items: ["Event creation & ticketing", "Capacity management"],
+      title: "Advanced engagement",
+      items: ["Branded devotee mobile app", "Advanced PR & communications", "WhatsApp included", "Basic devotee analytics"],
     },
     {
-      title: "Devotees",
-      items: ["Devotee database", "VIP devotee tracking", "Family groups"],
-    },
-    {
-      title: "Team",
-      items: ["Up to 15 users"],
+      title: "Donations & events",
+      items: ["Donor CRM, 80G certificates", "Event ticketing & capacity", "VIP devotee tracking"],
     },
   ],
   sampoorna: [
     {
-      title: "Finance & accounting",
-      items: ["Double-entry ledger", "Vouchers & receipts", "GST reports"],
+      title: "Digital presence (Advanced)",
+      items: ["Advanced website template", "Online seva booking — up to 5,000", "Online donation — up to 5,000", "Donor list on website"],
     },
     {
-      title: "People & HR",
-      items: ["Employees & attendance", "Payroll automation", "Freelancer payouts"],
+      title: "Growth & accounting",
+      items: ["Accounting & audit module", "Project & event P&L", "Devotee/projects/events analytics", "Basic stocks management"],
     },
     {
-      title: "Productivity",
-      items: ["Tasks & projects", "Cross-module reports", "Knowledge base"],
-    },
-    {
-      title: "Team",
-      items: ["Unlimited users"],
+      title: "People & operations",
+      items: ["Employee payroll", "Task management", "Full stocks management", "Child / sub-temple management", "Multi-branch dashboard"],
     },
   ],
   sanskriti: [
     {
-      title: "Multi-temple platform",
-      items: ["Branch management", "Centralized governance", "Institution module (school, hospital, goshala)"],
+      title: "Custom website & unlimited",
+      items: ["Custom website template", "Unlimited online seva bookings", "Unlimited online donations", "Featured devotee analytics"],
     },
     {
-      title: "Operations at scale",
-      items: ["Crowd & queue management", "Suppliers & purchase orders", "Asset register & maintenance"],
+      title: "AI & integrations",
+      items: ["AI-powered devotee insights", "Custom integrations / API", "White-label branding", "Custom AI services"],
     },
     {
       title: "Premium support",

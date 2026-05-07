@@ -10,6 +10,7 @@ interface ThemeConfig {
   fontStyle: string;
   heroTagline: string;
   welcomeMessage: string;
+  template?: "plus" | "featured" | "advanced" | "custom";
   sections: {
     about: boolean;
     timings: boolean;
