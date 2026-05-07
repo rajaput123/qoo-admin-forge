@@ -472,8 +472,8 @@ const CounterBooking = () => {
                   </div>
                   <div>
                     <Label>Payment Mode</Label>
-                    <div className="grid grid-cols-4 gap-2 mt-2">
-                      {["Cash", "UPI", "Card", "Other"].map(mode => (
+                    <div className="grid grid-cols-5 gap-2 mt-2">
+                      {["Cash", "UPI", "Card", "Cheque", "Other"].map(mode => (
                         <button key={mode} onClick={() => setPaymentMode(mode)} className={`p-3 border rounded-lg text-center text-sm font-medium transition-all ${paymentMode === mode ? "border-primary bg-primary/5 text-primary" : "hover:bg-muted/50"}`}>{mode}</button>
                       ))}
                     </div>
