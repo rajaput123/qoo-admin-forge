@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, IndianRupee, Search, Download, RefreshCw, PlayCircle, CheckCircle2, AlertTriangle, Eye, CalendarDays, UserCheck, Banknote, FileDown, RotateCcw } from "lucide-react";
+import { Users, IndianRupee, Search, Download, RefreshCw, PlayCircle, CheckCircle2, AlertTriangle, Eye, CalendarDays, UserCheck, Banknote, FileDown, RotateCcw, History } from "lucide-react";
 import { toast } from "sonner";
 import { exportToCSV } from "@/utils/exportCSV";
 import { financeSelectors, financeActions } from "@/modules/finance/financeStore";
@@ -36,11 +36,27 @@ const FinancePayroll = () => {
   const [showRunAllConfirm, setShowRunAllConfirm] = useState(false);
   const [showSingleConfirm, setShowSingleConfirm] = useState<{ id: string; name: string; amount: number } | null>(null);
   const [viewDetail, setViewDetail] = useState<PayrollRecord | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const allPayroll = financeSelectors.getPayroll();
   const monthShort = selectedMonth.slice(0, 3);
   // Scope page to selected month/year so Bank Advice / KPIs / table reflect that period
   const employees = allPayroll.filter(e => e.month === monthShort && e.year === selectedYear);
+
+  // Group ALL payroll history by month/year for the Bank Advice History dialog
+  const historyGroups = (() => {
+    const map = new Map<string, { month: string; year: string; records: PayrollRecord[] }>();
+    for (const p of allPayroll) {
+      const key = `${p.year}-${p.month}`;
+      if (!map.has(key)) map.set(key, { month: p.month, year: p.year, records: [] });
+      map.get(key)!.records.push(p);
+    }
+    const monthOrder = MONTH_NAMES.map(m => m.slice(0, 3));
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.year !== b.year) return Number(b.year) - Number(a.year);
+      return monthOrder.indexOf(b.month) - monthOrder.indexOf(a.month);
+    });
+  })();
   const accounts = financeSelectors.getAccounts();
   const payableAccounts = accounts.filter(a => a.type === "Asset" && (a.accountCategory === "Bank" || a.accountCategory === "Cash"));
   const defaultBankId = payableAccounts.find(a => a.accountCategory === "Bank")?.id || payableAccounts[0]?.id || "ACC-002";
@@ -208,6 +224,9 @@ const FinancePayroll = () => {
             }}
           >
             <FileDown className="h-3.5 w-3.5" /> Bank Advice
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowHistory(true)}>
+            <History className="h-3.5 w-3.5" /> History
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
             exportToCSV("payroll",
