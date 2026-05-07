@@ -144,30 +144,41 @@ const TempleWebsitePreview = ({ theme }: { theme: ThemeConfig }) => {
 
       {/* ═══════ HERO — ASYMMETRIC EDITORIAL ═══════ */}
       {/* ═══════ HERO — CINEMATIC FULL-BLEED ═══════ */}
-      <section className="relative overflow-hidden min-h-[640px] md:min-h-[760px] flex items-end">
+      <section className="relative w-full overflow-hidden" style={{ height: "min(92vh, 820px)", minHeight: 620 }}>
         {/* Background image with slow Ken-Burns */}
-        <motion.img
-          src={templeHero}
-          alt="Temple"
+        <motion.div
           initial={{ scale: 1.08 }}
           animate={{ scale: 1.18 }}
-          transition={{ duration: 18, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
-          className="absolute inset-0 h-full w-full object-cover"
+          transition={{ duration: 22, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+          className="absolute inset-0"
+        >
+          <img
+            src={templeHero}
+            alt="Temple gopuram at golden hour"
+            className="h-full w-full object-cover object-center"
+          />
+        </motion.div>
+
+        {/* Strong readability gradient — dark at top + bottom */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 30%, rgba(0,0,0,0.45) 65%, rgba(0,0,0,0.85) 100%)",
+          }}
         />
-        {/* Color-tinted gradient overlay */}
-        <div className="absolute inset-0" style={{
-          background: `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.85) 100%), linear-gradient(135deg, ${p.accent}33 0%, transparent 60%)`,
-        }} />
-        {/* Subtle grain */}
-        <div className="absolute inset-0 opacity-[0.06] mix-blend-overlay" style={{
-          backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-          backgroundSize: "3px 3px",
-        }} />
+        {/* Color tint */}
+        <div
+          className="absolute inset-0 mix-blend-soft-light opacity-60"
+          style={{ background: `linear-gradient(135deg, ${p.accent} 0%, transparent 70%)` }}
+        />
 
         {/* Floating glass info pill — top right */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}
-          className="absolute top-6 right-6 hidden md:flex items-center gap-2 rounded-full backdrop-blur-xl bg-white/10 border border-white/20 px-4 py-2 text-white text-xs font-medium shadow-2xl"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          className="absolute top-24 right-6 z-20 hidden md:flex items-center gap-2 rounded-full backdrop-blur-xl bg-white/10 border border-white/25 px-4 py-2 text-white text-xs font-medium shadow-2xl"
         >
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
@@ -176,64 +187,95 @@ const TempleWebsitePreview = ({ theme }: { theme: ThemeConfig }) => {
           Live Aarti · 12,408 watching
         </motion.div>
 
-        {/* Content */}
-        <div className="relative w-full max-w-6xl mx-auto px-6 pb-16 md:pb-24 pt-32">
-          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9 }} className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 mb-6 text-[11px] font-semibold text-white backdrop-blur-md bg-white/10 border border-white/20">
-              <Sparkles className="h-3 w-3" style={{ color: p.brand }} />
-              <span className="tracking-wider uppercase">{data.short} · Est. {data.est}</span>
+        {/* Content — vertically centered */}
+        <div className="relative z-10 h-full max-w-6xl mx-auto px-6 flex flex-col justify-center pt-16">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9 }}
+            className="max-w-3xl"
+          >
+            <div className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 mb-6 text-[11px] font-semibold text-white backdrop-blur-md bg-white/15 border border-white/25 shadow-lg">
+              <Sparkles className="h-3 w-3" style={{ color: "#fde047" }} />
+              <span className="tracking-[0.2em] uppercase">{data.short} · Est. {data.est}</span>
             </div>
 
-            <h1 className="text-[42px] sm:text-[56px] md:text-[78px] font-black leading-[0.95] tracking-tight text-white mb-5 drop-shadow-lg">
+            <h1
+              className="font-black tracking-tight text-white mb-5"
+              style={{
+                fontSize: "clamp(38px, 7vw, 84px)",
+                lineHeight: 0.95,
+                textShadow: "0 4px 30px rgba(0,0,0,0.5)",
+              }}
+            >
               Where the{" "}
-              <span className="italic font-serif" style={{
-                background: p.gradient, WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent", backgroundClip: "text",
-              }}>divine</span><br className="hidden sm:block" />
+              <span
+                className="italic font-serif"
+                style={{
+                  background: p.gradient,
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                  filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.3))",
+                }}
+              >
+                divine
+              </span>
+              <br />
               meets devotion.
             </h1>
 
-            <p className="text-base md:text-xl text-white/85 leading-relaxed mb-8 max-w-2xl font-light">
+            <p
+              className="text-base md:text-lg text-white/90 leading-relaxed mb-8 max-w-xl font-light"
+              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}
+            >
               {theme.heroTagline}
             </p>
 
             <div className="flex gap-3 flex-wrap">
-              <button className="px-7 py-4 rounded-full text-sm font-bold text-white shadow-2xl flex items-center gap-2 hover:scale-[1.03] transition-transform"
-                style={{ background: p.gradient, boxShadow: `0 16px 48px -8px ${p.ring}` }}>
+              <button
+                className="px-7 py-3.5 rounded-full text-sm font-bold text-white shadow-2xl flex items-center gap-2 hover:scale-[1.03] transition-transform"
+                style={{
+                  background: p.gradient,
+                  boxShadow: `0 18px 40px -10px ${p.ring}, 0 4px 12px rgba(0,0,0,0.3)`,
+                }}
+              >
                 <Calendar className="h-4 w-4" /> Book Darshan <ArrowRight className="h-4 w-4" />
               </button>
-              <button className="px-7 py-4 rounded-full text-sm font-semibold text-white flex items-center gap-2 backdrop-blur-md bg-white/10 border border-white/25 hover:bg-white/20 transition-colors">
+              <button className="px-7 py-3.5 rounded-full text-sm font-semibold text-white flex items-center gap-2 backdrop-blur-md bg-white/10 border border-white/30 hover:bg-white/20 transition-colors">
                 <PlayCircle className="h-4 w-4" /> Watch Live Aarti
               </button>
             </div>
           </motion.div>
+        </div>
 
-          {/* Bottom info strip — glassmorphic */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.8 }}
-            className="mt-12 md:mt-16 grid grid-cols-2 md:grid-cols-4 gap-px rounded-2xl overflow-hidden backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl"
-          >
+        {/* Bottom info strip — glassmorphic, anchored */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          className="absolute bottom-6 left-6 right-6 z-10 max-w-6xl mx-auto"
+        >
+          <div className="grid grid-cols-2 md:grid-cols-4 rounded-2xl overflow-hidden backdrop-blur-2xl bg-black/30 border border-white/15 shadow-2xl divide-x divide-white/10">
             {[
               { l: "Next Darshan", v: "6:00 AM", s: "Tomorrow" },
               { l: "Today's Seva", v: "Suprabhatam", s: "₹300" },
               { l: "Festival", v: "Brahmotsavam", s: "in 12 days" },
-              { l: "Devotees Today", v: "48,237", s: "Live count" },
-            ].map(item => (
-              <div key={item.l} className="bg-black/20 px-5 py-4">
-                <div className="text-[10px] uppercase tracking-[0.18em] text-white/60 font-semibold mb-1">{item.l}</div>
-                <div className="text-lg md:text-xl font-bold text-white leading-tight">{item.v}</div>
-                <div className="text-[11px] mt-0.5" style={{ color: p.brand }}>{item.s}</div>
+              { l: "Devotees Today", v: "48,237", s: "Live now" },
+            ].map((item) => (
+              <div key={item.l} className="px-5 py-4">
+                <div className="text-[10px] uppercase tracking-[0.18em] text-white/60 font-semibold mb-1">
+                  {item.l}
+                </div>
+                <div className="text-base md:text-lg font-bold text-white leading-tight truncate">
+                  {item.v}
+                </div>
+                <div className="text-[11px] mt-0.5 font-medium" style={{ color: "#fde047" }}>
+                  {item.s}
+                </div>
               </div>
             ))}
-          </motion.div>
-        </div>
-
-        {/* Scroll indicator */}
-        <motion.div
-          animate={{ y: [0, 6, 0] }} transition={{ duration: 2, repeat: Infinity }}
-          className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/60"
-        >
-          <ChevronDown className="h-5 w-5" />
+          </div>
         </motion.div>
       </section>
 
