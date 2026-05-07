@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Check, Lock, Sparkles, Crown, Globe, Star, Zap, Eye, ArrowUpRight, Palette } from "lucide-react";
+import { Check, Lock, Sparkles, Crown, Globe, Star, Zap, ArrowUpRight, Palette, X, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import TempleWebsitePreview from "@/components/communication/TempleWebsitePreview";
@@ -129,16 +129,13 @@ const TEMPLATES: TemplateDef[] = [
 const tierOrder: Record<string, number> = { seva: 1, shraddha: 2, sampoorna: 3, sanskriti: 4 };
 
 const TempleWebsite = () => {
-  const [selected, setSelected] = useState<TemplateId>(() => {
-    const t = TEMPLATES.find(t => t.planId === currentPlanId);
-    return (t?.id ?? "plus") as TemplateId;
-  });
+  const [openId, setOpenId] = useState<TemplateId | null>(null);
 
   const isUnlocked = (planId: string) =>
     (tierOrder[planId] ?? 99) <= (tierOrder[currentPlanId] ?? 0);
 
-  const active = TEMPLATES.find(t => t.id === selected)!;
-  const activeUnlocked = isUnlocked(active.planId);
+  const active = TEMPLATES.find(t => t.id === openId) || null;
+  const activeUnlocked = active ? isUnlocked(active.planId) : false;
   const currentPlanName = PLANS.find(p => p.id === currentPlanId)?.name ?? currentPlanId;
 
   return (
@@ -192,18 +189,18 @@ const TempleWebsite = () => {
               <Palette className="h-4 w-4 text-primary" />
               <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Choose a template</h2>
             </div>
-            <span className="text-xs text-muted-foreground hidden sm:block">Click any card to preview live</span>
+            <span className="text-xs text-muted-foreground hidden sm:block">Click any card to open the live website</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {TEMPLATES.map((t, idx) => {
               const Icon = t.icon;
               const unlocked = isUnlocked(t.planId);
-              const isActive = t.id === selected;
+              const isActive = t.id === openId;
               return (
                 <motion.button
                   key={t.id}
                   type="button"
-                  onClick={() => setSelected(t.id)}
+                  onClick={() => setOpenId(t.id)}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
@@ -229,15 +226,9 @@ const TempleWebsite = () => {
                     </div>
                     <div className="absolute top-3 right-3">
                       {unlocked ? (
-                        isActive ? (
-                          <Badge className="text-[10px] bg-white text-foreground gap-1 shadow-md">
-                            <Check className="h-2.5 w-2.5" /> Active
-                          </Badge>
-                        ) : (
-                          <Badge className="text-[10px] bg-white/20 text-white border-white/30 backdrop-blur-sm">
-                            Unlocked
-                          </Badge>
-                        )
+                        <Badge className="text-[10px] bg-white/25 text-white border-white/30 backdrop-blur-sm gap-1">
+                          <ExternalLink className="h-2.5 w-2.5" /> Open
+                        </Badge>
                       ) : (
                         <div className="h-7 w-7 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 flex items-center justify-center">
                           <Lock className="h-3.5 w-3.5 text-white" />
@@ -272,97 +263,87 @@ const TempleWebsite = () => {
                         </div>
                       ))}
                     </div>
+                    <div className="mt-3 flex items-center justify-between text-[11px] font-semibold text-primary">
+                      <span>View website</span>
+                      <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    </div>
                   </div>
-
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeUnderline"
-                      className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary"
-                    />
-                  )}
                 </motion.button>
               );
             })}
           </div>
         </div>
+      </div>
 
-        {/* ── Active template detail bar ── */}
+      {/* ─────── Fullscreen website viewer ─────── */}
+      {active && (
         <motion.div
-          key={active.id}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex flex-col"
+          onClick={() => setOpenId(null)}
         >
-          <div className={`h-1 bg-gradient-to-r ${active.accent}`} />
-          <div className="p-5 flex items-start justify-between flex-wrap gap-4">
-            <div className="flex items-start gap-4 flex-1 min-w-[260px]">
-              <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${active.accent} text-white flex items-center justify-center shadow-md shrink-0`}>
-                <active.icon className="h-6 w-6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <h2 className="text-lg font-bold text-foreground">{active.name} template</h2>
-                  <Badge variant="outline" className="text-[10px]">{active.tier}</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">{active.description}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" className="gap-1.5">
-                <Eye className="h-4 w-4" /> Preview
-              </Button>
-              {activeUnlocked ? (
-                <Button
-                  size="sm"
-                  className="gap-1.5 shadow-md"
-                  onClick={() => toast.success(`${active.name} template applied`)}
-                >
-                  <Check className="h-4 w-4" /> Apply template
-                </Button>
-              ) : (
-                <Button
-                  size="sm"
-                  className={`gap-1.5 bg-gradient-to-r ${active.accent} text-white border-0 shadow-md hover:opacity-90`}
-                  onClick={() => toast.info(`Upgrade to ${active.tier} to unlock`)}
-                >
-                  <Crown className="h-4 w-4" /> Upgrade to unlock <ArrowUpRight className="h-3.5 w-3.5" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ── Live preview ── */}
-        <div>
-          <div className="flex items-center justify-between mb-3 px-1">
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1.5">
-                <div className="h-2.5 w-2.5 rounded-full bg-red-400" />
-                <div className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
-              </div>
-              <span className="text-xs text-muted-foreground font-mono ml-2">
-                yourtemple.devalaya.app
-              </span>
-            </div>
-            <span className="text-[11px] text-muted-foreground">Live preview</span>
-          </div>
+          {/* Browser chrome */}
           <div
-            className={`rounded-2xl overflow-hidden border border-border bg-white shadow-2xl shadow-foreground/5 relative ${
-              !activeUnlocked ? "opacity-95" : ""
-            }`}
+            className="flex items-center gap-3 px-4 py-2.5 bg-neutral-900 text-white border-b border-white/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex gap-1.5">
+              <button onClick={() => setOpenId(null)} className="h-3 w-3 rounded-full bg-red-500 hover:scale-110 transition-transform" title="Close" />
+              <div className="h-3 w-3 rounded-full bg-amber-400" />
+              <div className="h-3 w-3 rounded-full bg-emerald-500" />
+            </div>
+            <div className="flex-1 mx-4 max-w-xl">
+              <div className="bg-white/10 rounded-md px-3 py-1 text-xs font-mono text-white/80 flex items-center gap-2">
+                <Globe className="h-3 w-3" />
+                yourtemple.devalaya.app
+                <span className="text-white/40">·</span>
+                <span className="text-[10px] uppercase tracking-wider text-white/50">{active.name} template</span>
+              </div>
+            </div>
+            <Badge className={`bg-gradient-to-r ${active.accent} text-white border-0 text-[10px]`}>{active.tier}</Badge>
+            {activeUnlocked ? (
+              <Button
+                size="sm"
+                className="gap-1.5 h-7 text-xs"
+                onClick={() => { toast.success(`${active.name} template applied`); setOpenId(null); }}
+              >
+                <Check className="h-3.5 w-3.5" /> Apply
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                className={`gap-1.5 h-7 text-xs bg-gradient-to-r ${active.accent} text-white border-0 hover:opacity-90`}
+                onClick={() => toast.info(`Upgrade to ${active.tier} to unlock`)}
+              >
+                <Crown className="h-3.5 w-3.5" /> Upgrade
+              </Button>
+            )}
+            <button
+              onClick={() => setOpenId(null)}
+              className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center transition-colors"
+              title="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Website content */}
+          <div
+            className="flex-1 overflow-y-auto bg-white relative"
+            onClick={(e) => e.stopPropagation()}
           >
             {!activeUnlocked && (
-              <div className="absolute top-4 right-4 z-30">
-                <Badge className="bg-foreground/85 text-background gap-1 backdrop-blur-sm shadow-lg">
-                  <Lock className="h-3 w-3" /> Locked preview
-                </Badge>
+              <div className="sticky top-0 z-30 bg-foreground/90 text-background backdrop-blur-md px-4 py-2 text-xs flex items-center justify-center gap-2">
+                <Lock className="h-3 w-3" />
+                This template is locked. Upgrade to {active.tier} to use it on your live site.
               </div>
             )}
             <TempleWebsitePreview theme={active.theme} />
           </div>
-        </div>
-      </div>
+        </motion.div>
+      )}
     </div>
   );
 };
