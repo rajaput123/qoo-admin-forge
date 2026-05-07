@@ -190,11 +190,22 @@ const FinancePayroll = () => {
               <PlayCircle className="h-3.5 w-3.5" /> Run All ({pendingCount})
             </Button>
           )}
-          {pendingCount > 0 && (
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadBankAdvice(employees.filter(e => e.status !== "Paid"), `pending-${selectedMonth}-${selectedYear}`)}>
-              <FileDown className="h-3.5 w-3.5" /> Bank Advice
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            disabled={employees.length === 0}
+            onClick={() => {
+              const pending = employees.filter(e => e.status !== "Paid");
+              const records = pending.length > 0 ? pending : employees;
+              const label = pending.length > 0
+                ? `pending-${selectedMonth}-${selectedYear}`
+                : `paid-${selectedMonth}-${selectedYear}`;
+              downloadBankAdvice(records, label);
+            }}
+          >
+            <FileDown className="h-3.5 w-3.5" /> Bank Advice
+          </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
             exportToCSV("payroll",
               ["ID", "Employee", "Role", "Department", "Month", "Year", "Basic", "Gross", "Deductions", "Net Pay", "Status", "Days Present", "Total Days"],
@@ -394,8 +405,8 @@ const FinancePayroll = () => {
       </TooltipProvider>
 
       {/* Salary Breakdown Detail Modal */}
-      <Dialog open={!!viewDetail} onOpenChange={() => setViewDetail(null)}>
-        <DialogContent className="sm:max-w-lg">
+       <Dialog open={!!viewDetail} onOpenChange={() => setViewDetail(null)}>
+         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <IndianRupee className="h-5 w-5 text-primary" />
