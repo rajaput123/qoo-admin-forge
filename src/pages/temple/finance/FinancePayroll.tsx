@@ -749,6 +749,44 @@ const FinancePayroll = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bank Advice History — download for any past month */}
+      <Dialog open={showHistory} onOpenChange={setShowHistory}>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="h-5 w-5 text-primary" /> Bank Advice History
+            </DialogTitle>
+            <DialogDescription>Download the bank advice file for any past payroll month.</DialogDescription>
+          </DialogHeader>
+          {historyGroups.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-6 text-center">No payroll history yet. Sync HR for a month to begin.</p>
+          ) : (
+            <div className="space-y-2 py-2">
+              {historyGroups.map(g => {
+                const total = g.records.reduce((s, r) => s + r.netPay, 0);
+                const paid = g.records.filter(r => r.status === "Paid").length;
+                return (
+                  <div key={`${g.year}-${g.month}`} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/40">
+                    <div>
+                      <p className="text-sm font-medium">{g.month} {g.year}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {g.records.length} employee(s) • {paid} paid • {formatCurrency(total)}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => downloadBankAdvice(g.records, `${g.month}-${g.year}`)}>
+                      <FileDown className="h-3.5 w-3.5" /> Download
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowHistory(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
