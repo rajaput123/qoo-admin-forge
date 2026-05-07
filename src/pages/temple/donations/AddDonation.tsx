@@ -183,7 +183,7 @@ const AddDonation = () => {
     let channel: "Cash" | "UPI" | "Bank Transfer" | "Online" | "Cheque" | "In-Kind" = "Cash";
     if (!isCashNature) {
       channel = "In-Kind";
-    } else if (formData.donationType === "Counter") {
+    } else {
       channel = formData.paymentMode;
     }
 
@@ -539,23 +539,6 @@ const AddDonation = () => {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Payment Mode *</Label>
-                      <Select 
-                        value={formData.paymentMode} 
-                        onValueChange={(v: any) => setFormData({ ...formData, paymentMode: v })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Cash">Cash</SelectItem>
-                          <SelectItem value="UPI">UPI</SelectItem>
-                          <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                          <SelectItem value="Cheque">Cheque</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </div>
                 )}
 
@@ -590,6 +573,48 @@ const AddDonation = () => {
                     </Select>
                   </div>
                 )}
+
+              {/* Payment Mode — shown for ALL donation types when Cash nature */}
+              {formData.donationNature === "Cash" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="space-y-2">
+                    <Label>Payment Mode *</Label>
+                    <Select
+                      value={formData.paymentMode}
+                      onValueChange={(v: any) => setFormData({ ...formData, paymentMode: v, paymentReference: v === "Cash" ? "" : formData.paymentReference })}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Cash">Cash</SelectItem>
+                        <SelectItem value="UPI">UPI</SelectItem>
+                        <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                        <SelectItem value="Online">Online (Card / Net Banking)</SelectItem>
+                        <SelectItem value="Cheque">Cheque / DD</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {formData.paymentMode !== "Cash" && (
+                    <div className="space-y-2">
+                      <Label>
+                        {formData.paymentMode === "UPI" && "UPI Reference / Txn ID *"}
+                        {formData.paymentMode === "Bank Transfer" && "UTR / NEFT Reference *"}
+                        {formData.paymentMode === "Online" && "Transaction / Approval Code *"}
+                        {formData.paymentMode === "Cheque" && "Cheque Number *"}
+                      </Label>
+                      <Input
+                        placeholder={
+                          formData.paymentMode === "UPI" ? "e.g. 4XXXXXXXXXXX" :
+                          formData.paymentMode === "Bank Transfer" ? "e.g. SBIN0XXXXXXXX" :
+                          formData.paymentMode === "Online" ? "e.g. last 4 digits / approval code" :
+                          "e.g. 123456 — Bank, Date"
+                        }
+                        value={formData.paymentReference}
+                        onChange={(e) => setFormData({ ...formData, paymentReference: e.target.value })}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               </div>
             </div>
