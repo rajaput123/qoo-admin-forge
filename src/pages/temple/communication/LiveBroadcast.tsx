@@ -13,7 +13,7 @@ import {
   Radio, Calendar as CalendarIcon, Sparkles, Repeat, Smartphone, Cctv, Camera, Webcam, MonitorPlay,
   Wifi, Battery, QrCode, Copy, CheckCircle2, AlertTriangle, ArrowLeft, ArrowRight, Play,
   Mic, Video as VideoIcon, Signal, Gauge, ImagePlus, MessageSquare, HandCoins, Bell, CircleDot,
-  Users, Clock, Square, RefreshCw, MicOff, Flag, Heart
+  Users, Clock, Square, RefreshCw, MicOff, Flag, Heart, Layout, Building2, TrendingUp
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -330,17 +330,25 @@ const CctvSetup = () => (
 
 /* -------------------- Configure -------------------- */
 
-const ConfigureStep = ({ schedule, setSchedule, isSchedule }: { schedule: Date | undefined; setSchedule: (d: Date | undefined) => void; isSchedule: boolean }) => (
+const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
+
+const ConfigureStep = ({ schedule, setSchedule, type }: { schedule: Date | undefined; setSchedule: (d: Date | undefined) => void; type: StreamType | null }) => {
+  const isSchedule = type === "schedule";
+  const isRecurring = type === "recurring";
+  const isFestival = type === "festival";
+  const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5, 6, 0]);
+  const toggleDay = (d: number) => setDays(p => p.includes(d) ? p.filter(x => x !== d) : [...p, d]);
+  return (
   <div className="grid lg:grid-cols-3 gap-6">
     <Card className="lg:col-span-2 rounded-3xl">
       <CardContent className="p-6 space-y-5">
         <div>
-          <h2 className="text-xl font-bold">Stream details</h2>
+          <h2 className="text-xl font-bold">{isFestival ? "Festival stream details" : "Stream details"}</h2>
           <p className="text-sm text-muted-foreground">These help devotees find and trust your broadcast.</p>
         </div>
         <div>
           <Label>Stream Title</Label>
-          <Input placeholder="Sandhya Aarti — Live from Garbhagriha" className="h-11 rounded-xl" />
+          <Input placeholder={isFestival ? "Maha Shivaratri — Grand Live Darshan" : "Sandhya Aarti — Live from Garbhagriha"} className="h-11 rounded-xl" />
         </div>
         <div>
           <Label>Description</Label>
@@ -362,6 +370,57 @@ const ConfigureStep = ({ schedule, setSchedule, isSchedule }: { schedule: Date |
             <div className="text-center"><ImagePlus className="h-7 w-7 mx-auto opacity-50" /><p className="text-sm mt-1">Drop image or click to upload</p></div>
           </div>
         </div>
+        {isFestival && (
+          <div className="space-y-4 pt-2 border-t">
+            <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-rose-500" /><h3 className="font-bold">Festival mode</h3></div>
+            <div>
+              <Label>Event banner text</Label>
+              <Input placeholder="Maha Shivaratri 2026 · Live from Sanctum" className="h-11 rounded-xl" />
+            </div>
+            <div>
+              <Label className="mb-2 block">Multi-camera layout</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { id: "single", label: "Single", grid: "grid-cols-1" },
+                  { id: "split", label: "Split (2)", grid: "grid-cols-2" },
+                  { id: "quad", label: "Quad (4)", grid: "grid-cols-2 grid-rows-2" },
+                ].map((l, i) => (
+                  <button key={l.id} className={cn("rounded-2xl border-2 p-3 text-left transition-all", i === 1 ? "border-rose-500 bg-rose-50" : "border-muted hover:border-rose-200")}>
+                    <div className={cn("grid gap-1 aspect-video", l.grid)}>
+                      {Array.from({ length: l.id === "quad" ? 4 : l.id === "split" ? 2 : 1 }).map((_, k) => (
+                        <div key={k} className="bg-gradient-to-br from-amber-400 to-rose-400 rounded" />
+                      ))}
+                    </div>
+                    <div className="text-xs font-semibold mt-2">{l.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <Label>Sponsor logos</Label>
+              <div className="mt-1 rounded-2xl border-2 border-dashed border-rose-200 p-4 grid grid-cols-4 gap-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="aspect-square rounded-xl bg-rose-50 grid place-items-center text-xs text-rose-400 font-medium">Logo {i}</div>
+                ))}
+                <button className="aspect-square rounded-xl border-2 border-dashed border-rose-300 grid place-items-center text-rose-500 hover:bg-rose-50">
+                  <ImagePlus className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-gradient-to-r from-amber-50 to-rose-50 border border-rose-100 p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-rose-500 grid place-items-center text-white"><TrendingUp className="h-5 w-5" /></div>
+              <div className="flex-1"><div className="text-sm font-semibold">High-traffic mode</div><div className="text-xs text-muted-foreground">Auto-scale for 50,000+ concurrent devotees</div></div>
+              <Switch defaultChecked />
+            </div>
+            <div className="flex items-center justify-between rounded-2xl border p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 grid place-items-center"><HandCoins className="h-5 w-5" /></div>
+                <div><div className="text-sm font-semibold">Donation highlights</div><div className="text-xs text-muted-foreground">Show top donors live on screen</div></div>
+              </div>
+              <Switch defaultChecked />
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
     <div className="space-y-5">
@@ -402,16 +461,50 @@ const ConfigureStep = ({ schedule, setSchedule, isSchedule }: { schedule: Date |
               <div><Label>Start time</Label><Input type="time" defaultValue="06:00" className="h-11 rounded-xl" /></div>
               <div><Label>Duration</Label><Input defaultValue="45 min" className="h-11 rounded-xl" /></div>
             </div>
-            <div className="flex items-center justify-between pt-1">
-              <div><div className="text-sm font-medium">Repeat daily</div><div className="text-xs text-muted-foreground">Stream every day at this time</div></div>
-              <Switch />
+          </CardContent>
+        </Card>
+      )}
+      {isRecurring && (
+        <Card className="rounded-3xl">
+          <CardContent className="p-6 space-y-4">
+            <h3 className="font-bold flex items-center gap-2"><Repeat className="h-4 w-4 text-orange-600" />Recurrence</h3>
+            <div>
+              <Label className="mb-2 block">Repeat on</Label>
+              <div className="flex gap-1.5">
+                {DAYS.map((d, i) => {
+                  const on = days.includes(i);
+                  return (
+                    <button key={i} onClick={() => toggleDay(i)} className={cn("h-10 w-10 rounded-full text-sm font-semibold transition-all", on ? "bg-orange-500 text-white shadow-md" : "bg-muted text-muted-foreground hover:bg-orange-100")}>{d}</button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label>Start time</Label><Input type="time" defaultValue="06:00" className="h-11 rounded-xl" /></div>
+              <div><Label>Duration</Label><Input defaultValue="45 min" className="h-11 rounded-xl" /></div>
+            </div>
+            <div>
+              <Label>Starts from</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start rounded-xl h-11 mt-1">
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    {schedule ? format(schedule, "PPP") : "Today"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={schedule} onSelect={setSchedule} initialFocus className={cn("p-3 pointer-events-auto")} /></PopoverContent>
+              </Popover>
+            </div>
+            <div className="rounded-xl bg-orange-50 border border-orange-100 p-3 text-xs text-orange-700">
+              Will auto-stream {days.length} day{days.length !== 1 ? "s" : ""} a week at the set time.
             </div>
           </CardContent>
         </Card>
       )}
     </div>
   </div>
-);
+  );
+};
 
 /* -------------------- Test -------------------- */
 
@@ -549,6 +642,7 @@ export default function LiveBroadcast() {
   const [live, setLive] = useState(false);
 
   const isSchedule = type === "schedule" || type === "recurring";
+  const isFestival = type === "festival";
 
   const next = () => {
     if (step === 1 && !source) { toast.error("Please select a camera source"); return; }
@@ -602,15 +696,15 @@ export default function LiveBroadcast() {
         <div className="animate-fade-in">
           {step === 0 && <TypeStep onPick={(t) => { setType(t); setStep(1); }} />}
           {step === 1 && <CameraStep source={source} setSource={setSource} />}
-          {step === 2 && <ConfigureStep schedule={schedule} setSchedule={setSchedule} isSchedule={isSchedule} />}
+          {step === 2 && <ConfigureStep schedule={schedule} setSchedule={setSchedule} type={type} />}
           {step === 3 && <TestStep />}
           {step === 4 && (
             <div className="text-center max-w-xl mx-auto py-8">
               <div className="h-24 w-24 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 grid place-items-center mx-auto shadow-2xl shadow-orange-500/40 animate-scale-in">
                 <Play className="h-10 w-10 text-white ml-1" fill="white" />
               </div>
-              <h2 className="text-3xl font-bold mt-6">{isSchedule ? "Ready to schedule" : "You're ready to go live"}</h2>
-              <p className="text-muted-foreground mt-2">{isSchedule ? "Your darshan will be broadcast at the scheduled time." : "Tap below to begin your darshan broadcast. Devotees will be notified instantly."}</p>
+              <h2 className="text-3xl font-bold mt-6">{isSchedule ? "Ready to schedule" : isFestival ? "Festival stream is ready" : "You're ready to go live"}</h2>
+              <p className="text-muted-foreground mt-2">{isSchedule ? "Your darshan will be broadcast at the scheduled time." : isFestival ? "Multi-camera festival broadcast is configured. Begin the grand event when ready." : "Tap below to begin your darshan broadcast. Devotees will be notified instantly."}</p>
               <div className="mt-6 flex justify-center gap-3">
                 <Button variant="outline" onClick={back} className="h-12 rounded-xl px-6"><ArrowLeft className="h-4 w-4 mr-2" />Back</Button>
                 <Button onClick={goLive} className="h-12 rounded-xl px-8 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg shadow-orange-500/30">
