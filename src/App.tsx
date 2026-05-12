@@ -459,15 +459,15 @@ const App = () => {
             </Route>
             {/* PR & Communication Module */}
             <Route path="/temple/communication" element={<CommunicationLayout />}>
-              <Route index element={<Navigate to="/temple/communication/website" replace />} />
+              <Route index element={<ControlCenter />} />
               <Route path="announcements" element={<CommAnnouncements />} />
               <Route path="media" element={<MediaCommunication />} />
               <Route path="broadcast" element={<LiveBroadcast />} />
               <Route path="experience" element={<DevoteeExperience />} />
               <Route path="meetings" element={<PublicMeetings />} />
               <Route path="logs" element={<CommLogsReports />} />
+              <Route path="website" element={<TempleWebsite />} />
             </Route>
-            <Route path="/temple/communication/website" element={<TempleWebsite />} />
             <Route path="/temple/live" element={<TempleHub />} />
             {/* Crowd & Capacity Management Module (Upcoming) */}
             <Route
