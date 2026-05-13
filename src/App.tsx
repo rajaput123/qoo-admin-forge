@@ -246,6 +246,7 @@ import KnowledgeCategories from "./pages/temple/knowledge/Categories";
 import KnowledgeOnboarding from "./pages/temple/knowledge/Onboarding";
 import KnowledgeLibrary from "./pages/temple/knowledge/Library";
 import KnowledgeChatAssist from "./pages/temple/knowledge/ChatAssist";
+import HelpSupport from "./pages/temple/HelpSupport";
 
 const queryClient = new QueryClient();
 
