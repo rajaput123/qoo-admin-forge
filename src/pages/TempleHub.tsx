@@ -297,7 +297,7 @@ const TempleHub = () => {
                   <Settings className="h-4 w-4" />
                   Temple Settings
                 </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2">
+                <DropdownMenuItem onClick={() => navigate("/temple/help")} className="gap-2">
                   <HelpCircle className="h-4 w-4" />
                   Help & Support
                 </DropdownMenuItem>
