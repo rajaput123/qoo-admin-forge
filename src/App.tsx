@@ -470,6 +470,7 @@ const App = () => {
               <Route path="website" element={<TempleWebsite />} />
             </Route>
             <Route path="/temple/live" element={<TempleHub />} />
+            <Route path="/temple/help" element={<HelpSupport />} />
             {/* Crowd & Capacity Management Module (Upcoming) */}
             <Route
               path="/temple/crowd/*"
