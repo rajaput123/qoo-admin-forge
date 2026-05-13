@@ -162,6 +162,9 @@ const allModules = [
   { id: "settings", title: "Settings", icon: Settings, enabled: true, path: "/temple/settings",
     description: "Temple profile, subscription, users", category: "growth",
     gradient: "from-[hsl(220,10%,50%)] to-[hsl(220,10%,38%)]", bgTint: "bg-[hsl(220,8%,96%)]" },
+  { id: "help", title: "Help & Support", icon: HelpCircle, enabled: true, path: "/temple/help",
+    description: "FAQs, contact support and guides", category: "growth",
+    gradient: "from-[hsl(195,60%,45%)] to-[hsl(195,55%,33%)]", bgTint: "bg-[hsl(195,50%,95%)]" },
 ];
 
 const containerVariants = {
@@ -294,7 +297,7 @@ const TempleHub = () => {
                   <Settings className="h-4 w-4" />
                   Temple Settings
                 </DropdownMenuItem>
-                <DropdownMenuItem className="gap-2">
+                <DropdownMenuItem onClick={() => navigate("/temple/help")} className="gap-2">
                   <HelpCircle className="h-4 w-4" />
                   Help & Support
                 </DropdownMenuItem>
