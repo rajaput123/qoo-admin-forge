@@ -270,14 +270,21 @@ const SubscriptionBilling = () => {
                       )}
                     </div>
                     {getOriginalPrice(plan) && (
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         <span className="text-xs text-muted-foreground line-through">{getOriginalPrice(plan)}/mo</span>
-                        <span className="text-[10px] font-semibold text-[hsl(142,50%,42%)]">15% off</span>
+                        <Badge className="bg-[hsl(142,50%,42%)]/10 text-[hsl(142,50%,32%)] border-0 text-[10px] px-1.5 py-0 h-4 font-semibold">
+                          Save ₹{getSavings(plan)?.monthly.toLocaleString("en-IN")}/mo
+                        </Badge>
                       </div>
                     )}
                     {plan.price > 0 && (
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         {getAnnualTotal(plan)} billed {annual ? "annually" : "monthly"}
+                      </p>
+                    )}
+                    {annual && getSavings(plan) && (
+                      <p className="text-[11px] font-semibold text-[hsl(142,50%,32%)] mt-0.5">
+                        You save ₹{getSavings(plan)?.yearly.toLocaleString("en-IN")} per year
                       </p>
                     )}
                     {plan.price === 0 && (
