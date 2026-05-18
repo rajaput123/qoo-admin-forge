@@ -101,6 +101,13 @@ const SubscriptionBilling = () => {
     return `₹${plan.price.toLocaleString("en-IN")}`;
   };
 
+  const getSavings = (plan: Plan) => {
+    if (!annual || plan.price === 0) return null;
+    const monthlySaving = plan.price - Math.round(plan.price * (1 - annualDiscount));
+    const yearlySaving = monthlySaving * 12;
+    return { monthly: monthlySaving, yearly: yearlySaving };
+  };
+
   const handleSelectPlan = (plan: Plan) => {
     if (plan.id === currentPlanId) return;
     setCheckoutPlan(plan);
