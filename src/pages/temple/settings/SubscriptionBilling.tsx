@@ -101,6 +101,13 @@ const SubscriptionBilling = () => {
     return `₹${plan.price.toLocaleString("en-IN")}`;
   };
 
+  const getSavings = (plan: Plan) => {
+    if (!annual || plan.price === 0) return null;
+    const monthlySaving = plan.price - Math.round(plan.price * (1 - annualDiscount));
+    const yearlySaving = monthlySaving * 12;
+    return { monthly: monthlySaving, yearly: yearlySaving };
+  };
+
   const handleSelectPlan = (plan: Plan) => {
     if (plan.id === currentPlanId) return;
     setCheckoutPlan(plan);
@@ -263,14 +270,21 @@ const SubscriptionBilling = () => {
                       )}
                     </div>
                     {getOriginalPrice(plan) && (
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         <span className="text-xs text-muted-foreground line-through">{getOriginalPrice(plan)}/mo</span>
-                        <span className="text-[10px] font-semibold text-[hsl(142,50%,42%)]">15% off</span>
+                        <Badge className="bg-[hsl(142,50%,42%)]/10 text-[hsl(142,50%,32%)] border-0 text-[10px] px-1.5 py-0 h-4 font-semibold">
+                          Save ₹{getSavings(plan)?.monthly.toLocaleString("en-IN")}/mo
+                        </Badge>
                       </div>
                     )}
                     {plan.price > 0 && (
                       <p className="text-[11px] text-muted-foreground mt-0.5">
                         {getAnnualTotal(plan)} billed {annual ? "annually" : "monthly"}
+                      </p>
+                    )}
+                    {annual && getSavings(plan) && (
+                      <p className="text-[11px] font-semibold text-[hsl(142,50%,32%)] mt-0.5">
+                        You save ₹{getSavings(plan)?.yearly.toLocaleString("en-IN")} per year
                       </p>
                     )}
                     {plan.price === 0 && (
@@ -453,23 +467,42 @@ const SubscriptionBilling = () => {
                 </div>
 
                 {/* Order summary */}
-                <div className="px-6 py-4 border-b border-border">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-foreground">{checkoutPlan.name} Plan</span>
-                    <span className="text-sm font-bold text-foreground">₹{price.toLocaleString("en-IN")}/mo</span>
-                  </div>
+                <div className="px-6 py-4 border-b border-border space-y-2">
                   <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-foreground">{checkoutPlan.name} Plan</span>
                     <span className="text-xs text-muted-foreground">Billed {annual ? "annually" : "monthly"}</span>
-                    <span className="text-xs text-muted-foreground">{totalLabel}</span>
                   </div>
-                  {annual && (
-                    <div className="mt-2 flex items-center gap-1.5">
-                      <Badge className="bg-[hsl(142,50%,42%)] text-white border-0 text-[10px]">
-                        Saving 15%
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground line-through">
-                        ₹{(checkoutPlan.price * 12).toLocaleString("en-IN")}/yr
-                      </span>
+                  {annual ? (
+                    <>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Subtotal</span>
+                        <span className="text-foreground line-through">
+                          ₹{(checkoutPlan.price * 12).toLocaleString("en-IN")}/yr
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-[hsl(142,50%,32%)] font-medium flex items-center gap-1.5">
+                          Discount
+                          <Badge className="bg-[hsl(142,50%,42%)]/10 text-[hsl(142,50%,32%)] border-0 text-[10px] px-1.5 py-0 h-4">
+                            15% off
+                          </Badge>
+                        </span>
+                        <span className="text-[hsl(142,50%,32%)] font-semibold">
+                          − ₹{((checkoutPlan.price * 12) - Math.round(checkoutPlan.price * 12 * (1 - annualDiscount))).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-border">
+                        <span className="text-sm font-bold text-foreground">Total</span>
+                        <div className="text-right">
+                          <div className="text-base font-bold text-foreground">{totalLabel}</div>
+                          <div className="text-[10px] text-muted-foreground">≈ ₹{price.toLocaleString("en-IN")}/mo</div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-sm font-bold text-foreground">Total</span>
+                      <span className="text-base font-bold text-foreground">₹{price.toLocaleString("en-IN")}/mo</span>
                     </div>
                   )}
                 </div>
