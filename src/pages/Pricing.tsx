@@ -407,6 +407,18 @@ const PlanCard = ({
                         </Tooltip>
                       </div>
 
+                      {/* Original price + savings (inline) */}
+                      {(plan.discountPercent ?? 0) > 0 && breakdown.perMonth < plan.price && (
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                          <span className="text-sm text-muted-foreground line-through">
+                            ₹{plan.price.toLocaleString("en-IN")}/month
+                          </span>
+                          <Badge className="bg-success/10 text-success border border-success/30 text-[10px] font-semibold px-1.5 py-0 h-5">
+                            Save ₹{(plan.price - breakdown.perMonth).toLocaleString("en-IN")}/mo
+                          </Badge>
+                        </div>
+                      )}
+
                       <div className="text-xs text-muted-foreground mt-1.5">
                         {effectiveCycle === "annual" ? (
                           <>
@@ -416,7 +428,15 @@ const PlanCard = ({
                             </span>{" "}
                             / year · incl. {plan.gstPercent ?? 0}% GST
                             {(plan.discountPercent ?? 0) > 0 && (
-                              <> · {plan.discountPercent}% off</>
+                              <>
+                                {" "}·{" "}
+                                <span className="line-through">
+                                  ₹{(plan.price * 12).toLocaleString("en-IN")}
+                                </span>{" "}
+                                <span className="font-semibold text-success">
+                                  −₹{((plan.price * 12) - breakdown.total).toLocaleString("en-IN")} ({plan.discountPercent}% off)
+                                </span>
+                              </>
                             )}
                           </>
                         ) : (
