@@ -170,6 +170,14 @@ const GuidedTour = ({ steps, storageKey, autoStart = true, startSignal = 0, onCl
           <h3 className="text-base font-semibold text-foreground mb-1">{step.title}</h3>
           <p className="text-sm text-muted-foreground mb-4">{step.description}</p>
 
+          {/* Progress bar (works for any number of steps) */}
+          <div className="h-1 w-full bg-muted rounded-full overflow-hidden mb-3">
+            <div
+              className="h-full bg-primary transition-all"
+              style={{ width: `${((index + 1) / steps.length) * 100}%` }}
+            />
+          </div>
+
           <div className="flex items-center justify-between gap-2">
             <Button
               variant="ghost"
@@ -181,24 +189,24 @@ const GuidedTour = ({ steps, storageKey, autoStart = true, startSignal = 0, onCl
               <ArrowLeft className="h-3.5 w-3.5" />
               Back
             </Button>
-            <div className="flex items-center gap-1">
-              {steps.map((_, i) => (
-                <span
-                  key={i}
-                  className={`h-1.5 w-1.5 rounded-full ${i === index ? "bg-primary" : "bg-muted-foreground/30"}`}
-                />
-              ))}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={finish}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Skip
+              </button>
+              {index < steps.length - 1 ? (
+                <Button size="sm" onClick={() => setIndex((i) => i + 1)} className="gap-1">
+                  Next
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              ) : (
+                <Button size="sm" onClick={finish} className="gap-1">
+                  Finish
+                </Button>
+              )}
             </div>
-            {index < steps.length - 1 ? (
-              <Button size="sm" onClick={() => setIndex((i) => i + 1)} className="gap-1">
-                Next
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-            ) : (
-              <Button size="sm" onClick={finish} className="gap-1">
-                Finish
-              </Button>
-            )}
           </div>
         </motion.div>
       </motion.div>
