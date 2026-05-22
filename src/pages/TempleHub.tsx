@@ -213,23 +213,128 @@ const TempleHub = () => {
     },
     {
       selector: '[data-tour-module="temple-structure"]',
-      title: "Set up your temple structure",
-      description: "Define shrines, halls, counters and sacred spaces — the foundation of everything else.",
+      title: "1. Temple Structure",
+      description: "Start here. Define main temple, child temples, sacred shrines, halls, rooms and counters. This is the foundation every other module references.",
     },
     {
       selector: '[data-tour-module="offerings"]',
-      title: "Configure offerings & sevas",
-      description: "Add rituals, darshan slots and pricing devotees can book.",
+      title: "2. Offerings & Sevas",
+      description: "Configure rituals, darshan and sevas. Assign priests, set pricing (Free/Paid), schedule slots and pick frequency (daily, weekly, on-demand).",
+    },
+    {
+      selector: '[data-tour-module="bookings"]',
+      title: "3. Bookings",
+      description: "Manage online and counter bookings. Use the cart for counter sevas, then track attendance and reports here.",
     },
     {
       selector: '[data-tour-module="donations"]',
-      title: "Enable donations",
-      description: "Track donors, issue 80G receipts and monitor your funds in one place.",
+      title: "4. Donations",
+      description: "Record cash, online and in-kind donations. Receipts and 80G tax certificates are auto-generated and tagged to the right Fund.",
+    },
+    {
+      selector: '[data-tour-module="prasadam-kitchen"]',
+      title: "5. Prasadam & Kitchen",
+      description: "Run kitchen operations and Annadanam. Prasadam is distributed only after the linked seva is marked complete.",
+    },
+    {
+      selector: '[data-tour-module="crowd"]',
+      title: "6. Crowd Management",
+      description: "Issue tokens, monitor queues in real time and manage darshan slots and check-ins.",
+    },
+    {
+      selector: '[data-tour-module="devotees"]',
+      title: "7. Devotees",
+      description: "Maintain a unified devotee database, volunteer groups, engagement history and donation history.",
+    },
+    {
+      selector: '[data-tour-module="vip-devotee"]',
+      title: "8. VIP Devotees",
+      description: "Track VIP devotees, assign levels, manage protocol services and view activity reports.",
+    },
+    {
+      selector: '[data-tour-module="people-hr"]',
+      title: "9. People & HR",
+      description: "Employees, attendance with Temple Rules engine, shifts, leave approvals and payroll. Batch payouts post directly to the ledger.",
+    },
+    {
+      selector: '[data-tour-module="finance"]',
+      title: "10. Finance & Accounts",
+      description: "Double-entry accounting hub: income, expenses, vouchers, funds, reconciliation and bank accounts. All transactions are immutable and auto-tagged.",
+    },
+    {
+      selector: '[data-tour-module="suppliers"]',
+      title: "11. Inventory",
+      description: "Track stock, suppliers and purchase orders. In-kind donations and kitchen consumption flow through here automatically.",
+    },
+    {
+      selector: '[data-tour-module="tasks"]',
+      title: "12. Tasks",
+      description: "Coordinate daily operations. Create one-off or scheduled tasks, assign owners and track completion.",
+    },
+    {
+      selector: '[data-tour-module="freelancer"]',
+      title: "13. Freelancers",
+      description: "Manage external priests/artisans with GST, TDS percentages and billing cycles. Payments sync to Finance.",
+    },
+    {
+      selector: '[data-tour-module="communication"]',
+      title: "14. Communication",
+      description: "Send announcements, SMS and notifications to devotees, volunteers and staff. Manage your temple website here too.",
+    },
+    {
+      selector: '[data-tour-module="assets"]',
+      title: "15. Assets",
+      description: "Register temple assets, schedule maintenance and track depreciation.",
+    },
+    {
+      selector: '[data-tour-module="events"]',
+      title: "16. Events",
+      description: "Create events (Published → Ongoing → Completed), link sevas, collect event donations and log expenses against the event.",
+    },
+    {
+      selector: '[data-tour-module="projects"]',
+      title: "17. Projects",
+      description: "Run strategic projects with milestones, virtual entries and date-clamped progress. 'Raised' tracks received donations only.",
+    },
+    {
+      selector: '[data-tour-module="branches"]',
+      title: "18. Branches",
+      description: "If your temple operates across locations, manage each branch's dashboard, reports and settings here.",
+    },
+    {
+      selector: '[data-tour-module="institution"]',
+      title: "19. Institutions",
+      description: "Manage trust entities — schools, hospitals, goshalas — linked to your temple.",
+    },
+    {
+      selector: '[data-tour-module="feedback"]',
+      title: "20. Feedback",
+      description: "Collect devotee feedback and ratings; review sentiment analysis to improve services.",
+    },
+    {
+      selector: '[data-tour-module="knowledge"]',
+      title: "21. Knowledge Base",
+      description: "Store SOPs, documents and onboarding guides. Use Chat Assist to search them instantly.",
+    },
+    {
+      selector: '[data-tour-module="reports"]',
+      title: "22. Reports Center",
+      description: "Consolidated reports across every module with unified period filters. Drill into details from the sidebar.",
+    },
+    {
+      selector: '[data-tour-module="planner"]',
+      title: "23. Planner",
+      description: "Calendar view combining events, sevas, shifts and Panchang timings.",
     },
     {
       selector: '[data-tour-module="settings"]',
-      title: "Finish your setup",
-      description: "Use Settings any time to update temple profile, users and subscription.",
+      title: "24. Settings",
+      description: "Temple profile, users & roles, permission matrix, subscription and module toggles. Finish onboarding here.",
+    },
+    {
+      selector: '[data-tour-module="help"]',
+      title: "25. Help & Support",
+      description: "FAQs, video guides and direct support. You can re-launch this tour any time from the 'Take a tour' button above.",
     },
   ];
 
