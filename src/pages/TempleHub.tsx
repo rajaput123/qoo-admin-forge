@@ -649,6 +649,13 @@ const TempleHub = () => {
 
       <DemoVideoModal open={helpVideoOpen} onOpenChange={setHelpVideoOpen} />
 
+      {/* Guided tour overlay for first-time admins */}
+      <GuidedTour
+        steps={tourSteps}
+        storageKey="templeHubTourDone"
+        onClose={() => localStorage.setItem("templeSetupComplete", "1")}
+      />
+
       {/* Upgrade Modal */}
       {selectedLockedModule && (
         <UpgradeModal
