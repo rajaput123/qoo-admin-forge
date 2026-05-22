@@ -25,11 +25,22 @@ const GuidedTour = ({ steps, storageKey, autoStart = true, onClose }: GuidedTour
     if (!autoStart) return;
     const pending = typeof window !== "undefined" && localStorage.getItem("templeHubTourPending") === "1";
     const done = storageKey && typeof window !== "undefined" && localStorage.getItem(storageKey) === "1";
-    if (pending && !done) {
+    // Auto-start on first visit (pending flag from Welcome page) OR when tour hasn't been completed yet.
+    if (!done && (pending || true)) {
       setActive(true);
-      localStorage.removeItem("templeHubTourPending");
+      if (pending) localStorage.removeItem("templeHubTourPending");
     }
   }, [autoStart, storageKey]);
+
+  // Expose a global trigger so a button anywhere can (re)start the tour.
+  useEffect(() => {
+    const handler = () => {
+      setIndex(0);
+      setActive(true);
+    };
+    window.addEventListener("start-guided-tour", handler);
+    return () => window.removeEventListener("start-guided-tour", handler);
+  }, []);
 
   useEffect(() => {
     if (!active) return;
