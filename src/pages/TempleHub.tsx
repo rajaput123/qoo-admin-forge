@@ -199,6 +199,7 @@ const TempleHub = () => {
   const [helpVideoOpen, setHelpVideoOpen] = useState(false);
   const [iconStyle, setIconStyle] = useState<"glass" | "filled">("glass");
   const [activeModuleId, setActiveModuleId] = useState<string | null>(null);
+  const [tourStartSignal, setTourStartSignal] = useState(0);
 
   // Upgrade modal state
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
@@ -415,7 +416,7 @@ const TempleHub = () => {
                 <button
                   onClick={() => {
                     localStorage.removeItem("templeHubTourDone");
-                    window.dispatchEvent(new Event("start-guided-tour"));
+                    setTourStartSignal((signal) => signal + 1);
                   }}
                   className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
                 >
@@ -794,6 +795,7 @@ const TempleHub = () => {
       <GuidedTour
         steps={tourSteps}
         storageKey="templeHubTourDone"
+        startSignal={tourStartSignal}
         onClose={() => localStorage.setItem("templeSetupComplete", "1")}
       />
 
