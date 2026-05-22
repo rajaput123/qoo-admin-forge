@@ -39,6 +39,7 @@ import {
   Lock,
   Zap,
   ArrowRight,
+  Compass,
 } from "lucide-react";
 import DemoVideoModal from "@/components/DemoVideoModal";
 import UpgradeModal from "@/components/UpgradeModal";
