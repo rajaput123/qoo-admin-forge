@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import DemoVideoModal from "@/components/DemoVideoModal";
 import UpgradeModal from "@/components/UpgradeModal";
+import GuidedTour, { type TourStep } from "@/components/GuidedTour";
 import { isModuleAccessible, getMinimumPlan, formatPrice } from "@/lib/plans";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -201,6 +202,35 @@ const TempleHub = () => {
   // Upgrade modal state
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectedLockedModule, setSelectedLockedModule] = useState<typeof allModules[0] | null>(null);
+
+  // Guided tour steps highlight key modules for first-time admins
+  const tourSteps: TourStep[] = [
+    {
+      selector: '[data-tour="profile-menu"]',
+      title: "Your profile & settings",
+      description: "Manage your account, temple settings, help and sign out from here.",
+    },
+    {
+      selector: '[data-tour-module="temple-structure"]',
+      title: "Set up your temple structure",
+      description: "Define shrines, halls, counters and sacred spaces — the foundation of everything else.",
+    },
+    {
+      selector: '[data-tour-module="offerings"]',
+      title: "Configure offerings & sevas",
+      description: "Add rituals, darshan slots and pricing devotees can book.",
+    },
+    {
+      selector: '[data-tour-module="donations"]',
+      title: "Enable donations",
+      description: "Track donors, issue 80G receipts and monitor your funds in one place.",
+    },
+    {
+      selector: '[data-tour-module="settings"]',
+      title: "Finish your setup",
+      description: "Use Settings any time to update temple profile, users and subscription.",
+    },
+  ];
 
   const currentPlanId = tenantData.planId;
 
