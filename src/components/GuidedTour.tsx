@@ -13,10 +13,11 @@ interface GuidedTourProps {
   steps: TourStep[];
   storageKey?: string; // when set, persists "done" state
   autoStart?: boolean;
+  startSignal?: number;
   onClose?: () => void;
 }
 
-const GuidedTour = ({ steps, storageKey, autoStart = true, onClose }: GuidedTourProps) => {
+const GuidedTour = ({ steps, storageKey, autoStart = true, startSignal = 0, onClose }: GuidedTourProps) => {
   const [active, setActive] = useState(false);
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -31,6 +32,12 @@ const GuidedTour = ({ steps, storageKey, autoStart = true, onClose }: GuidedTour
       if (pending) localStorage.removeItem("templeHubTourPending");
     }
   }, [autoStart, storageKey]);
+
+  useEffect(() => {
+    if (startSignal <= 0) return;
+    setIndex(0);
+    setActive(true);
+  }, [startSignal]);
 
   // Expose a global trigger so a button anywhere can (re)start the tour.
   useEffect(() => {
