@@ -26,7 +26,9 @@ const Login = () => {
     if (role === "super-admin") {
       navigate("/temple-hub");
     } else {
-      navigate("/temple-hub");
+      // Show Welcome page until setup is complete
+      const setupDone = typeof window !== "undefined" && localStorage.getItem("templeSetupComplete") === "1";
+      navigate(setupDone ? "/temple-hub" : "/welcome");
     }
   };
 
