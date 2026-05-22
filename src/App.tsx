@@ -11,6 +11,7 @@ import Pricing from "./pages/Pricing";
 import TempleHub from "./pages/TempleHub";
 import ApplicationStatus from "./pages/ApplicationStatus";
 import FirstLoginSetup from "./pages/FirstLoginSetup";
+import Welcome from "./pages/Welcome";
 import OutOfCreditScreen from "./pages/OutOfCreditScreen";
 import UpcomingModule from "./pages/temple/UpcomingModule";
 import Profile from "./pages/Profile";
@@ -268,6 +269,7 @@ const App = () => {
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/application-status" element={<ApplicationStatus />} />
             <Route path="/temple-welcome" element={<FirstLoginSetup />} />
+            <Route path="/welcome" element={<Welcome />} />
             <Route path="/out-of-credits" element={<OutOfCreditScreen />} />
 
             {/* Temple Admin Routes */}

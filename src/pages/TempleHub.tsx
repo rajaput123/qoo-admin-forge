@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import DemoVideoModal from "@/components/DemoVideoModal";
 import UpgradeModal from "@/components/UpgradeModal";
+import GuidedTour, { type TourStep } from "@/components/GuidedTour";
 import { isModuleAccessible, getMinimumPlan, formatPrice } from "@/lib/plans";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -202,6 +203,35 @@ const TempleHub = () => {
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectedLockedModule, setSelectedLockedModule] = useState<typeof allModules[0] | null>(null);
 
+  // Guided tour steps highlight key modules for first-time admins
+  const tourSteps: TourStep[] = [
+    {
+      selector: '[data-tour="profile-menu"]',
+      title: "Your profile & settings",
+      description: "Manage your account, temple settings, help and sign out from here.",
+    },
+    {
+      selector: '[data-tour-module="temple-structure"]',
+      title: "Set up your temple structure",
+      description: "Define shrines, halls, counters and sacred spaces — the foundation of everything else.",
+    },
+    {
+      selector: '[data-tour-module="offerings"]',
+      title: "Configure offerings & sevas",
+      description: "Add rituals, darshan slots and pricing devotees can book.",
+    },
+    {
+      selector: '[data-tour-module="donations"]',
+      title: "Enable donations",
+      description: "Track donors, issue 80G receipts and monitor your funds in one place.",
+    },
+    {
+      selector: '[data-tour-module="settings"]',
+      title: "Finish your setup",
+      description: "Use Settings any time to update temple profile, users and subscription.",
+    },
+  ];
+
   const currentPlanId = tenantData.planId;
 
   const isSuspended = tenantData.status === "suspended";
@@ -276,7 +306,7 @@ const TempleHub = () => {
             {/* Profile Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <button data-tour="profile-menu" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="text-xs font-semibold bg-primary text-primary-foreground">
                       SV
@@ -523,6 +553,7 @@ const TempleHub = () => {
                               whileHover={{ y: -5, transition: { duration: 0.2 } }}
                               whileTap={{ scale: 0.96 }}
                               onClick={(e) => handleModuleClick(module, e)}
+                              data-tour-module={module.id}
                               className={`group flex flex-col items-center text-center focus:outline-none relative py-3 px-1.5 rounded-xl transition-all duration-300 ${
                                 isLocked
                                   ? "bg-card/60 hover:bg-muted/50 opacity-75 hover:opacity-100"
@@ -617,6 +648,13 @@ const TempleHub = () => {
       </main>
 
       <DemoVideoModal open={helpVideoOpen} onOpenChange={setHelpVideoOpen} />
+
+      {/* Guided tour overlay for first-time admins */}
+      <GuidedTour
+        steps={tourSteps}
+        storageKey="templeHubTourDone"
+        onClose={() => localStorage.setItem("templeSetupComplete", "1")}
+      />
 
       {/* Upgrade Modal */}
       {selectedLockedModule && (
