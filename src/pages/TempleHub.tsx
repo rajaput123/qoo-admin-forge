@@ -304,6 +304,41 @@ const TempleHub = () => {
               </TooltipContent>
             </Tooltip>
 
+            {/* Take a tour */}
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("templeHubTourDone");
+                    window.dispatchEvent(new Event("start-guided-tour"));
+                  }}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
+                >
+                  <Compass className="h-3.5 w-3.5" />
+                  Take a tour
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Start the guided tour</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Welcome page */}
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => navigate("/welcome")}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Welcome
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Open the welcome &amp; setup page</p>
+              </TooltipContent>
+            </Tooltip>
+
             {/* Profile Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
