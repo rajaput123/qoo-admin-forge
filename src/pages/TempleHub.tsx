@@ -306,7 +306,7 @@ const TempleHub = () => {
             {/* Profile Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                <button data-tour="profile-menu" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="text-xs font-semibold bg-primary text-primary-foreground">
                       SV
@@ -553,6 +553,7 @@ const TempleHub = () => {
                               whileHover={{ y: -5, transition: { duration: 0.2 } }}
                               whileTap={{ scale: 0.96 }}
                               onClick={(e) => handleModuleClick(module, e)}
+                              data-tour-module={module.id}
                               className={`group flex flex-col items-center text-center focus:outline-none relative py-3 px-1.5 rounded-xl transition-all duration-300 ${
                                 isLocked
                                   ? "bg-card/60 hover:bg-muted/50 opacity-75 hover:opacity-100"
