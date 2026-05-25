@@ -31,7 +31,7 @@ const Welcome = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-6 py-10"
+      className="relative min-h-screen flex items-center justify-center px-6 py-10"
       style={{ background: "linear-gradient(180deg, hsl(30 30% 97%) 0%, hsl(30 20% 92%) 100%)" }}
     >
       <div className="absolute top-4 right-4">
