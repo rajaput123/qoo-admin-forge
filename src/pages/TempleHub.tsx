@@ -413,6 +413,9 @@ const TempleHub = () => {
               </TooltipContent>
             </Tooltip>
 
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
             {/* Take a tour */}
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
