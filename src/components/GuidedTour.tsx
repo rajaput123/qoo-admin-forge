@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLang, t, type LangCode } from "@/lib/i18n";
 
 export interface TourStep {
   selector: string; // CSS selector for the target
   title: string;
   description: string;
+  i18n?: Partial<Record<LangCode, { title: string; description: string }>>;
 }
 
 interface GuidedTourProps {
@@ -18,6 +20,7 @@ interface GuidedTourProps {
 }
 
 const GuidedTour = ({ steps, storageKey, autoStart = true, startSignal = 0, onClose }: GuidedTourProps) => {
+  const [lang] = useLang();
   const [active, setActive] = useState(false);
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
@@ -87,6 +90,9 @@ const GuidedTour = ({ steps, storageKey, autoStart = true, startSignal = 0, onCl
   if (!active) return null;
   const step = steps[index];
   if (!step) return null;
+  const tr = step.i18n?.[lang];
+  const title = tr?.title ?? step.title;
+  const description = tr?.description ?? step.description;
 
   // Position tooltip below the highlighted rect (or center if none)
   const padding = 8;
@@ -155,7 +161,7 @@ const GuidedTour = ({ steps, storageKey, autoStart = true, startSignal = 0, onCl
                 <Sparkles className="h-3.5 w-3.5" />
               </div>
               <span className="text-xs font-medium text-muted-foreground">
-                Step {index + 1} of {steps.length}
+                {t("step_of", lang, { a: index + 1, b: steps.length })}
               </span>
             </div>
             <button
@@ -167,8 +173,8 @@ const GuidedTour = ({ steps, storageKey, autoStart = true, startSignal = 0, onCl
             </button>
           </div>
 
-          <h3 className="text-base font-semibold text-foreground mb-1">{step.title}</h3>
-          <p className="text-sm text-muted-foreground mb-4">{step.description}</p>
+          <h3 className="text-base font-semibold text-foreground mb-1">{title}</h3>
+          <p className="text-sm text-muted-foreground mb-4">{description}</p>
 
           {/* Progress bar (works for any number of steps) */}
           <div className="h-1 w-full bg-muted rounded-full overflow-hidden mb-3">
@@ -187,23 +193,23 @@ const GuidedTour = ({ steps, storageKey, autoStart = true, startSignal = 0, onCl
               className="gap-1"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              Back
+              {t("back", lang)}
             </Button>
             <div className="flex items-center gap-2">
               <button
                 onClick={finish}
                 className="text-xs text-muted-foreground hover:text-foreground"
               >
-                Skip
+                {t("skip", lang)}
               </button>
               {index < steps.length - 1 ? (
                 <Button size="sm" onClick={() => setIndex((i) => i + 1)} className="gap-1">
-                  Next
+                  {t("next", lang)}
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               ) : (
                 <Button size="sm" onClick={finish} className="gap-1">
-                  Finish
+                  {t("finish", lang)}
                 </Button>
               )}
             </div>

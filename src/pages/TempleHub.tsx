@@ -44,6 +44,8 @@ import {
 import DemoVideoModal from "@/components/DemoVideoModal";
 import UpgradeModal from "@/components/UpgradeModal";
 import GuidedTour, { type TourStep } from "@/components/GuidedTour";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useLang, t } from "@/lib/i18n";
 import { isModuleAccessible, getMinimumPlan, formatPrice } from "@/lib/plans";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -195,6 +197,7 @@ const itemVariants = {
 
 const TempleHub = () => {
   const navigate = useNavigate();
+  const [lang] = useLang();
   const [showBanner, setShowBanner] = useState(true);
   const [helpVideoOpen, setHelpVideoOpen] = useState(false);
   const [iconStyle, setIconStyle] = useState<"glass" | "filled">("glass");
@@ -410,6 +413,9 @@ const TempleHub = () => {
               </TooltipContent>
             </Tooltip>
 
+            {/* Language Switcher */}
+            <LanguageSwitcher />
+
             {/* Take a tour */}
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
@@ -421,7 +427,7 @@ const TempleHub = () => {
                   className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/15 transition-colors"
                 >
                   <Compass className="h-3.5 w-3.5" />
-                  Take a tour
+                  {t("take_tour", lang)}
                 </button>
               </TooltipTrigger>
               <TooltipContent>
