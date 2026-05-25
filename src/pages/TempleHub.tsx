@@ -44,6 +44,8 @@ import {
 import DemoVideoModal from "@/components/DemoVideoModal";
 import UpgradeModal from "@/components/UpgradeModal";
 import GuidedTour, { type TourStep } from "@/components/GuidedTour";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useLang, t } from "@/lib/i18n";
 import { isModuleAccessible, getMinimumPlan, formatPrice } from "@/lib/plans";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -195,6 +197,7 @@ const itemVariants = {
 
 const TempleHub = () => {
   const navigate = useNavigate();
+  const [lang] = useLang();
   const [showBanner, setShowBanner] = useState(true);
   const [helpVideoOpen, setHelpVideoOpen] = useState(false);
   const [iconStyle, setIconStyle] = useState<"glass" | "filled">("glass");
