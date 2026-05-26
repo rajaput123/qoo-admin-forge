@@ -443,7 +443,7 @@ const TempleHub = () => {
                   className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
-                  Welcome
+                  {t("welcome", lang)}
                 </button>
               </TooltipTrigger>
               <TooltipContent>
