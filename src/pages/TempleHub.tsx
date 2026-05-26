@@ -443,7 +443,7 @@ const TempleHub = () => {
                   className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-muted transition-colors"
                 >
                   <Sparkles className="h-3.5 w-3.5" />
-                  Welcome
+                  {t("welcome", lang)}
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -661,9 +661,9 @@ const TempleHub = () => {
         {!isSuspended && (
           <div className="space-y-7">
             {[
-              { key: "temple", label: "Temple & Worship", icon: Landmark },
-              { key: "management", label: "People & Management", icon: Users },
-              { key: "growth", label: "Growth & Intelligence", icon: BarChart3 },
+              { key: "temple", label: t("cat_temple", lang), icon: Landmark },
+              { key: "management", label: t("cat_management", lang), icon: Users },
+              { key: "growth", label: t("cat_growth", lang), icon: BarChart3 },
             ].map((cat) => {
               const catModules = allModules.filter(m => m.category === cat.key);
               if (catModules.length === 0) return null;
@@ -753,14 +753,14 @@ const TempleHub = () => {
                                     ? "text-primary-foreground"
                                     : "text-foreground group-hover:text-primary-foreground"
                               }`}>
-                                {module.title}
+                                {t(`mod_${module.id}`, lang)}
                               </span>
 
                               {/* Status indicator */}
                               {isLocked ? (
                                 <span className="text-[9px] text-muted-foreground mt-1 leading-tight flex items-center gap-0.5">
                                   <Lock className="h-2.5 w-2.5" />
-                                  Locked
+                                  {t("locked", lang)}
                                 </span>
                               ) : (
                                 <button
@@ -771,7 +771,7 @@ const TempleHub = () => {
                                   className="flex items-center gap-0.5 mt-1 text-[10px] font-medium text-primary group-hover:text-primary-foreground/80 hover:underline transition-colors"
                                 >
                                   <Video className="h-3 w-3" />
-                                  How to use
+                                  {t("how_to_use", lang)}
                                 </button>
                               )}
                             </motion.button>
