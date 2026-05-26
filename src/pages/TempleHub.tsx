@@ -753,14 +753,14 @@ const TempleHub = () => {
                                     ? "text-primary-foreground"
                                     : "text-foreground group-hover:text-primary-foreground"
                               }`}>
-                                {module.title}
+                                {t(`mod_${module.id}`, lang)}
                               </span>
 
                               {/* Status indicator */}
                               {isLocked ? (
                                 <span className="text-[9px] text-muted-foreground mt-1 leading-tight flex items-center gap-0.5">
                                   <Lock className="h-2.5 w-2.5" />
-                                  Locked
+                                  {t("locked", lang)}
                                 </span>
                               ) : (
                                 <button
@@ -771,7 +771,7 @@ const TempleHub = () => {
                                   className="flex items-center gap-0.5 mt-1 text-[10px] font-medium text-primary group-hover:text-primary-foreground/80 hover:underline transition-colors"
                                 >
                                   <Video className="h-3 w-3" />
-                                  How to use
+                                  {t("how_to_use", lang)}
                                 </button>
                               )}
                             </motion.button>
