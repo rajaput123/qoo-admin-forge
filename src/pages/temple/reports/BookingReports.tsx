@@ -12,10 +12,10 @@ const COLORS = ["hsl(16,85%,23%)", "hsl(217,91%,60%)", "hsl(142,60%,40%)", "hsl(
 const BookingReports = () => {
   const [period, setPeriod] = useState("month");
   const bookings = getSevaBookings();
-  // Anchor the period window to the most recent booking so seed data is always visible.
+  // Anchor the period window to the most recent booking so demo/seed data is always visible.
   const latestDate = bookings.reduce((m, b) => (b.date > m ? b.date : m), "");
   const today = new Date();
-  const now = latestDate && new Date(latestDate) > today ? today : (latestDate ? new Date(latestDate) : today);
+  const now = latestDate ? new Date(Math.max(new Date(latestDate).getTime(), today.getTime())) : today;
 
   const filtered = useMemo(() => {
     return bookings.filter(b => {
