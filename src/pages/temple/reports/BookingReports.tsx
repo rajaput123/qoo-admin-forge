@@ -15,7 +15,7 @@ const BookingReports = () => {
   // Anchor the period window to the most recent booking so demo/seed data is always visible.
   const latestDate = bookings.reduce((m, b) => (b.date > m ? b.date : m), "");
   const today = new Date();
-  const now = latestDate ? new Date(Math.max(new Date(latestDate).getTime(), today.getTime())) : today;
+  const now = latestDate && new Date(latestDate) < today ? new Date(latestDate) : today;
 
   const filtered = useMemo(() => {
     return bookings.filter(b => {
