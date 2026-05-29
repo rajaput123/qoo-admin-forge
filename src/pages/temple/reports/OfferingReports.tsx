@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import PeriodFilter from "@/components/reports/PeriodFilter";
 import { Download, Sparkles, IndianRupee, Users, Clock, TrendingUp } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -141,14 +142,14 @@ const OfferingReports = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Category-wise Revenue */}
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base">Revenue by Category</CardTitle></CardHeader><CardContent>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Revenue by Category<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Bar Chart</Badge></CardTitle></CardHeader><CardContent>
           {categoryData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}><BarChart data={categoryData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis /><Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} /><Bar dataKey="revenue" fill="hsl(16,85%,23%)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer>
           ) : <p className="text-sm text-muted-foreground py-8 text-center">No data for selected period</p>}
         </CardContent></Card>
 
         {/* Source Breakdown */}
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base">Booking Source</CardTitle></CardHeader><CardContent>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Booking Source<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Pie Chart</Badge></CardTitle></CardHeader><CardContent>
           {sourceData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}><PieChart><Pie data={sourceData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>{sourceData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} /></PieChart></ResponsiveContainer>
           ) : <p className="text-sm text-muted-foreground py-8 text-center">No data</p>}
@@ -156,14 +157,14 @@ const OfferingReports = () => {
       </div>
 
       {/* Seva-wise Performance */}
-      <Card><CardHeader className="pb-2"><CardTitle className="text-base">Seva-wise Revenue & Bookings</CardTitle></CardHeader><CardContent>
+      <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Seva-wise Revenue & Bookings<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Grouped Bar Chart</Badge></CardTitle></CardHeader><CardContent>
         {sevaData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}><BarChart data={sevaData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis yAxisId="left" /><YAxis yAxisId="right" orientation="right" /><Tooltip /><Bar yAxisId="left" dataKey="revenue" fill="hsl(217,91%,60%)" radius={[4,4,0,0]} name="Revenue (₹)" /><Bar yAxisId="right" dataKey="count" fill="hsl(45,90%,45%)" radius={[4,4,0,0]} name="Bookings" /></BarChart></ResponsiveContainer>
         ) : <p className="text-sm text-muted-foreground py-8 text-center">No data</p>}
       </CardContent></Card>
 
       {/* Status Breakdown */}
-      <Card><CardHeader className="pb-2"><CardTitle className="text-base">Booking Status</CardTitle></CardHeader><CardContent>
+      <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Booking Status<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Donut Chart</Badge></CardTitle></CardHeader><CardContent>
         {statusData.length > 0 ? (
           <ResponsiveContainer width="100%" height={200}><PieChart><Pie data={statusData} cx="50%" cy="50%" outerRadius={80} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>{statusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer>
         ) : <p className="text-sm text-muted-foreground py-8 text-center">No data</p>}
