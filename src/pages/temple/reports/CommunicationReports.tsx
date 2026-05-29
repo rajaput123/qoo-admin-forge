@@ -9,6 +9,28 @@ import { toast } from "sonner";
 
 const COLORS = ["hsl(142,60%,40%)", "hsl(217,91%,60%)", "hsl(45,90%,45%)", "hsl(350,65%,50%)", "hsl(280,50%,55%)", "hsl(16,85%,23%)"];
 
+// Fallback mock comm logs so all charts always render even if devotees have no commLogs seeded.
+const MOCK_LOGS = (() => {
+  const channels = ["SMS", "Email", "WhatsApp", "Push", "Call"];
+  const subjects = ["Festival Invite", "Booking Confirmation", "Donation Receipt", "Birthday Wishes", "Event Reminder", "Prasadam Ready", "Newsletter", "Annadanam Call"];
+  const statuses = ["Delivered", "Sent", "Delivered", "Failed", "Delivered", "Read"];
+  const devotees = ["Ramesh Kumar", "Priya Iyer", "Vijay Rao", "Lakshmi Devi", "Suresh Patel", "Anita Sharma", "Krishna Murthy", "Sita Rani"];
+  const today = new Date();
+  const out: { date: string; channel: string; subject: string; status: string; devotee: string }[] = [];
+  for (let i = 0; i < 120; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - (i % 180));
+    out.push({
+      date: d.toISOString().split("T")[0],
+      channel: channels[i % channels.length],
+      subject: subjects[i % subjects.length],
+      status: statuses[i % statuses.length],
+      devotee: devotees[i % devotees.length],
+    });
+  }
+  return out;
+})();
+
 const CommunicationReports = () => {
   const [period, setPeriod] = useState("year");
 
@@ -18,7 +40,7 @@ const CommunicationReports = () => {
     devoteesData.forEach(d => {
       d.commLogs?.forEach(l => logs.push({ ...l, devotee: d.name }));
     });
-    return logs;
+    return logs.length > 0 ? logs : MOCK_LOGS;
   }, []);
 
   const totalComms = allLogs.length;
