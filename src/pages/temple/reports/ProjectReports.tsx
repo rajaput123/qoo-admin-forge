@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import PeriodFilter from "@/components/reports/PeriodFilter";
 import { Download, FolderKanban, IndianRupee, TrendingUp, CheckCircle2, Clock } from "lucide-react";
@@ -78,12 +79,12 @@ const ProjectReports = () => {
 
       {/* Overview Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base">Projects by Status</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={statusData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>{statusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base">Projects by Type</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><BarChart data={typeData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis /><Tooltip /><Bar dataKey="value" fill="hsl(220,55%,50%)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Projects by Status<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Pie Chart</Badge></CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={statusData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>{statusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Projects by Type<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Bar Chart</Badge></CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><BarChart data={typeData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis /><Tooltip /><Bar dataKey="value" fill="hsl(220,55%,50%)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
       </div>
 
       {/* Funding Analysis */}
-      <Card><CardHeader className="pb-2"><CardTitle className="text-base">Goal vs Raised vs Spent</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={300}><BarChart data={fundingData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 11 }} /><Tooltip formatter={(v: number) => `₹${(v / 100000).toFixed(1)}L`} /><Bar dataKey="goal" fill="hsl(217,91%,60%)" name="Goal" radius={[4,4,0,0]} /><Bar dataKey="raised" fill="hsl(142,60%,40%)" name="Raised" radius={[4,4,0,0]} /><Bar dataKey="spent" fill="hsl(350,65%,50%)" name="Spent" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
+      <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Goal vs Raised vs Spent<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Grouped Bar Chart</Badge></CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={300}><BarChart data={fundingData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis tick={{ fontSize: 11 }} /><Tooltip formatter={(v: number) => `₹${(v / 100000).toFixed(1)}L`} /><Bar dataKey="goal" fill="hsl(217,91%,60%)" name="Goal" radius={[4,4,0,0]} /><Bar dataKey="raised" fill="hsl(142,60%,40%)" name="Raised" radius={[4,4,0,0]} /><Bar dataKey="spent" fill="hsl(350,65%,50%)" name="Spent" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
 
       {/* Milestone Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
