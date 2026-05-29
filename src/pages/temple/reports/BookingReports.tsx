@@ -9,9 +9,46 @@ import { toast } from "sonner";
 
 const COLORS = ["hsl(16,85%,23%)", "hsl(217,91%,60%)", "hsl(142,60%,40%)", "hsl(45,90%,45%)", "hsl(280,50%,55%)", "hsl(350,65%,50%)"];
 
+// Fallback mock bookings — used only when the live store has no data so every
+// chart in this report always renders something meaningful.
+const MOCK_BOOKINGS = (() => {
+  const sevas = [
+    { name: "Archana", category: "Daily Seva", amount: 251 },
+    { name: "Abhishekam", category: "Daily Seva", amount: 1100 },
+    { name: "Kalyanotsavam", category: "Special Seva", amount: 5100 },
+    { name: "Annadanam Sponsorship", category: "Annadanam", amount: 2500 },
+    { name: "Sahasranama Archana", category: "Special Seva", amount: 501 },
+    { name: "Vahana Seva", category: "Festival Seva", amount: 1500 },
+  ];
+  const sources = ["Counter", "Online", "Booking"];
+  const payments = ["Cash", "UPI", "Card", "Net Banking"];
+  const statuses = ["Completed", "Completed", "Completed", "Pending", "Cancelled"];
+  const devotees = ["Ramesh Kumar", "Priya Iyer", "Vijay Rao", "Lakshmi Devi", "Suresh Patel", "Anita Sharma"];
+  const today = new Date();
+  const out: any[] = [];
+  for (let i = 0; i < 60; i++) {
+    const s = sevas[i % sevas.length];
+    const d = new Date(today);
+    d.setDate(d.getDate() - (i % 25));
+    out.push({
+      id: `MOCK-B${1000 + i}`,
+      sevaName: s.name,
+      sevaCategory: s.category,
+      devoteeName: devotees[i % devotees.length],
+      date: d.toISOString().split("T")[0],
+      amount: s.amount + (i % 5) * 50,
+      status: statuses[i % statuses.length],
+      sourceModule: sources[i % sources.length],
+      paymentMethod: payments[i % payments.length],
+    });
+  }
+  return out;
+})();
+
 const BookingReports = () => {
   const [period, setPeriod] = useState("month");
-  const bookings = getSevaBookings();
+  const liveBookings = getSevaBookings();
+  const bookings = liveBookings.length > 0 ? liveBookings : MOCK_BOOKINGS;
   // Anchor the period window to the most recent booking so demo/seed data is always visible.
   const latestDate = bookings.reduce((m, b) => (b.date > m ? b.date : m), "");
   const today = new Date();
