@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import PeriodFilter from "@/components/reports/PeriodFilter";
 import { Download } from "lucide-react";
@@ -126,7 +127,7 @@ const FinanceReports = () => {
       {/* Row 1: Revenue vs Expense | Income-Expense Trend | Net Balance Trend */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Revenue vs Expenses vs Net</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Revenue vs Expenses vs Net<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Bar Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{fmt(summary.totalRevenue)} <span className="text-xs text-muted-foreground font-normal">revenue</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -136,7 +137,7 @@ const FinanceReports = () => {
         </Card>
 
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Income vs Expense Trend</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Income vs Expense Trend<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Area Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{fmt(summary.totalExpenses)} <span className="text-xs text-muted-foreground font-normal">expenses</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -146,7 +147,7 @@ const FinanceReports = () => {
         </Card>
 
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Net Balance Trend</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Net Balance Trend<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Line Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{fmt(summary.netBalance)} <span className="text-xs text-muted-foreground font-normal">net</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -159,7 +160,7 @@ const FinanceReports = () => {
       {/* Row 2: Balance Breakdown | Donation by Purpose | Revenue by Channel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Balance Breakdown (Bank / Cash / UPI)</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Balance Breakdown (Bank / Cash / UPI)<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Donut Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{fmt(summary.bankBalance + cashBalance + upiBalance)} <span className="text-xs text-muted-foreground font-normal">total</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -169,7 +170,7 @@ const FinanceReports = () => {
         </Card>
 
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Donations by Purpose</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Donations by Purpose<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Pie Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{fmt(summary.totalDonations)} <span className="text-xs text-muted-foreground font-normal">{totalDonationCount} donations</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -179,7 +180,7 @@ const FinanceReports = () => {
         </Card>
 
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Revenue by Channel</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Revenue by Channel<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Bar Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{fmt(avgDonation)} <span className="text-xs text-muted-foreground font-normal">avg donation</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -192,7 +193,7 @@ const FinanceReports = () => {
       {/* Row 3: Seva Income | Fund Balances | Transaction Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Seva vs Event vs Other Income</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Seva vs Event vs Other Income<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Donut Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{fmt(summary.totalSevaIncome)} <span className="text-xs text-muted-foreground font-normal">seva income</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -208,7 +209,7 @@ const FinanceReports = () => {
         </Card>
 
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Fund Balances</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Fund Balances<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Horizontal Bar Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{fmt(summary.fundBalance)} <span className="text-xs text-muted-foreground font-normal">{activeFunds} active funds</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -218,7 +219,7 @@ const FinanceReports = () => {
         </Card>
 
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Transaction Status</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Transaction Status<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Donut Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{transactions.length} <span className="text-xs text-muted-foreground font-normal">total transactions</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -231,7 +232,7 @@ const FinanceReports = () => {
       {/* Row 4: Transaction Types | Budget Utilization | Payroll */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Transaction Types (Income / Expense / Transfer)</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Transaction Types (Income / Expense / Transfer)<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Bar Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{pendingTxns.length} <span className="text-xs text-muted-foreground font-normal">pending</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -241,7 +242,7 @@ const FinanceReports = () => {
         </Card>
 
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Budget Utilization</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Budget Utilization<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Grouped Bar Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{budgetUtilPct}% <span className="text-xs text-muted-foreground font-normal">{fmt(totalUtilized)} of {fmt(totalBudgeted)}</span></p>
             {budgetData.length > 0 ? (
@@ -255,7 +256,7 @@ const FinanceReports = () => {
         </Card>
 
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Payroll Disbursements</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Payroll Disbursements<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Area Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{fmt(payrollTotal)} <span className="text-xs text-muted-foreground font-normal">{finState.payroll.filter(p => p.status === "Paid").length} paid</span></p>
             {payrollChartData.length > 0 ? (
@@ -272,7 +273,7 @@ const FinanceReports = () => {
       {/* Row 5: Reconciliation | Pending Payables | Donors */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Reconciliation Rate</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Reconciliation Rate<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Donut Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{reconciliationRate}% <span className="text-xs text-muted-foreground font-normal">{reconciled}/{transactions.length} matched</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -282,7 +283,7 @@ const FinanceReports = () => {
         </Card>
 
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Pending Payables / Liabilities</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Pending Payables / Liabilities<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Bar Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{fmt(summary.pendingPayables)} <span className="text-xs text-muted-foreground font-normal">outstanding</span></p>
             <ResponsiveContainer width="100%" height={180}>
@@ -295,7 +296,7 @@ const FinanceReports = () => {
         </Card>
 
         <Card>
-          <CardHeader className="pb-1"><CardTitle className="text-sm">Donor & Donation Overview</CardTitle></CardHeader>
+          <CardHeader className="pb-1"><CardTitle className="text-sm flex items-center gap-2">Donor & Donation Overview<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Bar Chart</Badge></CardTitle></CardHeader>
           <CardContent className="pt-0">
             <p className="text-lg font-bold mb-1">{totalDonors} <span className="text-xs text-muted-foreground font-normal">donors · {totalDonationCount} donations</span></p>
             <ResponsiveContainer width="100%" height={180}>

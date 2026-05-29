@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import PeriodFilter from "@/components/reports/PeriodFilter";
 import { Download, Users, Heart, Calendar, MapPin, TrendingUp } from "lucide-react";
@@ -88,30 +89,30 @@ const DevoteeReports = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* City Distribution */}
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" />City-wise Distribution</CardTitle></CardHeader><CardContent>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" />City-wise Distribution<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Bar Chart</Badge></CardTitle></CardHeader><CardContent>
           <ResponsiveContainer width="100%" height={250}><BarChart data={cityData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis /><Tooltip /><Bar dataKey="value" fill="hsl(217,91%,60%)" radius={[4,4,0,0]} name="Devotees" /></BarChart></ResponsiveContainer>
         </CardContent></Card>
 
         {/* Gender Distribution */}
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base">Gender Distribution</CardTitle></CardHeader><CardContent>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Gender Distribution<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Pie Chart</Badge></CardTitle></CardHeader><CardContent>
           <ResponsiveContainer width="100%" height={250}><PieChart><Pie data={genderData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>{genderData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer>
         </CardContent></Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Source */}
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base">Registration Source</CardTitle></CardHeader><CardContent>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Registration Source<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Pie Chart</Badge></CardTitle></CardHeader><CardContent>
           <ResponsiveContainer width="100%" height={250}><PieChart><Pie data={sourceData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>{sourceData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer>
         </CardContent></Card>
 
         {/* Tags */}
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base">Popular Tags</CardTitle></CardHeader><CardContent>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Popular Tags<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Bar Chart</Badge></CardTitle></CardHeader><CardContent>
           <ResponsiveContainer width="100%" height={250}><BarChart data={tagData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis /><Tooltip /><Bar dataKey="value" fill="hsl(45,90%,45%)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer>
         </CardContent></Card>
       </div>
 
       {/* Top Devotees */}
-      <Card><CardHeader className="pb-2"><CardTitle className="text-base">Top Engaged Devotees</CardTitle></CardHeader><CardContent>
+      <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Top Engaged Devotees<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Table</Badge></CardTitle></CardHeader><CardContent>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b"><th className="text-left py-2 font-medium text-muted-foreground">Name</th><th className="text-left py-2 font-medium text-muted-foreground">City</th><th className="text-right py-2 font-medium text-muted-foreground">Bookings</th><th className="text-right py-2 font-medium text-muted-foreground">Donations</th><th className="text-left py-2 font-medium text-muted-foreground">Last Visit</th></tr></thead>

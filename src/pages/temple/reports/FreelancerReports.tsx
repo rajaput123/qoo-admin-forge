@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import PeriodFilter from "@/components/reports/PeriodFilter";
 import { Download, Briefcase, IndianRupee, CheckCircle2, Clock, Award } from "lucide-react";
@@ -63,7 +64,7 @@ const FreelancerReports = () => {
       </div>
 
       {/* Financial Chart */}
-      <Card><CardHeader className="pb-2"><CardTitle className="text-base">Spend by Freelancer</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={300}><BarChart data={spendData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" /><YAxis /><Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} /><Bar dataKey="paid" fill="hsl(142,60%,40%)" name="Paid" radius={[4,4,0,0]} stackId="a" /><Bar dataKey="pending" fill="hsl(45,90%,45%)" name="Pending" radius={[4,4,0,0]} stackId="a" /></BarChart></ResponsiveContainer></CardContent></Card>
+      <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Spend by Freelancer<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Grouped Bar Chart</Badge></CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={300}><BarChart data={spendData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" /><YAxis /><Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} /><Bar dataKey="paid" fill="hsl(142,60%,40%)" name="Paid" radius={[4,4,0,0]} stackId="a" /><Bar dataKey="pending" fill="hsl(45,90%,45%)" name="Pending" radius={[4,4,0,0]} stackId="a" /></BarChart></ResponsiveContainer></CardContent></Card>
 
       {/* Financial Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

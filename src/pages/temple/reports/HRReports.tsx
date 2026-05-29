@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import PeriodFilter from "@/components/reports/PeriodFilter";
 import { Download, Users, Clock, CalendarOff, TrendingUp, Briefcase, IndianRupee } from "lucide-react";
@@ -96,20 +97,20 @@ const HRReports = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base">Department Distribution</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><BarChart data={deptData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis /><Tooltip /><Bar dataKey="value" fill="hsl(217,91%,60%)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base">Employee Status</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={statusData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>{statusData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Department Distribution<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Bar Chart</Badge></CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><BarChart data={deptData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis /><Tooltip /><Bar dataKey="value" fill="hsl(217,91%,60%)" radius={[4,4,0,0]} /></BarChart></ResponsiveContainer></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Employee Status<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Pie Chart</Badge></CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={statusData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>{statusData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Salary by Department */}
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base">Salary Distribution by Dept</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><BarChart data={salaryByDept}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis /><Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} /><Bar dataKey="salary" fill="hsl(142,60%,40%)" radius={[4,4,0,0]} name="Total Salary" /></BarChart></ResponsiveContainer></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Salary Distribution by Dept<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Bar Chart</Badge></CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><BarChart data={salaryByDept}><CartesianGrid strokeDasharray="3 3" stroke="hsl(0,0%,90%)" /><XAxis dataKey="name" tick={{ fontSize: 10 }} /><YAxis /><Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} /><Bar dataKey="salary" fill="hsl(142,60%,40%)" radius={[4,4,0,0]} name="Total Salary" /></BarChart></ResponsiveContainer></CardContent></Card>
 
         {/* Shift Distribution */}
-        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" />Shift Distribution</CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={shiftData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>{shiftData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" />Shift Distribution<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Pie Chart</Badge></CardTitle></CardHeader><CardContent><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={shiftData} cx="50%" cy="50%" outerRadius={90} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>{shiftData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
       </div>
 
       {/* Employee Table */}
-      <Card><CardHeader className="pb-2"><CardTitle className="text-base">Employee Directory</CardTitle></CardHeader><CardContent>
+      <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2">Employee Directory<Badge variant="secondary" className="ml-auto text-[10px] font-normal">Table</Badge></CardTitle></CardHeader><CardContent>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b"><th className="text-left py-2 font-medium text-muted-foreground">ID</th><th className="text-left py-2 font-medium text-muted-foreground">Name</th><th className="text-left py-2 font-medium text-muted-foreground">Dept</th><th className="text-left py-2 font-medium text-muted-foreground">Designation</th><th className="text-left py-2 font-medium text-muted-foreground">Status</th><th className="text-right py-2 font-medium text-muted-foreground">Salary</th></tr></thead>
