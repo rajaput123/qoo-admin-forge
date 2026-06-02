@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Plus, Download, HandHelping, UserCheck, Clock, Calendar, ChevronLeft, ChevronRight, Shield, Heart, StickyNote, Eye, X } from "lucide-react";
+import { Search, Plus, Download, HandHelping, UserCheck, Clock, Calendar, ChevronLeft, ChevronRight, Shield, Heart, StickyNote, Eye, X, Globe, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 type Volunteer = {
@@ -53,6 +53,23 @@ const Volunteers = () => {
   const [viewing, setViewing] = useState<Volunteer | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [page, setPage] = useState(1);
+  const [published, setPublished] = useState<Record<string, boolean>>({
+    "VOL-001": true,
+    "VOL-003": true,
+    "VOL-005": true,
+  });
+
+  const togglePublish = (id: string, name: string) => {
+    setPublished((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      toast.success(
+        next[id]
+          ? `${name} is now visible on the devotee app`
+          : `${name} hidden from devotee app`
+      );
+      return next;
+    });
+  };
   const [skillOptions, setSkillOptions] = useState<string[]>([
     "Cooking",
     "Crowd Control",
@@ -201,6 +218,7 @@ const Volunteers = () => {
                   <TableHead>Skills</TableHead>
                   <TableHead className="text-center">Hours</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-center w-[140px]">Visibility</TableHead>
                   <TableHead className="text-center w-[80px]">Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -223,6 +241,29 @@ const Volunteers = () => {
                     </TableCell>
                     <TableCell className="text-center">
                       <Button
+                        size="sm"
+                        variant={published[v.id] ? "default" : "outline"}
+                        className="h-7 gap-1 text-[11px]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePublish(v.id, v.name);
+                        }}
+                      >
+                        {published[v.id] ? (
+                          <>
+                            <Globe className="h-3 w-3" />
+                            Published
+                          </>
+                        ) : (
+                          <>
+                            <EyeOff className="h-3 w-3" />
+                            Publish
+                          </>
+                        )}
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
@@ -237,7 +278,7 @@ const Volunteers = () => {
                   </TableRow>
                 ))}
                 {paged.length === 0 && (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No volunteers match filters</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No volunteers match filters</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
