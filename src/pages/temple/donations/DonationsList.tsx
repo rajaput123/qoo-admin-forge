@@ -270,7 +270,5 @@ const DonationsList = () => {
     </div>
   );
 };
-  );
-};
 
 export default DonationsList;
