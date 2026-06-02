@@ -473,7 +473,7 @@ const CounterBooking = () => {
                   <div>
                     <Label>Payment Mode</Label>
                     <div className="grid grid-cols-5 gap-2 mt-2">
-                      {["Cash", "UPI", "Card", "Cheque", "Other"].map(mode => (
+                      {["Cash", "UPI", "Card", "Cheque", "Temple QR"].map(mode => (
                         <button key={mode} onClick={() => setPaymentMode(mode)} className={`p-3 border rounded-lg text-center text-sm font-medium transition-all ${paymentMode === mode ? "border-primary bg-primary/5 text-primary" : "hover:bg-muted/50"}`}>{mode}</button>
                       ))}
                     </div>
@@ -484,7 +484,7 @@ const CounterBooking = () => {
                         {paymentMode === "UPI" && "UPI Reference / Txn ID"}
                         {paymentMode === "Card" && "Card Txn / Approval Code"}
                         {paymentMode === "Cheque" && "Cheque Number"}
-                        {paymentMode === "Other" && "Reference Number"}
+                        {paymentMode === "Temple QR" && "Temple QR Txn / UPI Ref"}
                       </Label>
                       <Input
                         value={refNumber}
@@ -493,6 +493,7 @@ const CounterBooking = () => {
                           paymentMode === "UPI" ? "e.g. 4XXXXXXXXXXX (UTR / UPI ref)" :
                           paymentMode === "Card" ? "e.g. last 4 digits or approval code" :
                           paymentMode === "Cheque" ? "e.g. 123456 — Bank, Date" :
+                          paymentMode === "Temple QR" ? "e.g. UPI ref from temple QR scan" :
                           "Reference"
                         }
                       />
