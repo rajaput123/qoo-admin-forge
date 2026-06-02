@@ -110,6 +110,13 @@ const AddDonation = () => {
         toast({ title: "Error", description: "Please enter a valid amount", variant: "destructive" });
         return;
       }
+      // 80G compliance: warn when cash payment exceeds ₹2,000
+      if (formData.paymentMode === "Cash" && parseFloat(formData.amount) > 2000) {
+        toast({
+          title: "Cash Limit Warning",
+          description: "Cash donations above ₹2,000 are not eligible for 80G deduction under Income Tax rules. Consider UPI / Cheque / Bank Transfer.",
+        });
+      }
     } else {
       // Non-cash validations
       if (!formData.assetName.trim()) {
