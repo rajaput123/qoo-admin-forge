@@ -182,6 +182,7 @@ import VipDevotees from "./pages/temple/vip/Devotees";
 import VipLevels from "./pages/temple/vip/Levels";
 import VipActivity from "./pages/temple/vip/Activity";
 import VipReports from "./pages/temple/vip/Reports";
+import VipEligibility from "./pages/temple/vip/Eligibility";
 // Finance Module
 import FinanceLayout from "./pages/temple/FinanceLayout";
 import FinanceDashboard from "./pages/temple/finance/FinanceDashboard";
@@ -440,6 +441,7 @@ const App = () => {
               <Route path="levels" element={<VipLevels />} />
               <Route path="activity" element={<VipActivity />} />
               <Route path="reports" element={<VipReports />} />
+              <Route path="eligibility" element={<VipEligibility />} />
             </Route>
 
             {/* Devotee CRM Module */}

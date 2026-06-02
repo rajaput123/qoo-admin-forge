@@ -1,4 +1,4 @@
-import { Crown, LayoutDashboard, Users, Settings2, Activity, FileBarChart2 } from "lucide-react";
+import { Crown, LayoutDashboard, Users, Settings2, Activity, Sparkles } from "lucide-react";
 import TempleLayout from "@/components/TempleLayout";
 
 const navItems = [
@@ -26,6 +26,12 @@ const navItems = [
     path: "/temple/vip/activity",
     icon: Activity,
     description: "VIP bookings, donations & visits",
+  },
+  {
+    label: "Eligibility Engine",
+    path: "/temple/vip/eligibility",
+    icon: Sparkles,
+    description: "Auto-detect & promote eligible devotees",
   },
 ];
 
