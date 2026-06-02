@@ -1,14 +1,17 @@
 import { useState } from "react";
+import JSZip from "jszip";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, Receipt, FileDown, FileText, CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { Search, Receipt, FileDown, FileText, CheckCircle2, Clock, AlertCircle, Package } from "lucide-react";
 import { useCertificates80G, useDonations } from "@/modules/donations/hooks";
 import { generate80GCertificate } from "@/modules/donations/donationsStore";
+import { useToast } from "@/hooks/use-toast";
 
 const formatCurrency = (val: number) => {
   if (val >= 10000000) return `₹${(val / 10000000).toFixed(1)} Cr`;
@@ -19,7 +22,10 @@ const formatCurrency = (val: number) => {
 const Receipts80G = () => {
   const donations = useDonations();
   const certificates80G = useCertificates80G();
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
+  const [bulkFy, setBulkFy] = useState<string>("2024-25");
+  const [bulkLoading, setBulkLoading] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<{
     id: string;
     donationId: string;
@@ -46,6 +52,69 @@ const Receipts80G = () => {
     r.donationId.toLowerCase().includes(search.toLowerCase()) ||
     r.donor.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Available FYs from existing certificates
+  const fyOptions = Array.from(new Set(certificates80G.map(c => c.fy))).filter(Boolean);
+  if (fyOptions.length === 0) fyOptions.push("2024-25");
+
+  const handleBulkDownload = async () => {
+    const fyCerts = certificates80G.filter(c => c.fy === bulkFy && c.status === "Generated");
+    if (fyCerts.length === 0) {
+      toast({ title: "No certificates", description: `No generated 80G certificates for FY ${bulkFy}`, variant: "destructive" });
+      return;
+    }
+    setBulkLoading(true);
+    try {
+      const zip = new JSZip();
+      fyCerts.forEach(c => {
+        // Each certificate as a Form 10BE text representation
+        const content = `FORM 10BE — CERTIFICATE OF DONATION
+(Under Section 80G(5)(ix) of the Income Tax Act, 1961)
+
+Certificate ID : ${c.certificateId}
+Financial Year : ${c.fy}
+Generated On   : ${c.generatedDate}
+
+------------------------------------------------------------
+Donor Details
+------------------------------------------------------------
+Donor Name     : ${c.donorName}
+Donor ID       : ${c.donorId}
+PAN            : ${c.pan}
+
+------------------------------------------------------------
+Donation Summary
+------------------------------------------------------------
+Total Receipts : ${c.receiptNos.length}
+Total Amount   : ₹${c.totalAmount.toLocaleString("en-IN")}
+
+Receipt Numbers:
+${c.receiptNos.map(r => `  • ${r}`).join("\n")}
+
+------------------------------------------------------------
+This certificate is issued under Section 80G of the Income Tax Act.
+Donations are eligible for deduction as per the prescribed limits.
+
+Authorised Signatory
+Sri Venkateswara Temple
+`;
+        const safe = c.donorName.replace(/[^a-z0-9]/gi, "_");
+        zip.file(`${c.certificateId}_${safe}.txt`, content);
+      });
+      const blob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Form10BE_Certificates_FY${bulkFy}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "ZIP downloaded", description: `${fyCerts.length} Form 10BE certificates exported` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Failed to generate ZIP", variant: "destructive" });
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -112,6 +181,23 @@ const Receipts80G = () => {
         <TabsContent value="80g" className="mt-4">
           <Card>
             <CardContent className="p-4">
+              {/* Bulk download bar */}
+              <div className="flex flex-wrap items-end gap-3 mb-4 p-3 rounded-lg border bg-muted/30">
+                <div className="flex-1 min-w-[200px]">
+                  <p className="text-sm font-medium mb-1">Form 10BE — Bulk Download</p>
+                  <p className="text-xs text-muted-foreground">Download all donor certificates for a financial year as a single ZIP file</p>
+                </div>
+                <Select value={bulkFy} onValueChange={setBulkFy}>
+                  <SelectTrigger className="w-36"><SelectValue placeholder="FY" /></SelectTrigger>
+                  <SelectContent>
+                    {fyOptions.map(f => <SelectItem key={f} value={f}>FY {f}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleBulkDownload} disabled={bulkLoading}>
+                  <Package className="h-4 w-4 mr-2" />
+                  {bulkLoading ? "Preparing..." : "Download ZIP"}
+                </Button>
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
