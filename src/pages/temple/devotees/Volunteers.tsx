@@ -218,6 +218,7 @@ const Volunteers = () => {
                   <TableHead>Skills</TableHead>
                   <TableHead className="text-center">Hours</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-center w-[140px]">Visibility</TableHead>
                   <TableHead className="text-center w-[80px]">Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -240,6 +241,29 @@ const Volunteers = () => {
                     </TableCell>
                     <TableCell className="text-center">
                       <Button
+                        size="sm"
+                        variant={published[v.id] ? "default" : "outline"}
+                        className="h-7 gap-1 text-[11px]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePublish(v.id, v.name);
+                        }}
+                      >
+                        {published[v.id] ? (
+                          <>
+                            <Globe className="h-3 w-3" />
+                            Published
+                          </>
+                        ) : (
+                          <>
+                            <EyeOff className="h-3 w-3" />
+                            Publish
+                          </>
+                        )}
+                      </Button>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
@@ -254,7 +278,7 @@ const Volunteers = () => {
                   </TableRow>
                 ))}
                 {paged.length === 0 && (
-                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No volunteers match filters</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No volunteers match filters</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
