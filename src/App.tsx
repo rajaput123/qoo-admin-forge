@@ -449,6 +449,7 @@ const App = () => {
             <Route path="/temple/devotees" element={<DevoteesLayout />}>
               <Route index element={<DevoteesList />} />
               <Route path="segments" element={<DevoteeGroups />} />
+              <Route path="volunteers" element={<DevoteeVolunteers />} />
               <Route path="insights" element={<DevoteeDashboard />} />
             </Route>
             {/* Event Management Module */}
