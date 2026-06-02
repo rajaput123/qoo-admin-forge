@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { FileSpreadsheet, Download, AlertTriangle, CheckCircle2, Calendar, Users, FileCheck2 } from "lucide-react";
 import { useDonations, useDonors } from "@/modules/donations/hooks";
 import { useToast } from "@/hooks/use-toast";
+import { downloadCsv } from "@/lib/csvExport";
 
 // Dummy data for preview / demo
 const dummyDonations = [
@@ -110,44 +111,21 @@ const Form10BD = () => {
       toast({ title: "No data", description: "No donor records with valid PAN for this FY", variant: "destructive" });
       return;
     }
-    // Form 10BD exact column order per Income Tax e-filing portal
-    const headers = [
-      "Sr. No.",
-      "Pre Acknowledgement Number",
-      "ID Code (PAN/Aadhaar/Other)",
-      "Unique Identification Number",
-      "Section Code",
-      "Donor Name",
-      "Address",
-      "Donation Type",
-      "Mode of Receipt",
-      "Amount (₹)",
-    ];
-    const lines = [headers.join(",")];
-    validRows.forEach((r, i) => {
+    // Form 10BD exact column order per Income Tax e-filing portal (Papa Parse)
+    const rows = validRows.map((r, i) => {
       const donationType = r.hasCorpus && r.hasGeneral ? "Mixed" : r.hasCorpus ? "Corpus" : "General";
-      const mode = Array.from(r.modes).join("/");
-      const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-      lines.push([
-        i + 1,
-        "",
-        "PAN",
-        r.pan,
-        "Section 80G",
-        esc(r.name),
-        esc(r.address),
-        donationType,
-        mode,
-        r.total,
-      ].join(","));
+      return {
+        "S.No": i + 1,
+        "Donor Name": r.name,
+        PAN: r.pan,
+        Address: r.address,
+        Amount: r.total,
+        "Donation Type": donationType,
+        "Mode of Payment": Array.from(r.modes).join("/"),
+        Section: "80G(5)(viii)",
+      };
     });
-    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Form10BD_FY${fy}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(rows, `Form10BD_FY${fy}.csv`);
     toast({ title: "Form 10BD CSV downloaded", description: `${validRows.length} donor records exported for FY ${fy}` });
   };
 
@@ -241,6 +219,16 @@ const Form10BD = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Upload instructions */}
+          <div className="mb-4 p-3 rounded-lg border bg-muted/30 text-xs">
+            <p className="font-semibold mb-1">How to file Form 10BD with the Income Tax Department:</p>
+            <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground">
+              <li>Download this CSV using the button above.</li>
+              <li>Login to <span className="font-mono">incometax.gov.in</span></li>
+              <li>Go to e-File → Income Tax Forms → Form 10BD</li>
+              <li>Upload the CSV file</li>
+            </ol>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>

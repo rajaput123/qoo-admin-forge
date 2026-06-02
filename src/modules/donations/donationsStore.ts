@@ -1,6 +1,6 @@
 import { DonationsState, Donor, Donation, Allocation, Certificate80G, DonationAuditEntry, DonationChannel, DonationSourceModule, DonationNature, NonCashAssetDetails, Fund, FundExpense, DonorCategory, DonorVipInfo } from "./types";
 
-const LS_KEY = "qoo.donations.v1";
+const LS_KEY = "qoo.donations.v2";
 
 function nowIso() {
   return new Date().toISOString();
@@ -93,6 +93,15 @@ function seedState(): DonationsState {
     { donorId: "DNR-012", name: "Priya Krishnan", phone: "+91 90000 44455", email: "priya.k@email.com", city: "5 Adyar Main Rd, Chennai - 600020", pan: "DLNPK9911R", category: "Regular", eligible80G: true, createdAt },
   ];
 
+  // ===== 80G Compliance sample donors (FY 2024-25 spec) =====
+  donors.push(
+    { donorId: "DNR-101", name: "Ramesh Kumar Sharma", phone: "+91 98800 11111", email: "ramesh.sharma@email.com", city: "14/2 MG Road, Bengaluru 560001", pan: "ABCPS1234R", category: "Regular", eligible80G: true, createdAt },
+    { donorId: "DNR-102", name: "Sunita Prabhu", phone: "+91 98800 22222", email: "sunita.prabhu@email.com", city: "7 Sea View Road, Karwar 581301", pan: "BCDQP5678S", category: "Regular", eligible80G: true, createdAt },
+    { donorId: "DNR-103", name: "Devidas Hegde", phone: "+91 98800 33333", email: "devidas.hegde@email.com", city: "18 Hill Top Colony, Sirsi 581401", pan: "CDEQH9012T", category: "Patron", eligible80G: true, createdAt },
+    { donorId: "DNR-104", name: "Asha Naik", phone: "+91 98800 44444", email: "asha.naik@email.com", city: "5 Temple Street, Ankola 581314", pan: "DEFAN3456U", category: "Regular", eligible80G: true, createdAt },
+    { donorId: "DNR-105", name: "Prakash Shetty", phone: "+91 98800 55555", email: "prakash.shetty@email.com", city: "22 NH 66 Main Road, Kumta 581343", pan: "EFGPS7890V", category: "Regular", eligible80G: true, createdAt },
+  );
+
   const donations: Donation[] = [
     { donationId: "DON-2025-0891", receiptNo: "REC-2025-0891", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-001", donorName: "Sri Ramesh Agarwal", nature: "Cash", amount: 500000, purpose: "Project-linked", channel: "Bank Transfer", mode: "NEFT", sourceModule: "Manual", date: "2025-02-10", time: "10:30 AM", status: "Recorded", createdAt },
     { donationId: "DON-2025-0890", receiptNo: "REC-2025-0890", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-006", donorName: "Anonymous Devotee", nature: "Cash", amount: 25000, purpose: "General / Hundi", channel: "Cash", mode: "Cash", sourceModule: "Counter", counterId: "CTR-001", date: "2025-02-10", time: "09:15 AM", status: "Recorded", createdAt },
@@ -110,6 +119,15 @@ function seedState(): DonationsState {
     { donationId: "DON-2024-0505", receiptNo: "REC-2024-0505", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-009", donorName: "Anitha Rao", nature: "Cash", amount: 31000, purpose: "Seva Sponsorship", channel: "UPI", mode: "UPI", referenceNo: "UPI-778899001122", sourceModule: "Manual", date: "2025-01-14", time: "09:30 AM", status: "Recorded", remarks: "Abhishekam seva", createdAt },
     { donationId: "DON-2024-0506", receiptNo: "REC-2024-0506", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-011", donorName: "Vikram Mehta", nature: "Cash", amount: 75000, purpose: "Corpus Fund", channel: "Bank Transfer", mode: "NEFT", referenceNo: "NEFT-ICICI-887766554", sourceModule: "Manual", date: "2025-03-02", time: "10:15 AM", status: "Recorded", remarks: "Additional corpus contribution", createdAt },
   ];
+
+  // ===== 80G Compliance sample donations (FY 2024-25 spec, RCT-2025-XXXX) =====
+  donations.push(
+    { donationId: "DON-2025-1001", receiptNo: "RCT-2025-0001", templeId: "TMPL-001", donorId: "DNR-101", donorName: "Ramesh Kumar Sharma", nature: "Cash", amount: 5000, purpose: "General / Hundi", channel: "Bank Transfer", mode: "NEFT", sourceModule: "Manual", date: "2024-04-02", time: "10:00 AM", status: "Recorded", is80G: true, createdAt },
+    { donationId: "DON-2025-1002", receiptNo: "RCT-2025-0002", templeId: "TMPL-001", donorId: "DNR-102", donorName: "Sunita Prabhu", nature: "Cash", amount: 2500, purpose: "General / Hundi", channel: "UPI", mode: "UPI", sourceModule: "Manual", date: "2024-05-15", time: "11:15 AM", status: "Recorded", is80G: true, createdAt },
+    { donationId: "DON-2025-1003", receiptNo: "RCT-2025-0003", templeId: "TMPL-001", donorId: "DNR-103", donorName: "Devidas Hegde", nature: "Cash", amount: 110000, purpose: "Corpus Fund", channel: "Bank Transfer", mode: "NEFT", sourceModule: "Manual", date: "2024-06-20", time: "12:00 PM", status: "Recorded", is80G: true, createdAt },
+    { donationId: "DON-2025-1004", receiptNo: "RCT-2025-0004", templeId: "TMPL-001", donorId: "DNR-104", donorName: "Asha Naik", nature: "Cash", amount: 1500, purpose: "General / Hundi", channel: "Cash", mode: "Cash", sourceModule: "Counter", counterId: "CTR-001", date: "2024-08-10", time: "09:30 AM", status: "Recorded", is80G: true, createdAt },
+    { donationId: "DON-2025-1005", receiptNo: "RCT-2025-0005", templeId: "TMPL-001", donorId: "DNR-105", donorName: "Prakash Shetty", nature: "Cash", amount: 33000, purpose: "General / Hundi", channel: "UPI", mode: "UPI", sourceModule: "Manual", date: "2024-11-25", time: "02:45 PM", status: "Recorded", is80G: true, createdAt },
+  );
 
   const allocations: Allocation[] = [
     { donationId: "DON-2025-0891", purpose: "Project-linked", linkedTo: "Gopuram Renovation", linkedType: "Project", allocated: 500000, utilized: 410000 },

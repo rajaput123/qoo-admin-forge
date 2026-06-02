@@ -12,7 +12,7 @@ import { Search, Receipt, FileDown, FileText, CheckCircle2, Clock, AlertCircle, 
 import { useCertificates80G, useDonations } from "@/modules/donations/hooks";
 import { useDonors } from "@/modules/donations/hooks";
 import { generate80GCertificate } from "@/modules/donations/donationsStore";
-import { downloadReceipt } from "@/lib/receiptGenerator";
+import { buildReceiptPdf, buildForm10BEPdf, downloadReceiptPdf, downloadForm10BEPdf } from "@/lib/pdfDocs";
 import { useToast } from "@/hooks/use-toast";
 
 const formatCurrency = (val: number) => {
@@ -70,39 +70,22 @@ const Receipts80G = () => {
     try {
       const zip = new JSZip();
       fyCerts.forEach(c => {
-        // Each certificate as a Form 10BE text representation
-        const content = `FORM 10BE — CERTIFICATE OF DONATION
-(Under Section 80G(5)(ix) of the Income Tax Act, 1961)
-
-Certificate ID : ${c.certificateId}
-Financial Year : ${c.fy}
-Generated On   : ${c.generatedDate}
-
-------------------------------------------------------------
-Donor Details
-------------------------------------------------------------
-Donor Name     : ${c.donorName}
-Donor ID       : ${c.donorId}
-PAN            : ${c.pan}
-
-------------------------------------------------------------
-Donation Summary
-------------------------------------------------------------
-Total Receipts : ${c.receiptNos.length}
-Total Amount   : ₹${c.totalAmount.toLocaleString("en-IN")}
-
-Receipt Numbers:
-${c.receiptNos.map(r => `  • ${r}`).join("\n")}
-
-------------------------------------------------------------
-This certificate is issued under Section 80G of the Income Tax Act.
-Donations are eligible for deduction as per the prescribed limits.
-
-Authorised Signatory
-Sri Venkateswara Temple
-`;
-        const safe = c.donorName.replace(/[^a-z0-9]/gi, "_");
-        zip.file(`${c.certificateId}_${safe}.txt`, content);
+        const donor = donors.find(x => x.donorId === c.donorId);
+        // Pick the most recent donation for this donor in the FY for date/mode/type
+        const donorDonations = donations.filter(d => d.donorId === c.donorId);
+        const ref = donorDonations[0];
+        const pdf = buildForm10BEPdf({
+          donorName: c.donorName,
+          donorPan: c.pan,
+          donorAddress: donor?.city || "—",
+          amount: c.totalAmount,
+          date: ref?.date || c.generatedDate || new Date().toISOString().slice(0, 10),
+          mode: ref?.mode || ref?.channel || "Bank Transfer",
+          donationType: (ref?.purpose || "").toLowerCase().includes("corpus") ? "Corpus" : "General",
+          fy: c.fy,
+        });
+        const safe = c.donorName.replace(/[^a-z0-9]+/gi, "_");
+        zip.file(`Form10BE_${safe}_FY${c.fy}.pdf`, pdf.output("blob"));
       });
       const blob = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(blob);
@@ -111,7 +94,7 @@ Sri Venkateswara Temple
       a.download = `Form10BE_Certificates_FY${bulkFy}.zip`;
       a.click();
       URL.revokeObjectURL(url);
-      toast({ title: "ZIP downloaded", description: `${fyCerts.length} Form 10BE certificates exported` });
+      toast({ title: "ZIP downloaded", description: `${fyCerts.length} Form 10BE PDF certificates exported` });
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to generate ZIP", variant: "destructive" });
     } finally {
@@ -127,7 +110,19 @@ Sri Venkateswara Temple
     }
     try {
       const donor = donors.find(x => x.donorId === d.donorId) || null;
-      downloadReceipt(d, donor, d.is80G || false);
+      downloadReceiptPdf({
+        receiptNo: d.receiptNo,
+        date: d.date,
+        donorName: d.donorName,
+        donorPan: donor?.pan && donor.pan !== "-" ? donor.pan : undefined,
+        donorAddress: donor?.city && donor.city !== "-" ? donor.city : undefined,
+        amount: d.amount,
+        mode: d.mode || d.channel,
+        donationType: (d.purpose || "").toLowerCase().includes("corpus") ? "Corpus" : "General",
+        remarks: d.remarks,
+        is80G: d.is80G,
+      });
+      toast({ title: "Receipt downloaded", description: `${d.receiptNo}.pdf saved` });
     } catch (e: any) {
       toast({ title: "Error", description: e.message || "Failed to open PDF", variant: "destructive" });
     }
@@ -136,46 +131,24 @@ Sri Venkateswara Temple
   const handle80GPDF = (certificateId: string) => {
     const c = certificates80G.find(x => x.certificateId === certificateId);
     if (!c) return;
-    const w = window.open('', '_blank');
-    if (!w) {
-      toast({ title: "Popup blocked", description: "Please allow popups to download the PDF", variant: "destructive" });
-      return;
+    try {
+      const donor = donors.find(x => x.donorId === c.donorId);
+      const donorDonations = donations.filter(d => d.donorId === c.donorId);
+      const ref = donorDonations[0];
+      downloadForm10BEPdf({
+        donorName: c.donorName,
+        donorPan: c.pan,
+        donorAddress: donor?.city || "—",
+        amount: c.totalAmount,
+        date: ref?.date || c.generatedDate || new Date().toISOString().slice(0, 10),
+        mode: ref?.mode || ref?.channel || "Bank Transfer",
+        donationType: (ref?.purpose || "").toLowerCase().includes("corpus") ? "Corpus" : "General",
+        fy: c.fy,
+      });
+      toast({ title: "Form 10BE downloaded", description: `Certificate for ${c.donorName} saved` });
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Failed to generate PDF", variant: "destructive" });
     }
-    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>${c.certificateId}</title>
-<style>
-  body{font-family:Georgia,serif;color:#1a1a1a;padding:48px;max-width:780px;margin:auto}
-  .border{border:2px solid #c2410c;padding:32px;border-radius:8px}
-  h1{text-align:center;color:#9a3412;margin:0 0 4px;font-size:22px;letter-spacing:1px}
-  h2{text-align:center;font-size:13px;font-weight:normal;color:#57534e;margin:0 0 24px}
-  .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dotted #d6d3d1}
-  .label{color:#57534e;font-size:12px}.val{font-weight:600;font-size:13px}
-  table{width:100%;margin-top:16px;border-collapse:collapse;font-size:12px}
-  th,td{border:1px solid #d6d3d1;padding:6px 8px;text-align:left}
-  th{background:#fed7aa}
-  .sig{margin-top:48px;text-align:right;font-size:13px}
-  .note{margin-top:24px;font-size:11px;color:#57534e;font-style:italic;text-align:center}
-</style></head><body>
-<div class="border">
-  <h1>FORM 10BE — CERTIFICATE OF DONATION</h1>
-  <h2>Under Section 80G(5)(ix) of the Income Tax Act, 1961</h2>
-  <div class="row"><span class="label">Certificate ID</span><span class="val">${c.certificateId}</span></div>
-  <div class="row"><span class="label">Financial Year</span><span class="val">${c.fy}</span></div>
-  <div class="row"><span class="label">Generated On</span><span class="val">${c.generatedDate}</span></div>
-  <div class="row"><span class="label">Donor Name</span><span class="val">${c.donorName}</span></div>
-  <div class="row"><span class="label">Donor ID</span><span class="val">${c.donorId}</span></div>
-  <div class="row"><span class="label">PAN</span><span class="val">${c.pan}</span></div>
-  <div class="row"><span class="label">Total Receipts</span><span class="val">${c.receiptNos.length}</span></div>
-  <div class="row"><span class="label">Total Amount</span><span class="val">₹${c.totalAmount.toLocaleString("en-IN")}</span></div>
-  <table><thead><tr><th>#</th><th>Receipt No.</th></tr></thead><tbody>
-    ${c.receiptNos.map((r,i)=>`<tr><td>${i+1}</td><td>${r}</td></tr>`).join("")}
-  </tbody></table>
-  <p class="note">This certificate is issued under Section 80G of the Income Tax Act, 1961. Donations are eligible for deduction as per the prescribed limits.</p>
-  <div class="sig">_____________________<br/>Authorised Signatory<br/>Sri Venkateswara Temple</div>
-</div>
-<script>window.onload=()=>setTimeout(()=>{window.print();},250);</script>
-</body></html>`;
-    w.document.write(html);
-    w.document.close();
   };
 
   return (
