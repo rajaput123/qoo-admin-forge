@@ -150,12 +150,12 @@ export function downloadReceiptPdf(input: ReceiptInput) {
 /* ---------------- FORM 10BE CERTIFICATE ---------------- */
 export function buildForm10BEPdf(input: Form10BEInput): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  let y = addTempleHeader(doc, "FORM 10BE — CERTIFICATE OF DONATION");
+  let y = addTempleHeader(doc, "80G DONATION CERTIFICATE");
 
   doc.setFont("times", "italic");
   doc.setFontSize(10);
   doc.setTextColor(80, 80, 80);
-  doc.text("[Under Section 80G(5)(viii) read with Rule 18AB of the Income Tax Rules, 1962]",
+  doc.text("[Temple-issued acknowledgment under Section 80G(5). Official Form 10BE is issued by the Income Tax Department after Form 10BD filing.]",
     doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
   y += 10;
 
@@ -192,5 +192,5 @@ export function buildForm10BEPdf(input: Form10BEInput): jsPDF {
 export function downloadForm10BEPdf(input: Form10BEInput, fileName?: string) {
   const doc = buildForm10BEPdf(input);
   const safe = input.donorName.replace(/[^a-z0-9]+/gi, "_");
-  doc.save(fileName || `Form10BE_${safe}_FY${input.fy}.pdf`);
+  doc.save(fileName || `80G_Certificate_${safe}_FY${input.fy}.pdf`);
 }

@@ -185,6 +185,26 @@ const AddDonation = () => {
       return;
     }
 
+    // Tax rule: donations above ₹10,000 mandatorily require donor PAN + Address (Form 10BD reporting)
+    const effectiveAmount = isCash
+      ? parseFloat(formData.amount || "0")
+      : parseFloat(formData.assetEstimatedValue || "0");
+    const panMandatory = effectiveAmount > 10000;
+    if (panMandatory) {
+      if (!formData.pan.trim()) {
+        toast({ title: "PAN Required", description: "PAN is mandatory for donations above ₹10,000 (Form 10BD reporting).", variant: "destructive" });
+        return;
+      }
+      if (!validatePAN(formData.pan)) {
+        toast({ title: "Invalid PAN", description: "Enter valid PAN. Format: ABCDE1234F", variant: "destructive" });
+        return;
+      }
+      if (!formData.address.trim()) {
+        toast({ title: "Address Required", description: "Address is mandatory for donations above ₹10,000.", variant: "destructive" });
+        return;
+      }
+    }
+
     // Validate 80G fields if requested
     if (formData.wants80G) {
       if (!formData.pan.trim()) {
@@ -735,19 +755,33 @@ const AddDonation = () => {
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-semibold mb-3">Step 3 — Tax Receipt Option</h3>
-              <div className="flex items-center justify-between p-4 border rounded-lg">
+              {(() => {
+                const eff = formData.donationNature === "Cash"
+                  ? parseFloat(formData.amount || "0")
+                  : parseFloat(formData.assetEstimatedValue || "0");
+                const panMandatory = eff > 10000;
+                const showPanBlock = formData.wants80G || panMandatory;
+                return (
+                  <>
+                    {panMandatory && (
+                      <div className="mb-3 p-3 rounded-lg border border-amber-300 bg-amber-50 text-xs text-amber-900">
+                        <strong>PAN & Address are mandatory</strong> for donations above ₹10,000 (required for Form 10BD reporting).
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="space-y-0.5">
                   <Label htmlFor="80g-toggle" className="text-base">Donor wants tax receipt (80G)?</Label>
                   <p className="text-sm text-muted-foreground">Enable to generate 80G certificate</p>
                 </div>
                 <Switch
                   id="80g-toggle"
-                  checked={formData.wants80G}
+                  checked={formData.wants80G || panMandatory}
+                  disabled={panMandatory}
                   onCheckedChange={(checked) => setFormData({ ...formData, wants80G: checked })}
                 />
               </div>
 
-              {formData.wants80G && (
+              {showPanBlock && (
                 <div className="mt-4 space-y-4 p-4 border rounded-lg bg-muted/30">
                   <div className="space-y-2">
                     <Label>PAN Number *</Label>
@@ -765,9 +799,11 @@ const AddDonation = () => {
                     <Textarea
                       placeholder="Enter complete address"
                       value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value.replace(/"/g, "").slice(0, 400) })}
                       rows={3}
+                      maxLength={400}
                     />
+                    <p className="text-xs text-muted-foreground">{formData.address.length}/400 characters. Double quotes are not allowed.</p>
                   </div>
 
                   <div className="space-y-2">
@@ -781,6 +817,9 @@ const AddDonation = () => {
                   </div>
                 </div>
               )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
