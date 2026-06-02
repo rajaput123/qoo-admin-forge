@@ -267,50 +267,9 @@ const DonationsList = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Send Email Dialog */}
-      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send Receipt via Email</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {selectedDonation && (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Receipt: <span className="font-mono font-semibold">{selectedDonation.receiptNo}</span>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Donor: <span className="font-semibold">{selectedDonation.donorName}</span>
-                </p>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter email address"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowEmailDialog(false);
-              setEmailAddress("");
-              setSelectedDonation(null);
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleSendEmail}>
-              <Mail className="h-4 w-4 mr-2" />
-              Send Receipt
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
+  );
+};
   );
 };
 
