@@ -86,8 +86,8 @@ const AddDonation = () => {
 
   // Get available events
   const [availableEvents, setAvailableEvents] = useState([
-    { value: "event-1", label: "Maha Shivaratri 2025" },
-    { value: "event-2", label: "Karthika Deepam" },
+    { value: "event-1", label: "Maha Shivaratri 2025", linkedBankAccountId: "ba-1" },
+    { value: "event-2", label: "Karthika Deepam", linkedBankAccountId: "ba-2" },
   ]);
 
   // Get available projects — each has a pre-linked bank account
