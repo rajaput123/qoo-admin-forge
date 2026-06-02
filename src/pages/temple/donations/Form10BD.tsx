@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { FileSpreadsheet, Download, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { FileSpreadsheet, Download, AlertTriangle, CheckCircle2, Calendar, Users, FileCheck2 } from "lucide-react";
 import { useDonations, useDonors } from "@/modules/donations/hooks";
 import { useToast } from "@/hooks/use-toast";
 
@@ -131,34 +131,75 @@ const Form10BD = () => {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Select Financial Year</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-4">
-          <div className="space-y-2">
-            <Label>Financial Year</Label>
-            <Select value={fy} onValueChange={setFy}>
-              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {fyOptions.map(o => (
-                  <SelectItem key={o.value} value={o.value}>FY {o.value}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button onClick={handleDownloadCSV} disabled={validRows.length === 0}>
-            <Download className="h-4 w-4 mr-2" />
-            Download Form 10BD CSV
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Horizontal Step Flow */}
+      <div className="relative">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Step 1 — Select FY */}
+          <Card className="relative border-primary/30">
+            <CardContent className="p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center">1</div>
+                <div className="flex items-center gap-2 font-semibold"><Calendar className="h-4 w-4" /> Select Financial Year</div>
+              </div>
+              <p className="text-xs text-muted-foreground">Choose the FY for which Form 10BD needs to be filed.</p>
+              <Select value={fy} onValueChange={setFy}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {fyOptions.map(o => (
+                    <SelectItem key={o.value} value={o.value}>FY {o.value}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Donors</p><p className="text-2xl font-bold">{rows.length}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Eligible (Valid PAN)</p><p className="text-2xl font-bold text-green-600">{validRows.length}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Excluded (Missing PAN)</p><p className="text-2xl font-bold text-amber-600">{invalidRows.length}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Amount</p><p className="text-2xl font-bold">₹{totalAmount.toLocaleString("en-IN")}</p></CardContent></Card>
+          {/* Step 2 — Review */}
+          <Card className="relative border-primary/30">
+            <CardContent className="p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center">2</div>
+                <div className="flex items-center gap-2 font-semibold"><Users className="h-4 w-4" /> Review Donor Records</div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="p-2 rounded bg-muted/40">
+                  <p className="text-[10px] text-muted-foreground">Total Donors</p>
+                  <p className="text-lg font-bold">{rows.length}</p>
+                </div>
+                <div className="p-2 rounded bg-green-50">
+                  <p className="text-[10px] text-muted-foreground">Eligible</p>
+                  <p className="text-lg font-bold text-green-700">{validRows.length}</p>
+                </div>
+                <div className="p-2 rounded bg-amber-50">
+                  <p className="text-[10px] text-muted-foreground">Excluded</p>
+                  <p className="text-lg font-bold text-amber-700">{invalidRows.length}</p>
+                </div>
+                <div className="p-2 rounded bg-blue-50">
+                  <p className="text-[10px] text-muted-foreground">Amount</p>
+                  <p className="text-sm font-bold text-blue-700">₹{(totalAmount / 100000).toFixed(1)}L</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Step 3 — Download */}
+          <Card className="relative border-primary/30">
+            <CardContent className="p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center">3</div>
+                <div className="flex items-center gap-2 font-semibold"><FileCheck2 className="h-4 w-4" /> Download CSV</div>
+              </div>
+              <p className="text-xs text-muted-foreground">Generate the CSV in the exact column format required by the IT e-filing portal.</p>
+              <Button onClick={handleDownloadCSV} disabled={validRows.length === 0} className="w-full">
+                <Download className="h-4 w-4 mr-2" />
+                Download Form 10BD CSV
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Connecting arrows (desktop) */}
+        <div className="hidden md:flex absolute top-1/2 left-1/3 -translate-y-1/2 -translate-x-1/2 text-primary/40 text-2xl pointer-events-none select-none">›</div>
+        <div className="hidden md:flex absolute top-1/2 left-2/3 -translate-y-1/2 -translate-x-1/2 text-primary/40 text-2xl pointer-events-none select-none">›</div>
       </div>
 
       <Card>
