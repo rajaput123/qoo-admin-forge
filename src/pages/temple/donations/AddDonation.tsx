@@ -375,6 +375,14 @@ const AddDonation = () => {
                     <>
                       <div className="space-y-2">
                         <Label>Event Name *</Label>
+                        {availableEvents.length === 0 ? (
+                          <div className="p-4 rounded-lg border border-dashed bg-muted/20 flex flex-col items-center gap-2 text-center">
+                            <p className="text-sm text-muted-foreground">No events available yet</p>
+                            <Button type="button" size="sm" variant="outline" onClick={() => navigate("/temple/events/create")}>
+                              <Plus className="h-4 w-4 mr-1" /> Add Event
+                            </Button>
+                          </div>
+                        ) : (
                         <Select
                           value={formData.eventName}
                           onValueChange={(v) => {
@@ -393,6 +401,7 @@ const AddDonation = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label>Linked Bank Account</Label>
@@ -430,6 +439,14 @@ const AddDonation = () => {
                     <>
                       <div className="space-y-2">
                         <Label>Project Name *</Label>
+                        {availableProjects.length === 0 ? (
+                          <div className="p-4 rounded-lg border border-dashed bg-muted/20 flex flex-col items-center gap-2 text-center">
+                            <p className="text-sm text-muted-foreground">No projects available yet</p>
+                            <Button type="button" size="sm" variant="outline" onClick={() => navigate("/temple/projects/create")}>
+                              <Plus className="h-4 w-4 mr-1" /> Add Project
+                            </Button>
+                          </div>
+                        ) : (
                         <Select
                           value={formData.projectName}
                           onValueChange={(v) => {
@@ -448,6 +465,7 @@ const AddDonation = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label>Linked Bank Account</Label>
