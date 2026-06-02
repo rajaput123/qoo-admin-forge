@@ -185,6 +185,26 @@ const AddDonation = () => {
       return;
     }
 
+    // Tax rule: donations above ₹10,000 mandatorily require donor PAN + Address (Form 10BD reporting)
+    const effectiveAmount = isCash
+      ? parseFloat(formData.amount || "0")
+      : parseFloat(formData.assetEstimatedValue || "0");
+    const panMandatory = effectiveAmount > 10000;
+    if (panMandatory) {
+      if (!formData.pan.trim()) {
+        toast({ title: "PAN Required", description: "PAN is mandatory for donations above ₹10,000 (Form 10BD reporting).", variant: "destructive" });
+        return;
+      }
+      if (!validatePAN(formData.pan)) {
+        toast({ title: "Invalid PAN", description: "Enter valid PAN. Format: ABCDE1234F", variant: "destructive" });
+        return;
+      }
+      if (!formData.address.trim()) {
+        toast({ title: "Address Required", description: "Address is mandatory for donations above ₹10,000.", variant: "destructive" });
+        return;
+      }
+    }
+
     // Validate 80G fields if requested
     if (formData.wants80G) {
       if (!formData.pan.trim()) {
@@ -765,9 +785,11 @@ const AddDonation = () => {
                     <Textarea
                       placeholder="Enter complete address"
                       value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value.replace(/"/g, "").slice(0, 400) })}
                       rows={3}
+                      maxLength={400}
                     />
+                    <p className="text-xs text-muted-foreground">{formData.address.length}/400 characters. Double quotes are not allowed.</p>
                   </div>
 
                   <div className="space-y-2">
