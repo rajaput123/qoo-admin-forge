@@ -363,11 +363,55 @@ const Volunteers = () => {
             </div>
             <div>
               <Label className="text-xs mb-2 block">Skills</Label>
-              <div className="flex flex-wrap gap-3">
-                {["Cooking", "Crowd Control", "Ritual Support", "Admin"].map(s => (
-                  <div key={s} className="flex items-center gap-2"><Checkbox id={`skill-${s}`} /><Label htmlFor={`skill-${s}`} className="text-sm">{s}</Label></div>
-                ))}
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {skillOptions.map((s) => {
+                  const active = selectedSkills.includes(s);
+                  return (
+                    <button
+                      type="button"
+                      key={s}
+                      onClick={() => toggleSkill(s)}
+                      className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
+                        active
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted/40 hover:bg-muted border-border text-foreground"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
               </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Add custom skill (e.g., Drone Pilot)"
+                  className="h-8 text-sm"
+                  value={newSkill}
+                  onChange={(e) => setNewSkill(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addCustomSkill();
+                    }
+                  }}
+                />
+                <Button type="button" size="sm" variant="outline" className="h-8 gap-1" onClick={addCustomSkill}>
+                  <Plus className="h-3 w-3" />
+                  Add
+                </Button>
+              </div>
+              {selectedSkills.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {selectedSkills.map((s) => (
+                    <Badge key={s} variant="secondary" className="text-[10px] gap-1">
+                      {s}
+                      <button type="button" onClick={() => toggleSkill(s)} className="hover:text-destructive">
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
