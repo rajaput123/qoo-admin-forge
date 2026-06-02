@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, FileDown, Phone, Mail, MapPin, Heart, Crown, AlertTriangle } from "lucide-react";
-import { useDonations, useDonors } from "@/modules/donations/hooks";
-import { markDonorAsVip, updateDonorVip } from "@/modules/donations/donationsStore";
+import { useDonations, useDonors, useCertificates80G } from "@/modules/donations/hooks";
+import { markDonorAsVip, updateDonorVip, generate80GCertificate } from "@/modules/donations/donationsStore";
 import { useToast } from "@/hooks/use-toast";
 import { downloadReceipt } from "@/lib/receiptGenerator";
+import { downloadReceiptPdf, downloadForm10BEPdf } from "@/lib/pdfDocs";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import SelectWithAddNew from "@/components/SelectWithAddNew";
@@ -43,6 +44,7 @@ const DonorRegistry = () => {
   // Hooks must be called unconditionally - can't wrap in try-catch
   const donors = useDonors();
   const donations = useDonations();
+  const certificates80G = useCertificates80G();
   const { toast } = useToast();
 
   // Ensure we have valid arrays with additional null/undefined checks
@@ -231,15 +233,23 @@ const DonorRegistry = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Donors</h1>
-          <p className="text-sm text-muted-foreground mt-1">All donors automatically created from donation records</p>
+          <h1 className="text-2xl font-bold text-foreground">Donors, Receipts & 80G</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage donor profiles, donation receipts and temple-issued 80G certificates</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm"><FileDown className="h-4 w-4 mr-1" /> CSV Export</Button>
         </div>
       </div>
 
-      <Card>
+      <Tabs defaultValue="donors" className="w-full">
+        <TabsList>
+          <TabsTrigger value="donors">Donors</TabsTrigger>
+          <TabsTrigger value="receipts">Donation Receipts</TabsTrigger>
+          <TabsTrigger value="80g">80G Certificates</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="donors" className="mt-4">
+        <Card>
         <CardContent className="p-4">
           {safeDonors.length === 0 && !search && (
             <div className="text-center py-8 text-muted-foreground mb-4">
@@ -321,6 +331,125 @@ const DonorRegistry = () => {
           </Table>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="receipts" className="mt-4">
+          <Card>
+            <CardContent className="p-4">
+              <p className="text-xs text-muted-foreground mb-3">Temple-issued donation receipts. Click PDF to download.</p>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Receipt No.</TableHead>
+                    <TableHead>Donor</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Mode</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {safeDonations.map(d => {
+                    const donor = safeDonors.find(x => x.donorId === d.donorId);
+                    return (
+                      <TableRow key={d.donationId}>
+                        <TableCell className="font-mono text-xs">{d.receiptNo}</TableCell>
+                        <TableCell className="font-medium text-sm">{d.donorName}</TableCell>
+                        <TableCell className="text-right font-mono">{formatCurrency(d.amount)}</TableCell>
+                        <TableCell className="text-xs">{d.channel}</TableCell>
+                        <TableCell className="text-xs">{d.date}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
+                            try {
+                              downloadReceiptPdf({
+                                receiptNo: d.receiptNo,
+                                date: d.date,
+                                donorName: d.donorName,
+                                donorPan: donor?.pan && donor.pan !== "-" ? donor.pan : undefined,
+                                donorAddress: donor?.city && donor.city !== "-" ? donor.city : undefined,
+                                amount: d.amount,
+                                mode: d.mode || d.channel,
+                                donationType: (d.purpose || "").toLowerCase().includes("corpus") ? "Corpus" : "General",
+                                remarks: d.remarks,
+                                is80G: d.is80G,
+                              });
+                              toast({ title: "Receipt downloaded", description: `${d.receiptNo}.pdf saved` });
+                            } catch (e: any) {
+                              toast({ title: "Error", description: e.message || "Failed", variant: "destructive" });
+                            }
+                          }}><FileDown className="h-3 w-3 mr-1" />PDF</Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="80g" className="mt-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="mb-3 p-3 rounded-lg border border-amber-200 bg-amber-50 text-xs text-amber-900">
+                <strong>Note:</strong> This is the temple-issued <em>80G Donation Certificate</em> (acknowledgment under Section 80G(5)). The official <em>Form 10BE</em> is generated by the Income Tax Department after you file <em>Form 10BD</em> — download it from the IT e-filing portal.
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Certificate ID</TableHead>
+                    <TableHead>Donor</TableHead>
+                    <TableHead>PAN</TableHead>
+                    <TableHead className="text-right">Total Amount</TableHead>
+                    <TableHead>FY</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {certificates80G.map(c => {
+                    const donor = safeDonors.find(x => x.donorId === c.donorId);
+                    const ref = safeDonations.find(d => d.donorId === c.donorId);
+                    return (
+                      <TableRow key={c.certificateId}>
+                        <TableCell className="font-mono text-xs">{c.certificateId}</TableCell>
+                        <TableCell className="font-medium text-sm">{c.donorName}</TableCell>
+                        <TableCell className="font-mono text-xs">{c.pan}</TableCell>
+                        <TableCell className="text-right font-mono">{formatCurrency(c.totalAmount)}</TableCell>
+                        <TableCell className="text-xs">{c.fy}</TableCell>
+                        <TableCell><Badge variant={c.status === "Generated" ? "default" : "secondary"} className="text-[10px]">{c.status}</Badge></TableCell>
+                        <TableCell>
+                          {c.status === "Generated" ? (
+                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
+                              try {
+                                downloadForm10BEPdf({
+                                  donorName: c.donorName,
+                                  donorPan: c.pan,
+                                  donorAddress: donor?.city || "—",
+                                  amount: c.totalAmount,
+                                  date: ref?.date || c.generatedDate || new Date().toISOString().slice(0, 10),
+                                  mode: ref?.mode || ref?.channel || "Bank Transfer",
+                                  donationType: (ref?.purpose || "").toLowerCase().includes("corpus") ? "Corpus" : "General",
+                                  fy: c.fy,
+                                });
+                                toast({ title: "Certificate downloaded", description: `80G certificate for ${c.donorName} saved` });
+                              } catch (e: any) {
+                                toast({ title: "Error", description: e.message || "Failed", variant: "destructive" });
+                              }
+                            }}><FileDown className="h-3 w-3 mr-1" />PDF</Button>
+                          ) : (
+                            <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => generate80GCertificate({ donorId: c.donorId, fy: c.fy, createdBy: "System" })}>Generate</Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Donor Detail Modal */}
       <Dialog open={!!selectedDonor} onOpenChange={() => setSelectedDonor(null)}>
