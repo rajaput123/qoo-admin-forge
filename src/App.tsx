@@ -75,6 +75,7 @@ import DevoteesLayout from "./pages/temple/DevoteesLayout";
 import DevoteeDashboard from "./pages/temple/devotees/Dashboard";
 import DevoteesList from "./pages/temple/devotees/DevoteesList";
 import DevoteeGroups from "./pages/temple/devotees/Groups";
+import DevoteeVolunteers from "./pages/temple/devotees/Volunteers";
 import Temples from "./pages/temple/structure/Temples";
 import ChildTemples from "./pages/temple/structure/ChildTemples";
 import Sacred from "./pages/temple/structure/Sacred";
@@ -448,6 +449,7 @@ const App = () => {
             <Route path="/temple/devotees" element={<DevoteesLayout />}>
               <Route index element={<DevoteesList />} />
               <Route path="segments" element={<DevoteeGroups />} />
+              <Route path="volunteers" element={<DevoteeVolunteers />} />
               <Route path="insights" element={<DevoteeDashboard />} />
             </Route>
             {/* Event Management Module */}
