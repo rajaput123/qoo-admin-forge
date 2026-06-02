@@ -166,10 +166,9 @@ const Volunteers = () => {
             <SelectTrigger className="w-[150px] bg-background"><SelectValue placeholder="Skill" /></SelectTrigger>
             <SelectContent className="bg-popover">
               <SelectItem value="all">All Skills</SelectItem>
-              <SelectItem value="Cooking">Cooking</SelectItem>
-              <SelectItem value="Crowd Control">Crowd Control</SelectItem>
-              <SelectItem value="Ritual Support">Ritual Support</SelectItem>
-              <SelectItem value="Admin">Admin</SelectItem>
+              {skillOptions.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={filterAvailability} onValueChange={v => { setFilterAvailability(v); setPage(1); }}>
