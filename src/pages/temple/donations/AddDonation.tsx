@@ -718,6 +718,9 @@ const AddDonation = () => {
                   </div>
                 </div>
               )}
+                  </>
+                );
+              })()}
             </div>
           </div>
 
