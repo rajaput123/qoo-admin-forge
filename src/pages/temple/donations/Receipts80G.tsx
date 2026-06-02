@@ -10,7 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, Receipt, FileDown, FileText, CheckCircle2, Clock, AlertCircle, Package } from "lucide-react";
 import { useCertificates80G, useDonations } from "@/modules/donations/hooks";
+import { useDonors } from "@/modules/donations/hooks";
 import { generate80GCertificate } from "@/modules/donations/donationsStore";
+import { downloadReceipt } from "@/lib/receiptGenerator";
 import { useToast } from "@/hooks/use-toast";
 
 const formatCurrency = (val: number) => {
@@ -21,6 +23,7 @@ const formatCurrency = (val: number) => {
 
 const Receipts80G = () => {
   const donations = useDonations();
+  const donors = useDonors();
   const certificates80G = useCertificates80G();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
@@ -116,6 +119,65 @@ Sri Venkateswara Temple
     }
   };
 
+  const handleReceiptPDF = (receiptId: string) => {
+    const d = donations.find(x => x.receiptNo === receiptId);
+    if (!d) {
+      toast({ title: "Not found", description: "Donation not found", variant: "destructive" });
+      return;
+    }
+    try {
+      const donor = donors.find(x => x.donorId === d.donorId) || null;
+      downloadReceipt(d, donor, d.is80G || false);
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message || "Failed to open PDF", variant: "destructive" });
+    }
+  };
+
+  const handle80GPDF = (certificateId: string) => {
+    const c = certificates80G.find(x => x.certificateId === certificateId);
+    if (!c) return;
+    const w = window.open('', '_blank');
+    if (!w) {
+      toast({ title: "Popup blocked", description: "Please allow popups to download the PDF", variant: "destructive" });
+      return;
+    }
+    const html = `<!doctype html><html><head><meta charset="utf-8"/><title>${c.certificateId}</title>
+<style>
+  body{font-family:Georgia,serif;color:#1a1a1a;padding:48px;max-width:780px;margin:auto}
+  .border{border:2px solid #c2410c;padding:32px;border-radius:8px}
+  h1{text-align:center;color:#9a3412;margin:0 0 4px;font-size:22px;letter-spacing:1px}
+  h2{text-align:center;font-size:13px;font-weight:normal;color:#57534e;margin:0 0 24px}
+  .row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dotted #d6d3d1}
+  .label{color:#57534e;font-size:12px}.val{font-weight:600;font-size:13px}
+  table{width:100%;margin-top:16px;border-collapse:collapse;font-size:12px}
+  th,td{border:1px solid #d6d3d1;padding:6px 8px;text-align:left}
+  th{background:#fed7aa}
+  .sig{margin-top:48px;text-align:right;font-size:13px}
+  .note{margin-top:24px;font-size:11px;color:#57534e;font-style:italic;text-align:center}
+</style></head><body>
+<div class="border">
+  <h1>FORM 10BE — CERTIFICATE OF DONATION</h1>
+  <h2>Under Section 80G(5)(ix) of the Income Tax Act, 1961</h2>
+  <div class="row"><span class="label">Certificate ID</span><span class="val">${c.certificateId}</span></div>
+  <div class="row"><span class="label">Financial Year</span><span class="val">${c.fy}</span></div>
+  <div class="row"><span class="label">Generated On</span><span class="val">${c.generatedDate}</span></div>
+  <div class="row"><span class="label">Donor Name</span><span class="val">${c.donorName}</span></div>
+  <div class="row"><span class="label">Donor ID</span><span class="val">${c.donorId}</span></div>
+  <div class="row"><span class="label">PAN</span><span class="val">${c.pan}</span></div>
+  <div class="row"><span class="label">Total Receipts</span><span class="val">${c.receiptNos.length}</span></div>
+  <div class="row"><span class="label">Total Amount</span><span class="val">₹${c.totalAmount.toLocaleString("en-IN")}</span></div>
+  <table><thead><tr><th>#</th><th>Receipt No.</th></tr></thead><tbody>
+    ${c.receiptNos.map((r,i)=>`<tr><td>${i+1}</td><td>${r}</td></tr>`).join("")}
+  </tbody></table>
+  <p class="note">This certificate is issued under Section 80G of the Income Tax Act, 1961. Donations are eligible for deduction as per the prescribed limits.</p>
+  <div class="sig">_____________________<br/>Authorised Signatory<br/>Sri Venkateswara Temple</div>
+</div>
+<script>window.onload=()=>setTimeout(()=>{window.print();},250);</script>
+</body></html>`;
+    w.document.write(html);
+    w.document.close();
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -169,7 +231,7 @@ Sri Venkateswara Temple
                       <TableCell className="text-xs">{r.mode}</TableCell>
                       <TableCell className="text-xs">{r.date}</TableCell>
                       <TableCell><Badge variant="default" className="text-[10px]">{r.status}</Badge></TableCell>
-                      <TableCell><Button variant="ghost" size="sm" className="h-7 text-xs"><FileDown className="h-3 w-3 mr-1" />PDF</Button></TableCell>
+                      <TableCell><Button variant="ghost" size="sm" className="h-7 text-xs" onClick={(e) => { e.stopPropagation(); handleReceiptPDF(r.id); }}><FileDown className="h-3 w-3 mr-1" />PDF</Button></TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -225,7 +287,7 @@ Sri Venkateswara Temple
                       <TableCell><Badge variant={c.status === "Generated" ? "default" : "secondary"} className="text-[10px]">{c.status}</Badge></TableCell>
                       <TableCell>
                         {c.status === "Generated" ? (
-                          <Button variant="ghost" size="sm" className="h-7 text-xs"><FileDown className="h-3 w-3 mr-1" />PDF</Button>
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handle80GPDF(c.certificateId)}><FileDown className="h-3 w-3 mr-1" />PDF</Button>
                         ) : (
                           <Button
                             variant="outline"
@@ -272,7 +334,7 @@ Sri Venkateswara Temple
                   </div>
                 ))}
               </div>
-              <Button className="w-full" variant="outline"><FileDown className="h-4 w-4 mr-2" /> Download Receipt PDF</Button>
+              <Button className="w-full" variant="outline" onClick={() => handleReceiptPDF(selectedReceipt.id)}><FileDown className="h-4 w-4 mr-2" /> Download Receipt PDF</Button>
             </div>
           )}
         </DialogContent>
