@@ -10,7 +10,6 @@ import { Search, Plus, Download, Eye, FileDown } from "lucide-react";
 import { useDonations, useDonors } from "@/modules/donations/hooks";
 import { downloadReceipt } from "@/lib/receiptGenerator";
 import { useToast } from "@/hooks/use-toast";
-import { Label } from "@/components/ui/label";
 const formatCurrency = (val: number | undefined | null): string => {
   try {
     if (val == null || typeof val !== 'number' || !Number.isFinite(val)) {
