@@ -441,6 +441,7 @@ const App = () => {
               <Route path="levels" element={<VipLevels />} />
               <Route path="activity" element={<VipActivity />} />
               <Route path="reports" element={<VipReports />} />
+              <Route path="eligibility" element={<VipEligibility />} />
             </Route>
 
             {/* Devotee CRM Module */}
