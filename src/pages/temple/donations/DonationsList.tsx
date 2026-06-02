@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Download, Eye, FileDown, Printer, Mail, MoreVertical } from "lucide-react";
+import { Search, Plus, Download, Eye, FileDown } from "lucide-react";
 import { useDonations, useDonors } from "@/modules/donations/hooks";
 import { downloadReceipt, printReceipt, sendReceiptEmail } from "@/lib/receiptGenerator";
 import { useToast } from "@/hooks/use-toast";
