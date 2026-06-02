@@ -234,41 +234,13 @@ const DonationsList = () => {
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDownloadReceipt(donation);
-                                  }}>
-                                    <FileDown className="h-4 w-4 mr-2" />
-                                    Download PDF
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePrintReceipt(donation);
-                                  }}>
-                                    <Printer className="h-4 w-4 mr-2" />
-                                    Print
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSendReceipt(donation);
-                                  }}>
-                                    <Mail className="h-4 w-4 mr-2" />
-                                    Send via Email
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                            <TableCell className="font-mono text-xs">
+                              {(() => {
+                                const amount = typeof donation?.amount === 'number' && Number.isFinite(donation.amount) ? donation.amount : 0;
+                                if (amount < 10000) return "—";
+                                const donor = getDonorInfo(donation.donorId);
+                                return donor?.pan && donor.pan !== "-" ? donor.pan : "—";
+                              })()}
                             </TableCell>
                           </TableRow>
                         );
