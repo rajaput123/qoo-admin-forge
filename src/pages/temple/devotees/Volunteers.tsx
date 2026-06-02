@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Plus, Download, HandHelping, UserCheck, Clock, Calendar, ChevronLeft, ChevronRight, Shield, Heart, StickyNote, Eye } from "lucide-react";
+import { Search, Plus, Download, HandHelping, UserCheck, Clock, Calendar, ChevronLeft, ChevronRight, Shield, Heart, StickyNote, Eye, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Volunteer = {
@@ -53,6 +53,49 @@ const Volunteers = () => {
   const [viewing, setViewing] = useState<Volunteer | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [page, setPage] = useState(1);
+  const [skillOptions, setSkillOptions] = useState<string[]>([
+    "Cooking",
+    "Crowd Control",
+    "Ritual Support",
+    "Admin",
+    "Security",
+    "Front Desk",
+    "Decoration",
+    "Sound & Lights",
+    "Transport / Driver",
+    "First Aid / Medical",
+    "Photography",
+    "Translation",
+    "Teaching / Pravachanam",
+    "Music / Bhajan",
+    "Garland Making",
+    "Cleaning / Housekeeping",
+    "IT / Tech Support",
+    "Accounting Help",
+    "Donor Relations",
+    "Event Coordination",
+  ]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState("");
+
+  const addCustomSkill = () => {
+    const s = newSkill.trim();
+    if (!s) return;
+    if (skillOptions.some((x) => x.toLowerCase() === s.toLowerCase())) {
+      toast.error("Skill already exists");
+      return;
+    }
+    setSkillOptions((prev) => [...prev, s]);
+    setSelectedSkills((prev) => [...prev, s]);
+    setNewSkill("");
+    toast.success(`Skill "${s}" added`);
+  };
+
+  const toggleSkill = (s: string) => {
+    setSelectedSkills((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+    );
+  };
 
   const filtered = volunteers.filter(v => {
     if (search && !v.name.toLowerCase().includes(search.toLowerCase()) && !v.phone.includes(search)) return false;
@@ -123,10 +166,9 @@ const Volunteers = () => {
             <SelectTrigger className="w-[150px] bg-background"><SelectValue placeholder="Skill" /></SelectTrigger>
             <SelectContent className="bg-popover">
               <SelectItem value="all">All Skills</SelectItem>
-              <SelectItem value="Cooking">Cooking</SelectItem>
-              <SelectItem value="Crowd Control">Crowd Control</SelectItem>
-              <SelectItem value="Ritual Support">Ritual Support</SelectItem>
-              <SelectItem value="Admin">Admin</SelectItem>
+              {skillOptions.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <Select value={filterAvailability} onValueChange={v => { setFilterAvailability(v); setPage(1); }}>
@@ -321,11 +363,55 @@ const Volunteers = () => {
             </div>
             <div>
               <Label className="text-xs mb-2 block">Skills</Label>
-              <div className="flex flex-wrap gap-3">
-                {["Cooking", "Crowd Control", "Ritual Support", "Admin"].map(s => (
-                  <div key={s} className="flex items-center gap-2"><Checkbox id={`skill-${s}`} /><Label htmlFor={`skill-${s}`} className="text-sm">{s}</Label></div>
-                ))}
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {skillOptions.map((s) => {
+                  const active = selectedSkills.includes(s);
+                  return (
+                    <button
+                      type="button"
+                      key={s}
+                      onClick={() => toggleSkill(s)}
+                      className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
+                        active
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted/40 hover:bg-muted border-border text-foreground"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  );
+                })}
               </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Add custom skill (e.g., Drone Pilot)"
+                  className="h-8 text-sm"
+                  value={newSkill}
+                  onChange={(e) => setNewSkill(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addCustomSkill();
+                    }
+                  }}
+                />
+                <Button type="button" size="sm" variant="outline" className="h-8 gap-1" onClick={addCustomSkill}>
+                  <Plus className="h-3 w-3" />
+                  Add
+                </Button>
+              </div>
+              {selectedSkills.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {selectedSkills.map((s) => (
+                    <Badge key={s} variant="secondary" className="text-[10px] gap-1">
+                      {s}
+                      <button type="button" onClick={() => toggleSkill(s)} className="hover:text-destructive">
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
