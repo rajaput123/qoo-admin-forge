@@ -992,16 +992,74 @@ const DevoteesList = () => {
           <div className="space-y-4 mt-4">
             <div>
               <Label className="text-xs mb-2 block">Skills *</Label>
-              <div className="flex flex-wrap gap-3">
-                {["Cooking", "Crowd Control", "Ritual Support", "Admin", "Security", "Front Desk"].map(skill => (
-                  <div key={skill} className="flex items-center gap-2">
-                    <Checkbox id={`vol-skill-${skill}`} checked={volunteerSkills.includes(skill)} onCheckedChange={checked => {
-                      if (checked) setVolunteerSkills([...volunteerSkills, skill]);
-                      else setVolunteerSkills(volunteerSkills.filter(s => s !== skill));
-                    }} />
-                    <Label htmlFor={`vol-skill-${skill}`} className="text-sm">{skill}</Label>
-                  </div>
-                ))}
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {volunteerSkillOptions.map((skill) => {
+                  const active = volunteerSkills.includes(skill);
+                  return (
+                    <button
+                      type="button"
+                      key={skill}
+                      onClick={() =>
+                        setVolunteerSkills(
+                          active
+                            ? volunteerSkills.filter((s) => s !== skill)
+                            : [...volunteerSkills, skill]
+                        )
+                      }
+                      className={`text-[11px] px-2 py-1 rounded-full border transition-colors ${
+                        active
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-muted/40 hover:bg-muted border-border text-foreground"
+                      }`}
+                    >
+                      {skill}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Add custom skill (e.g., Drone Pilot)"
+                  className="h-8 text-sm"
+                  value={newVolunteerSkill}
+                  onChange={(e) => setNewVolunteerSkill(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const s = newVolunteerSkill.trim();
+                      if (!s) return;
+                      if (volunteerSkillOptions.some((x) => x.toLowerCase() === s.toLowerCase())) {
+                        toast.error("Skill already exists");
+                        return;
+                      }
+                      setVolunteerSkillOptions((prev) => [...prev, s]);
+                      setVolunteerSkills((prev) => [...prev, s]);
+                      setNewVolunteerSkill("");
+                      toast.success(`Skill "${s}" added`);
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 gap-1"
+                  onClick={() => {
+                    const s = newVolunteerSkill.trim();
+                    if (!s) return;
+                    if (volunteerSkillOptions.some((x) => x.toLowerCase() === s.toLowerCase())) {
+                      toast.error("Skill already exists");
+                      return;
+                    }
+                    setVolunteerSkillOptions((prev) => [...prev, s]);
+                    setVolunteerSkills((prev) => [...prev, s]);
+                    setNewVolunteerSkill("");
+                    toast.success(`Skill "${s}" added`);
+                  }}
+                >
+                  <Plus className="h-3 w-3" />
+                  Add
+                </Button>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
