@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus, Download, Eye, FileDown } from "lucide-react";
 import { useDonations, useDonors } from "@/modules/donations/hooks";
-import { downloadReceipt } from "@/lib/receiptGenerator";
+import { downloadReceiptPdf } from "@/lib/pdfDocs";
+import { downloadCsv } from "@/lib/csvExport";
 import { useToast } from "@/hooks/use-toast";
 const formatCurrency = (val: number | undefined | null): string => {
   try {
@@ -96,8 +97,19 @@ const DonationsList = () => {
   const handleDownloadReceipt = (donation: (typeof donations)[number]) => {
     try {
       const donor = getDonorInfo(donation.donorId);
-      downloadReceipt(donation, donor || null, donation.is80G || false);
-      toast({ title: "Success", description: "Receipt download initiated" });
+      downloadReceiptPdf({
+        receiptNo: donation.receiptNo,
+        date: donation.date,
+        donorName: donation.donorName,
+        donorPan: donor?.pan && donor.pan !== "-" ? donor.pan : undefined,
+        donorAddress: donor?.city && donor.city !== "-" ? donor.city : undefined,
+        amount: donation.amount,
+        mode: donation.mode || donation.channel,
+        donationType: (donation.purpose || "").toLowerCase().includes("corpus") ? "Corpus" : "General",
+        remarks: donation.remarks,
+        is80G: donation.is80G,
+      });
+      toast({ title: "Receipt downloaded", description: `${donation.receiptNo}.pdf saved` });
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to download receipt", variant: "destructive" });
     }
@@ -105,26 +117,21 @@ const DonationsList = () => {
 
 
   const handleExport = () => {
-    // Export logic
-    const csv = [
-      ["Date", "Donor Name", "Amount", "Fund", "Donation Type", "Receipt Number"].join(","),
-      ...filteredDonations.map(d => [
-        d.date,
-        d.donorName,
-        d.amount,
-        d.purpose,
-        getDonationType(d),
-        d.receiptNo
-      ].join(","))
-    ].join("\n");
-    
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `donations-${activeTab.toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const rows = filteredDonations.map(d => {
+      const donor = getDonorInfo(d.donorId);
+      return {
+        "Receipt No": d.receiptNo,
+        Date: d.date,
+        "Donor Name": d.donorName,
+        PAN: donor?.pan && donor.pan !== "-" ? donor.pan : "",
+        Mode: d.mode || d.channel,
+        Amount: d.amount,
+        Type: (d.purpose || "").toLowerCase().includes("corpus") ? "Corpus" : "General",
+        Fund: d.purpose,
+      };
+    });
+    downloadCsv(rows, `donation-register-${activeTab.toLowerCase()}-${new Date().toISOString().split('T')[0]}.csv`);
+    toast({ title: "CSV exported", description: `${rows.length} donation${rows.length !== 1 ? 's' : ''} downloaded` });
   };
 
   return (
