@@ -86,8 +86,8 @@ const AddDonation = () => {
 
   // Get available events
   const [availableEvents, setAvailableEvents] = useState([
-    { value: "event-1", label: "Maha Shivaratri 2025" },
-    { value: "event-2", label: "Karthika Deepam" },
+    { value: "event-1", label: "Maha Shivaratri 2025", linkedBankAccountId: "ba-1" },
+    { value: "event-2", label: "Karthika Deepam", linkedBankAccountId: "ba-2" },
   ]);
 
   // Get available projects — each has a pre-linked bank account
@@ -344,14 +344,87 @@ const AddDonation = () => {
                     </Select>
                   </div>
                   {formData.donationType === "Other" && (
-                    <div className="space-y-2">
-                      <Label>Specify Donation Type *</Label>
-                      <Input
-                        placeholder="e.g., Memorial Fund, Special Occasion, etc."
-                        value={formData.otherTypeName}
-                        onChange={(e) => setFormData({ ...formData, otherTypeName: e.target.value })}
-                      />
-                    </div>
+                    <>
+                      <div className="space-y-2">
+                        <Label>Specify Donation Type *</Label>
+                        <Input
+                          placeholder="e.g., Memorial Fund, Special Occasion, etc."
+                          value={formData.otherTypeName}
+                          onChange={(e) => setFormData({ ...formData, otherTypeName: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Linked Bank Account *</Label>
+                        <Select
+                          value={formData.bankAccountId}
+                          onValueChange={(v) => setFormData({ ...formData, bankAccountId: v })}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
+                          <SelectContent>
+                            {bankAccounts.map(b => (
+                              <SelectItem key={b.id} value={b.id}>
+                                {b.name} — {b.bankName} ({b.accountNumber})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
+                  {formData.donationType === "Event" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Event Name *</Label>
+                        <Select
+                          value={formData.eventName}
+                          onValueChange={(v) => {
+                            const selectedEvent = availableEvents.find(e => e.value === v);
+                            setFormData({
+                              ...formData,
+                              eventName: v,
+                              bankAccountId: selectedEvent?.linkedBankAccountId || "",
+                            });
+                          }}
+                        >
+                          <SelectTrigger><SelectValue placeholder="Select event" /></SelectTrigger>
+                          <SelectContent>
+                            {availableEvents.map(e => (
+                              <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Linked Bank Account</Label>
+                        {(() => {
+                          const selectedEvent = availableEvents.find(e => e.value === formData.eventName);
+                          const linkedBank = bankAccounts.find(b => b.id === selectedEvent?.linkedBankAccountId);
+                          if (!linkedBank) {
+                            return (
+                              <div className="p-3 rounded-lg border bg-muted/30 text-sm text-muted-foreground">
+                                Select an event to view linked bank account
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="p-3 rounded-lg border bg-primary/5 border-primary/20">
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                  <Landmark className="h-4 w-4 text-primary" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">{linkedBank.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{linkedBank.bankName} — {linkedBank.accountNumber}</p>
+                                </div>
+                                {linkedBank.isDefaultDonation && (
+                                  <Badge variant="secondary" className="shrink-0 text-[10px]">Default</Badge>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </>
                   )}
                   {formData.donationType === "Project" && (
                     <>
