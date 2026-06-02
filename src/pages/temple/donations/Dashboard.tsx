@@ -298,6 +298,17 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Compliance Checklist & Deadlines */}
+      <ComplianceTracker
+        fyLabel={fyLabel}
+        fyStartYear={fyStartYear}
+        receiptsIssued={fyDonations.length}
+        registerCount={fyDonations.length}
+        tenBDFiled={tenBDFiled}
+        tenBEIssued={tenBEIssued}
+        tenBEPending={tenBEPending}
+      />
+
       {/* Action Button */}
       <div className="flex justify-end">
         <Button onClick={() => navigate("/temple/donations/add")} size="lg">
