@@ -1,12 +1,34 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Crown, Users, TrendingUp, IndianRupee, Activity, Calendar, Star, Shield } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+import {
+  Crown,
+  Users,
+  TrendingUp,
+  IndianRupee,
+  Activity,
+  Download,
+  Star,
+  Shield,
+} from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { toast } from "sonner";
+import { VipPageShell, SectionHeader, VipKpiCard } from "@/components/vip/VipPageShell";
 
 const vipLevelBreakdown = [
   { name: "Platinum", value: 8, color: "hsl(16, 85%, 23%)" },
@@ -42,64 +64,75 @@ const Dashboard = () => {
   const [period, setPeriod] = useState("month");
 
   return (
-    <div className="p-6 space-y-6">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-              <Crown className="h-6 w-6 text-amber-600" />
-              VIP Devotee Dashboard
-            </h1>
-            <p className="text-muted-foreground">
-              Classification, privileges and contribution overview for high-value devotees
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Select value={period} onValueChange={setPeriod}>
-              <SelectTrigger className="w-[130px] bg-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-popover">
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-                <SelectItem value="quarter">Quarter</SelectItem>
-                <SelectItem value="year">This Year</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              onClick={() => toast.success("VIP dashboard exported")}
-              className="gap-2"
-            >
-              <Calendar className="h-4 w-4" />
-              Export
-            </Button>
-          </div>
+    <VipPageShell
+      icon={Crown}
+      eyebrow="VIP · DASHBOARD"
+      title="VIP Devotee Dashboard"
+      description="Classification, privileges and contribution overview for high-value devotees."
+      actions={
+        <>
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-[140px] bg-background/80 backdrop-blur border-border/80">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover">
+              <SelectItem value="week">This Week</SelectItem>
+              <SelectItem value="month">This Month</SelectItem>
+              <SelectItem value="quarter">Quarter</SelectItem>
+              <SelectItem value="year">This Year</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={() => toast.success("VIP dashboard exported")}
+            className="gap-2 bg-primary hover:bg-primary/90 shadow-sm"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+        </>
+      }
+    >
+      {/* KPI Cards */}
+      <section>
+        <SectionHeader eyebrow="AT A GLANCE" title="Year-to-date snapshot" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <VipKpiCard
+            label="Active VIP Devotees"
+            value="24"
+            sub="Platinum / Gold / Silver"
+            icon={Users}
+            accent="primary"
+            delta={{ value: "12%", positive: true }}
+          />
+          <VipKpiCard
+            label="VIP Contribution (YTD)"
+            value="₹19,80,000"
+            sub="Donations & sponsorships"
+            icon={IndianRupee}
+            accent="green"
+            delta={{ value: "8.4%", positive: true }}
+          />
+          <VipKpiCard
+            label="VIP Bookings (YTD)"
+            value="606"
+            sub="Sevas & darshans"
+            icon={Activity}
+            accent="blue"
+          />
+          <VipKpiCard
+            label="Upgrades This Year"
+            value="14"
+            sub="Level changes & upgrades"
+            icon={TrendingUp}
+            accent="amber"
+          />
         </div>
+      </section>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          {[
-            { label: "Active VIP Devotees", value: "24", icon: Users, sub: "Platinum / Gold / Silver" },
-            { label: "VIP Contribution (YTD)", value: "₹19,80,000", icon: IndianRupee, sub: "Donations & sponsorships" },
-            { label: "VIP Bookings (YTD)", value: "606", icon: Activity, sub: "Sevas & darshans" },
-            { label: "Upgrades This Year", value: "14", icon: TrendingUp, sub: "Level changes & upgrades" },
-          ].map((kpi, i) => (
-            <Card key={i} className="group hover:shadow-md transition-all duration-200">
-              <CardContent className="p-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-muted group-hover:bg-primary group-hover:shadow-lg transition-all duration-200 mb-2">
-                  <kpi.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary-foreground transition-colors duration-200" />
-                </div>
-                <p className="text-xl font-bold">{kpi.value}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">{kpi.label}</p>
-                <p className="text-[10px] text-muted-foreground/70 mt-0.5">{kpi.sub}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Charts Row 1 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+      {/* Charts Row 1 */}
+      <section>
+        <SectionHeader eyebrow="GROWTH" title="Devotee growth & level mix" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <Card className="lg:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
@@ -177,9 +210,12 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+      </section>
 
-        {/* Charts Row 2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      {/* Charts Row 2 */}
+      <section>
+        <SectionHeader eyebrow="CONTRIBUTION & GOVERNANCE" title="Contribution flow & expiring devotees" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
@@ -227,7 +263,7 @@ const Dashboard = () => {
                 {expiringSoon.map((v) => (
                   <div
                     key={v.name}
-                    className="flex items-center justify-between rounded-md border p-2.5"
+                    className="flex items-center justify-between rounded-lg border border-border/70 bg-gradient-to-r from-amber-50/40 to-transparent p-3 hover:border-primary/40 transition-colors"
                   >
                     <div>
                       <div className="flex items-center gap-2">
@@ -255,8 +291,8 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
-      </motion.div>
-    </div>
+      </section>
+    </VipPageShell>
   );
 };
 
