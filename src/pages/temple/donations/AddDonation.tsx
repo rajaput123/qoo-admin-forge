@@ -755,19 +755,33 @@ const AddDonation = () => {
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-semibold mb-3">Step 3 — Tax Receipt Option</h3>
-              <div className="flex items-center justify-between p-4 border rounded-lg">
+              {(() => {
+                const eff = formData.donationNature === "Cash"
+                  ? parseFloat(formData.amount || "0")
+                  : parseFloat(formData.assetEstimatedValue || "0");
+                const panMandatory = eff > 10000;
+                const showPanBlock = formData.wants80G || panMandatory;
+                return (
+                  <>
+                    {panMandatory && (
+                      <div className="mb-3 p-3 rounded-lg border border-amber-300 bg-amber-50 text-xs text-amber-900">
+                        <strong>PAN & Address are mandatory</strong> for donations above ₹10,000 (required for Form 10BD reporting).
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="space-y-0.5">
                   <Label htmlFor="80g-toggle" className="text-base">Donor wants tax receipt (80G)?</Label>
                   <p className="text-sm text-muted-foreground">Enable to generate 80G certificate</p>
                 </div>
                 <Switch
                   id="80g-toggle"
-                  checked={formData.wants80G}
+                  checked={formData.wants80G || panMandatory}
+                  disabled={panMandatory}
                   onCheckedChange={(checked) => setFormData({ ...formData, wants80G: checked })}
                 />
               </div>
 
-              {formData.wants80G && (
+              {showPanBlock && (
                 <div className="mt-4 space-y-4 p-4 border rounded-lg bg-muted/30">
                   <div className="space-y-2">
                     <Label>PAN Number *</Label>
