@@ -1,6 +1,6 @@
 import { DonationsState, Donor, Donation, Allocation, Certificate80G, DonationAuditEntry, DonationChannel, DonationSourceModule, DonationNature, NonCashAssetDetails, Fund, FundExpense, DonorCategory, DonorVipInfo } from "./types";
 
-const LS_KEY = "qoo.donations.v1";
+const LS_KEY = "qoo.donations.v2";
 
 function nowIso() {
   return new Date().toISOString();
