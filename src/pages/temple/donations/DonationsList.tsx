@@ -6,18 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Download, Eye, FileDown, Printer, Mail, MoreVertical } from "lucide-react";
+import { Search, Plus, Download, Eye, FileDown } from "lucide-react";
 import { useDonations, useDonors } from "@/modules/donations/hooks";
-import { downloadReceipt, printReceipt, sendReceiptEmail } from "@/lib/receiptGenerator";
+import { downloadReceipt } from "@/lib/receiptGenerator";
 import { useToast } from "@/hooks/use-toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 const formatCurrency = (val: number | undefined | null): string => {
   try {
     if (val == null || typeof val !== 'number' || !Number.isFinite(val)) {
@@ -39,9 +31,6 @@ const DonationsList = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<DonationType>("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [selectedDonation, setSelectedDonation] = useState<(typeof donations)[number] | null>(null);
-  const [emailAddress, setEmailAddress] = useState("");
 
   // Get donation type from donation record
   const getDonationType = (donation: any): DonationType | "Other" => {
@@ -104,42 +93,6 @@ const DonationsList = () => {
     }
   };
 
-  const handlePrintReceipt = (donation: (typeof donations)[number]) => {
-    try {
-      const donor = getDonorInfo(donation.donorId);
-      printReceipt(donation, donor || null, donation.is80G || false);
-      toast({ title: "Success", description: "Print dialog opened" });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to print receipt", variant: "destructive" });
-    }
-  };
-
-  const handleSendReceipt = (donation: (typeof donations)[number]) => {
-    setSelectedDonation(donation);
-    const donor = getDonorInfo(donation.donorId);
-    if (donor?.email && donor.email !== "-") {
-      setEmailAddress(donor.email);
-    }
-    setShowEmailDialog(true);
-  };
-
-  const handleSendEmail = async () => {
-    if (!selectedDonation || !emailAddress.trim()) {
-      toast({ title: "Error", description: "Please enter a valid email address", variant: "destructive" });
-      return;
-    }
-
-    try {
-      const donor = getDonorInfo(selectedDonation.donorId);
-      await sendReceiptEmail(selectedDonation, donor || null, emailAddress.trim(), selectedDonation.is80G || false);
-      toast({ title: "Success", description: "Receipt email sent" });
-      setShowEmailDialog(false);
-      setEmailAddress("");
-      setSelectedDonation(null);
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to send email", variant: "destructive" });
-    }
-  };
 
   const handleExport = () => {
     // Export logic
@@ -219,7 +172,7 @@ const DonationsList = () => {
                       <TableHead>Fund</TableHead>
                       <TableHead>Donation Type</TableHead>
                       <TableHead>Receipt Number</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
+                      <TableHead>PAN No</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -280,41 +233,13 @@ const DonationsList = () => {
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDownloadReceipt(donation);
-                                  }}>
-                                    <FileDown className="h-4 w-4 mr-2" />
-                                    Download PDF
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePrintReceipt(donation);
-                                  }}>
-                                    <Printer className="h-4 w-4 mr-2" />
-                                    Print
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSendReceipt(donation);
-                                  }}>
-                                    <Mail className="h-4 w-4 mr-2" />
-                                    Send via Email
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                            <TableCell className="font-mono text-xs">
+                              {(() => {
+                                const amount = typeof donation?.amount === 'number' && Number.isFinite(donation.amount) ? donation.amount : 0;
+                                if (amount < 10000) return "—";
+                                const donor = getDonorInfo(donation.donorId);
+                                return donor?.pan && donor.pan !== "-" ? donor.pan : "—";
+                              })()}
                             </TableCell>
                           </TableRow>
                         );
@@ -341,49 +266,6 @@ const DonationsList = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Send Email Dialog */}
-      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Send Receipt via Email</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            {selectedDonation && (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Receipt: <span className="font-mono font-semibold">{selectedDonation.receiptNo}</span>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Donor: <span className="font-semibold">{selectedDonation.donorName}</span>
-                </p>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter email address"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowEmailDialog(false);
-              setEmailAddress("");
-              setSelectedDonation(null);
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleSendEmail}>
-              <Mail className="h-4 w-4 mr-2" />
-              Send Receipt
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
