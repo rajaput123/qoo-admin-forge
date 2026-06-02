@@ -383,13 +383,13 @@ const AddDonation = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Donation Type *</Label>
+                    <Label>Donation Purpose *</Label>
                     <Select 
                       value={formData.donationType} 
                       onValueChange={(v) => setFormData({ ...formData, donationType: v as DonationType })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select donation type" />
+                        <SelectValue placeholder="Select donation purpose" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Counter">Counter</SelectItem>
@@ -402,7 +402,7 @@ const AddDonation = () => {
                   {formData.donationType === "Other" && (
                     <>
                       <div className="space-y-2">
-                        <Label>Specify Donation Type *</Label>
+                        <Label>Specify Donation Purpose *</Label>
                         <Input
                           placeholder="e.g., Memorial Fund, Special Occasion, etc."
                           value={formData.otherTypeName}
@@ -614,13 +614,13 @@ const AddDonation = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Donation Type *</Label>
+                      <Label>Donation Purpose *</Label>
                       <Select 
                         value={formData.donationType} 
                         onValueChange={(v) => setFormData({ ...formData, donationType: v as DonationType })}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select donation type" />
+                          <SelectValue placeholder="Select donation purpose" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Counter">Counter</SelectItem>
@@ -632,7 +632,7 @@ const AddDonation = () => {
                     </div>
                     {formData.donationType === "Other" && (
                       <div className="space-y-2">
-                        <Label>Specify Donation Type *</Label>
+                        <Label>Specify Donation Purpose *</Label>
                         <Input
                           placeholder="e.g., Memorial Fund, Special Occasion, etc."
                           value={formData.otherTypeName}
