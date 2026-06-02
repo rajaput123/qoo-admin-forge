@@ -173,7 +173,7 @@ const DonationsList = () => {
                       <TableHead>Fund</TableHead>
                       <TableHead>Donation Type</TableHead>
                       <TableHead>Receipt Number</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
+                      <TableHead>PAN No</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
