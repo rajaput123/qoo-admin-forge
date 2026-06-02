@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Plus, Download, HandHelping, UserCheck, Clock, Calendar, ChevronLeft, ChevronRight, Shield, Heart, StickyNote, Eye, X } from "lucide-react";
+import { Search, Plus, Download, HandHelping, UserCheck, Clock, Calendar, ChevronLeft, ChevronRight, Shield, Heart, StickyNote, Eye, X, Globe, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 type Volunteer = {
@@ -53,6 +53,23 @@ const Volunteers = () => {
   const [viewing, setViewing] = useState<Volunteer | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [page, setPage] = useState(1);
+  const [published, setPublished] = useState<Record<string, boolean>>({
+    "VOL-001": true,
+    "VOL-003": true,
+    "VOL-005": true,
+  });
+
+  const togglePublish = (id: string, name: string) => {
+    setPublished((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      toast.success(
+        next[id]
+          ? `${name} is now visible on the devotee app`
+          : `${name} hidden from devotee app`
+      );
+      return next;
+    });
+  };
   const [skillOptions, setSkillOptions] = useState<string[]>([
     "Cooking",
     "Crowd Control",
