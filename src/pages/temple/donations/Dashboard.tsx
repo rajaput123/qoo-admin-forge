@@ -7,6 +7,7 @@ import { IndianRupee, Users, Wallet, CalendarCheck, Plus, TrendingUp, AlertTrian
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { useDonations, useDonors, useAllocations, useCertificates80G } from "@/modules/donations/hooks";
 import { Badge } from "@/components/ui/badge";
+import ComplianceTracker from "@/components/donations/ComplianceTracker";
 
 const formatCurrency = (val: number | undefined | null): string => {
   try {
