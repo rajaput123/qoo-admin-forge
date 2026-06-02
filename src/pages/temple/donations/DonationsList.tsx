@@ -94,42 +94,6 @@ const DonationsList = () => {
     }
   };
 
-  const handlePrintReceipt = (donation: (typeof donations)[number]) => {
-    try {
-      const donor = getDonorInfo(donation.donorId);
-      printReceipt(donation, donor || null, donation.is80G || false);
-      toast({ title: "Success", description: "Print dialog opened" });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to print receipt", variant: "destructive" });
-    }
-  };
-
-  const handleSendReceipt = (donation: (typeof donations)[number]) => {
-    setSelectedDonation(donation);
-    const donor = getDonorInfo(donation.donorId);
-    if (donor?.email && donor.email !== "-") {
-      setEmailAddress(donor.email);
-    }
-    setShowEmailDialog(true);
-  };
-
-  const handleSendEmail = async () => {
-    if (!selectedDonation || !emailAddress.trim()) {
-      toast({ title: "Error", description: "Please enter a valid email address", variant: "destructive" });
-      return;
-    }
-
-    try {
-      const donor = getDonorInfo(selectedDonation.donorId);
-      await sendReceiptEmail(selectedDonation, donor || null, emailAddress.trim(), selectedDonation.is80G || false);
-      toast({ title: "Success", description: "Receipt email sent" });
-      setShowEmailDialog(false);
-      setEmailAddress("");
-      setSelectedDonation(null);
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to send email", variant: "destructive" });
-    }
-  };
 
   const handleExport = () => {
     // Export logic
