@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus, Download, Eye, FileDown } from "lucide-react";
 import { useDonations, useDonors } from "@/modules/donations/hooks";
-import { downloadReceipt, printReceipt, sendReceiptEmail } from "@/lib/receiptGenerator";
+import { downloadReceipt } from "@/lib/receiptGenerator";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 const formatCurrency = (val: number | undefined | null): string => {
