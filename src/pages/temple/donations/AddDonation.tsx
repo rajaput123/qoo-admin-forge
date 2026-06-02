@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Save, Receipt, Plus, Package } from "lucide-react";
+import { ArrowLeft, Save, Receipt, Plus, Package, Landmark } from "lucide-react";
 import { getTemplatesByType } from "@/data/receiptTemplateData";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -90,10 +90,10 @@ const AddDonation = () => {
     { value: "event-2", label: "Karthika Deepam" },
   ]);
 
-  // Get available projects
+  // Get available projects — each has a pre-linked bank account
   const [availableProjects, setAvailableProjects] = useState([
-    { value: "project-1", label: "Temple Renovation" },
-    { value: "project-2", label: "New Hall Construction" },
+    { value: "project-1", label: "Temple Renovation", linkedBankAccountId: "ba-1" },
+    { value: "project-2", label: "New Hall Construction", linkedBankAccountId: "ba-2" },
   ]);
 
   // Validate PAN format
@@ -357,7 +357,17 @@ const AddDonation = () => {
                     <>
                       <div className="space-y-2">
                         <Label>Project Name *</Label>
-                        <Select value={formData.projectName} onValueChange={(v) => setFormData({ ...formData, projectName: v })}>
+                        <Select
+                          value={formData.projectName}
+                          onValueChange={(v) => {
+                            const selectedProject = availableProjects.find(p => p.value === v);
+                            setFormData({
+                              ...formData,
+                              projectName: v,
+                              bankAccountId: selectedProject?.linkedBankAccountId || "",
+                            });
+                          }}
+                        >
                           <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
                           <SelectContent>
                             {availableProjects.map(p => (
@@ -367,17 +377,34 @@ const AddDonation = () => {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Linked Bank Account *</Label>
-                        <Select value={formData.bankAccountId} onValueChange={(v) => setFormData({ ...formData, bankAccountId: v })}>
-                          <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
-                          <SelectContent>
-                            {bankAccounts.map(b => (
-                              <SelectItem key={b.id} value={b.id}>
-                                {b.name} — {b.bankName} ({b.accountNumber}){b.isDefaultDonation ? " ★" : ""}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Label>Linked Bank Account</Label>
+                        {(() => {
+                          const selectedProject = availableProjects.find(p => p.value === formData.projectName);
+                          const linkedBank = bankAccounts.find(b => b.id === selectedProject?.linkedBankAccountId);
+                          if (!linkedBank) {
+                            return (
+                              <div className="p-3 rounded-lg border bg-muted/30 text-sm text-muted-foreground">
+                                Select a project to view linked bank account
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="p-3 rounded-lg border bg-primary/5 border-primary/20">
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                  <Landmark className="h-4 w-4 text-primary" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">{linkedBank.name}</p>
+                                  <p className="text-xs text-muted-foreground truncate">{linkedBank.bankName} — {linkedBank.accountNumber}</p>
+                                </div>
+                                {linkedBank.isDefaultDonation && (
+                                  <Badge variant="secondary" className="shrink-0 text-[10px]">Default</Badge>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </>
                   )}
@@ -470,7 +497,17 @@ const AddDonation = () => {
                       <>
                         <div className="space-y-2">
                           <Label>Project Name *</Label>
-                          <Select value={formData.projectName} onValueChange={(v) => setFormData({ ...formData, projectName: v })}>
+                          <Select
+                            value={formData.projectName}
+                            onValueChange={(v) => {
+                              const selectedProject = availableProjects.find(p => p.value === v);
+                              setFormData({
+                                ...formData,
+                                projectName: v,
+                                bankAccountId: selectedProject?.linkedBankAccountId || "",
+                              });
+                            }}
+                          >
                             <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
                             <SelectContent>
                               {availableProjects.map(p => (
@@ -480,17 +517,34 @@ const AddDonation = () => {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Linked Bank Account *</Label>
-                          <Select value={formData.bankAccountId} onValueChange={(v) => setFormData({ ...formData, bankAccountId: v })}>
-                            <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
-                            <SelectContent>
-                              {bankAccounts.map(b => (
-                                <SelectItem key={b.id} value={b.id}>
-                                  {b.name} — {b.bankName} ({b.accountNumber}){b.isDefaultDonation ? " ★" : ""}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label>Linked Bank Account</Label>
+                          {(() => {
+                            const selectedProject = availableProjects.find(p => p.value === formData.projectName);
+                            const linkedBank = bankAccounts.find(b => b.id === selectedProject?.linkedBankAccountId);
+                            if (!linkedBank) {
+                              return (
+                                <div className="p-3 rounded-lg border bg-muted/30 text-sm text-muted-foreground">
+                                  Select a project to view linked bank account
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className="p-3 rounded-lg border bg-primary/5 border-primary/20">
+                                <div className="flex items-center gap-3">
+                                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                    <Landmark className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium truncate">{linkedBank.name}</p>
+                                    <p className="text-xs text-muted-foreground truncate">{linkedBank.bankName} — {linkedBank.accountNumber}</p>
+                                  </div>
+                                  {linkedBank.isDefaultDonation && (
+                                    <Badge variant="secondary" className="shrink-0 text-[10px]">Default</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </>
                     )}
