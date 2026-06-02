@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Plus, Download, HandHelping, UserCheck, Clock, Calendar, ChevronLeft, ChevronRight, Shield, Heart, StickyNote, Eye } from "lucide-react";
+import { Search, Plus, Download, HandHelping, UserCheck, Clock, Calendar, ChevronLeft, ChevronRight, Shield, Heart, StickyNote, Eye, X } from "lucide-react";
 import { toast } from "sonner";
 
 type Volunteer = {
@@ -53,6 +53,49 @@ const Volunteers = () => {
   const [viewing, setViewing] = useState<Volunteer | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [page, setPage] = useState(1);
+  const [skillOptions, setSkillOptions] = useState<string[]>([
+    "Cooking",
+    "Crowd Control",
+    "Ritual Support",
+    "Admin",
+    "Security",
+    "Front Desk",
+    "Decoration",
+    "Sound & Lights",
+    "Transport / Driver",
+    "First Aid / Medical",
+    "Photography",
+    "Translation",
+    "Teaching / Pravachanam",
+    "Music / Bhajan",
+    "Garland Making",
+    "Cleaning / Housekeeping",
+    "IT / Tech Support",
+    "Accounting Help",
+    "Donor Relations",
+    "Event Coordination",
+  ]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState("");
+
+  const addCustomSkill = () => {
+    const s = newSkill.trim();
+    if (!s) return;
+    if (skillOptions.some((x) => x.toLowerCase() === s.toLowerCase())) {
+      toast.error("Skill already exists");
+      return;
+    }
+    setSkillOptions((prev) => [...prev, s]);
+    setSelectedSkills((prev) => [...prev, s]);
+    setNewSkill("");
+    toast.success(`Skill "${s}" added`);
+  };
+
+  const toggleSkill = (s: string) => {
+    setSelectedSkills((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]
+    );
+  };
 
   const filtered = volunteers.filter(v => {
     if (search && !v.name.toLowerCase().includes(search.toLowerCase()) && !v.phone.includes(search)) return false;
