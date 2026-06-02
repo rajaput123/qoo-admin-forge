@@ -86,6 +86,7 @@ function seedState(): DonationsState {
     { donorId: "DNR-005", name: "Village Dev Committee", phone: "+91 54321 09876", email: "-", city: "Anantapur", pan: "DDDPV7890E", category: "Organization", eligible80G: false, createdAt },
     { donorId: "DNR-006", name: "Anonymous Devotee", phone: "-", email: "-", city: "-", pan: "-", category: "Anonymous", eligible80G: false, createdAt },
     { donorId: "DNR-007", name: "Lakshmi Narasimha Bhakta Mandali", phone: "+91 43210 98765", email: "lnbm@email.com", city: "Vijayawada", pan: "EEEPN1234F", category: "Patron", eligible80G: true, createdAt },
+    { donorId: "DNR-008", name: "Dr. Suresh Iyer", phone: "+91 99887 76655", email: "suresh.iyer@email.com", city: "Plot 12, Jubilee Hills, Hyderabad - 500033", pan: "AKLPI8821M", category: "Regular", eligible80G: true, createdAt },
   ];
 
   const donations: Donation[] = [
@@ -97,6 +98,7 @@ function seedState(): DonationsState {
     { donationId: "DON-2025-0886", receiptNo: "REC-2025-0886", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-002", donorName: "Smt. Padma Foundation", nature: "Cash", amount: 2500000, purpose: "Event-linked", channel: "Bank Transfer", mode: "NEFT", sourceModule: "Event", sourceRecordId: "EVT-2025-003", date: "2025-02-07", time: "02:00 PM", status: "Recorded", createdAt },
     { donationId: "DON-2025-0885", receiptNo: "REC-2025-0885", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-007", donorName: "Lakshmi Narasimha Bhakta Mandali", nature: "Cash", amount: 50000, purpose: "Seva Sponsorship", channel: "Cash", mode: "Cash", sourceModule: "Booking", sourceRecordId: "BKG-2025-0142", counterId: "CTR-002", date: "2025-02-06", time: "08:30 AM", status: "Recorded", createdAt },
     { donationId: "DON-2025-0884", receiptNo: "REC-2025-0884", templeId: "TMPL-001", branchId: "BR-TIRUCHANUR", donorId: "DNR-005", donorName: "Village Dev Committee", nature: "Non-Cash", amount: 75000, purpose: "Corpus Fund", channel: "In-Kind", mode: "In-Kind", sourceModule: "Campaign", sourceRecordId: "CMP-2025-001", date: "2025-02-05", time: "11:45 AM", status: "Recorded", nonCashDetails: { assetName: "Rice Bags", quantity: 50, unit: "bags", estimatedValue: 75000 }, createdAt },
+    { donationId: "DON-2025-0892", receiptNo: "REC-2025-0892", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-008", donorName: "Dr. Suresh Iyer", nature: "Cash", amount: 51000, purpose: "Corpus Fund", channel: "Bank Transfer", mode: "NEFT", referenceNo: "NEFT-SBI-786543210", sourceModule: "Manual", date: "2025-02-11", time: "11:20 AM", status: "Recorded", remarks: "80G eligible donation — Corpus contribution towards temple development", createdAt },
   ];
 
   const allocations: Allocation[] = [
