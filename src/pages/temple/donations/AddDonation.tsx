@@ -353,6 +353,34 @@ const AddDonation = () => {
                       />
                     </div>
                   )}
+                  {formData.donationType === "Project" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Project Name *</Label>
+                        <Select value={formData.projectName} onValueChange={(v) => setFormData({ ...formData, projectName: v })}>
+                          <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
+                          <SelectContent>
+                            {availableProjects.map(p => (
+                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Linked Bank Account *</Label>
+                        <Select value={formData.bankAccountId} onValueChange={(v) => setFormData({ ...formData, bankAccountId: v })}>
+                          <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
+                          <SelectContent>
+                            {bankAccounts.map(b => (
+                              <SelectItem key={b.id} value={b.id}>
+                                {b.name} — {b.bankName} ({b.accountNumber}){b.isDefaultDonation ? " ★" : ""}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 /* Non-Cash Asset Details */
@@ -437,6 +465,34 @@ const AddDonation = () => {
                           onChange={(e) => setFormData({ ...formData, otherTypeName: e.target.value })}
                         />
                       </div>
+                    )}
+                    {formData.donationType === "Project" && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Project Name *</Label>
+                          <Select value={formData.projectName} onValueChange={(v) => setFormData({ ...formData, projectName: v })}>
+                            <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
+                            <SelectContent>
+                              {availableProjects.map(p => (
+                                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Linked Bank Account *</Label>
+                          <Select value={formData.bankAccountId} onValueChange={(v) => setFormData({ ...formData, bankAccountId: v })}>
+                            <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
+                            <SelectContent>
+                              {bankAccounts.map(b => (
+                                <SelectItem key={b.id} value={b.id}>
+                                  {b.name} — {b.bankName} ({b.accountNumber}){b.isDefaultDonation ? " ★" : ""}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
@@ -570,37 +626,7 @@ const AddDonation = () => {
                 )}
 
                 {formData.donationType === "Project" && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Project Name *</Label>
-                      <Select value={formData.projectName} onValueChange={(v) => setFormData({ ...formData, projectName: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select project" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableProjects.map(project => (
-                            <SelectItem key={project.value} value={project.value}>{project.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Linked Bank Account *</Label>
-                      <Select value={formData.bankAccountId} onValueChange={(v) => setFormData({ ...formData, bankAccountId: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select bank account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {bankAccounts.map(b => (
-                            <SelectItem key={b.id} value={b.id}>
-                              {b.name} — {b.bankName} ({b.accountNumber}){b.isDefaultDonation ? " ★" : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-[10px] text-muted-foreground">Account where the project donation will be credited</p>
-                    </div>
-                  </div>
+                  null
                 )}
 
               {/* Payment Mode — shown for ALL donation types when Cash nature */}
