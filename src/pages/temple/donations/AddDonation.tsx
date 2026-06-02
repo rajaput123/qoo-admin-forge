@@ -102,12 +102,26 @@ const AddDonation = () => {
     return panRegex.test(pan.toUpperCase());
   };
 
+  // Validate 10-digit Indian mobile number
+  const validateMobile = (mobile: string): boolean => {
+    return /^[6-9]\d{9}$/.test(mobile.replace(/\s+/g, ""));
+  };
+
+  // Validate email format
+  const validateEmail = (email: string): boolean => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const handleSubmit = async () => {
     const isCash = formData.donationNature === "Cash";
 
     if (isCash) {
       if (!formData.amount || parseFloat(formData.amount) <= 0) {
         toast({ title: "Error", description: "Please enter a valid amount", variant: "destructive" });
+        return;
+      }
+      if (parseFloat(formData.amount) > 10000000) {
+        toast({ title: "Error", description: "Amount exceeds reasonable limit (₹1 Cr). Please verify.", variant: "destructive" });
         return;
       }
       // 80G compliance: warn when cash payment exceeds ₹2,000
@@ -137,13 +151,37 @@ const AddDonation = () => {
       return;
     }
 
+    // Donation date validation — required & not in future
+    if (!formData.date) {
+      toast({ title: "Error", description: "Please select donation date", variant: "destructive" });
+      return;
+    }
+    if (new Date(formData.date) > new Date()) {
+      toast({ title: "Error", description: "Donation date cannot be in the future", variant: "destructive" });
+      return;
+    }
+
     if (!formData.donorName.trim()) {
       toast({ title: "Error", description: "Please enter donor name", variant: "destructive" });
+      return;
+    }
+    if (formData.donorName.trim().length < 2) {
+      toast({ title: "Error", description: "Donor name must be at least 2 characters", variant: "destructive" });
       return;
     }
 
     if (!formData.donorPhone.trim()) {
       toast({ title: "Error", description: "Please enter donor mobile number", variant: "destructive" });
+      return;
+    }
+    if (!validateMobile(formData.donorPhone)) {
+      toast({ title: "Error", description: "Invalid mobile number. Enter a 10-digit Indian mobile number.", variant: "destructive" });
+      return;
+    }
+
+    // Optional email — validate format if provided
+    if (formData.email.trim() && !validateEmail(formData.email.trim())) {
+      toast({ title: "Error", description: "Invalid email address format", variant: "destructive" });
       return;
     }
 
@@ -159,6 +197,10 @@ const AddDonation = () => {
       }
       if (!formData.address.trim()) {
         toast({ title: "Error", description: "Address is required for 80G receipt", variant: "destructive" });
+        return;
+      }
+      if (formData.address.trim().length < 10) {
+        toast({ title: "Error", description: "Please enter a complete address (min 10 characters) for 80G receipt", variant: "destructive" });
         return;
       }
     }
@@ -183,6 +225,13 @@ const AddDonation = () => {
     const needsBank = formData.donationNature === "Cash" && ["UPI", "QR", "Cheque"].includes(formData.paymentMode);
     if (needsBank && !formData.bankAccountId) {
       toast({ title: "Error", description: "Please select the bank account where funds are received", variant: "destructive" });
+      return;
+    }
+
+    // Payment reference required for non-cash payment modes (UPI/QR/Cheque)
+    if (needsBank && !formData.paymentReference.trim()) {
+      const refLabel = formData.paymentMode === "Cheque" ? "Cheque number" : "Transaction / UTR reference";
+      toast({ title: "Error", description: `${refLabel} is required for ${formData.paymentMode} payments`, variant: "destructive" });
       return;
     }
 
