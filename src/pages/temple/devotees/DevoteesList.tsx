@@ -62,6 +62,29 @@ const DevoteesList = () => {
 
   // Volunteer form state
   const [volunteerSkills, setVolunteerSkills] = useState<string[]>([]);
+  const [volunteerSkillOptions, setVolunteerSkillOptions] = useState<string[]>([
+    "Cooking",
+    "Crowd Control",
+    "Ritual Support",
+    "Admin",
+    "Security",
+    "Front Desk",
+    "Decoration",
+    "Sound & Lights",
+    "Transport / Driver",
+    "First Aid / Medical",
+    "Photography",
+    "Translation",
+    "Teaching / Pravachanam",
+    "Music / Bhajan",
+    "Garland Making",
+    "Cleaning / Housekeeping",
+    "IT / Tech Support",
+    "Accounting Help",
+    "Donor Relations",
+    "Event Coordination",
+  ]);
+  const [newVolunteerSkill, setNewVolunteerSkill] = useState("");
   const [volunteerDept, setVolunteerDept] = useState("");
   const [volunteerAvailability, setVolunteerAvailability] = useState("");
   const [volunteerEmergencyContact, setVolunteerEmergencyContact] = useState("");
