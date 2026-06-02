@@ -31,6 +31,8 @@ const DonationsList = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<DonationType>("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const [fromDate, setFromDate] = useState<string>("");
+  const [toDate, setToDate] = useState<string>("");
 
   // Get donation type from donation record
   const getDonationType = (donation: any): DonationType | "Other" => {
@@ -51,6 +53,14 @@ const DonationsList = () => {
         const type = getDonationType(d);
         return type === activeTab;
       });
+    }
+
+    // Filter by date range
+    if (fromDate) {
+      filtered = filtered.filter(d => d?.date && d.date >= fromDate);
+    }
+    if (toDate) {
+      filtered = filtered.filter(d => d?.date && d.date <= toDate);
     }
 
     // Filter by search
@@ -77,7 +87,7 @@ const DonationsList = () => {
         return 0;
       }
     });
-  }, [donations, activeTab, searchQuery]);
+  }, [donations, activeTab, searchQuery, fromDate, toDate]);
 
   const getDonorInfo = (donorId: string) => {
     return donors.find(d => d.donorId === donorId);
@@ -146,6 +156,23 @@ const DonationsList = () => {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
         />
+      </div>
+
+      {/* Date Range Filter */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">From Date</label>
+          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-44" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">To Date</label>
+          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-44" />
+        </div>
+        {(fromDate || toDate) && (
+          <Button variant="ghost" size="sm" onClick={() => { setFromDate(""); setToDate(""); }}>
+            Clear dates
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
