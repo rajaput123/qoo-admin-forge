@@ -32,9 +32,6 @@ const DonationsList = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<DonationType>("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
-  const [selectedDonation, setSelectedDonation] = useState<(typeof donations)[number] | null>(null);
-  const [emailAddress, setEmailAddress] = useState("");
 
   // Get donation type from donation record
   const getDonationType = (donation: any): DonationType | "Other" => {
