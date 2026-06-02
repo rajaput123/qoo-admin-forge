@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,6 +8,34 @@ import { Badge } from "@/components/ui/badge";
 import { FileSpreadsheet, Download, AlertTriangle, CheckCircle2, Calendar, Users, FileCheck2 } from "lucide-react";
 import { useDonations, useDonors } from "@/modules/donations/hooks";
 import { useToast } from "@/hooks/use-toast";
+
+// Dummy data for preview / demo
+const dummyDonations = [
+  { donationId: "D1", donorId: "DR1", donorName: "Rajesh Kumar Sharma", date: "2024-06-15", amount: 25000, mode: "Cash", purpose: "General" },
+  { donationId: "D2", donorId: "DR1", donorName: "Rajesh Kumar Sharma", date: "2024-11-02", amount: 15000, mode: "UPI", purpose: "Corpus" },
+  { donationId: "D3", donorId: "DR2", donorName: "Lakshmi Devi Agarwal", date: "2024-07-20", amount: 50000, mode: "Bank Transfer", purpose: "General" },
+  { donationId: "D4", donorId: "DR3", donorName: "Suresh Iyer", date: "2024-08-05", amount: 10000, mode: "Cash", purpose: "General" },
+  { donationId: "D5", donorId: "DR4", donorName: "Anita Reddy", date: "2024-09-12", amount: 75000, mode: "Cheque", purpose: "Corpus" },
+  { donationId: "D6", donorId: "DR5", donorName: "Mohammed Ali Khan", date: "2024-10-30", amount: 12000, mode: "UPI", purpose: "General" },
+  { donationId: "D7", donorId: "DR2", donorName: "Lakshmi Devi Agarwal", date: "2025-01-10", amount: 30000, mode: "Bank Transfer", purpose: "Corpus" },
+  { donationId: "D8", donorId: "DR6", donorName: "Priya Nair", date: "2024-12-25", amount: 18000, mode: "Cash", purpose: "General" },
+  { donationId: "D9", donorId: "DR7", donorName: "Venkatesh Murthy", date: "2025-02-14", amount: 60000, mode: "Cheque", purpose: "Corpus" },
+  { donationId: "D10", donorId: "DR8", donorName: "Deepak Choudhary", date: "2024-11-28", amount: 9000, mode: "UPI", purpose: "General" },
+  { donationId: "D11", donorId: "DR3", donorName: "Suresh Iyer", date: "2025-03-05", amount: 20000, mode: "Cash", purpose: "General" },
+  { donationId: "D12", donorId: "DR9", donorName: "Sunita Patel", date: "2024-06-30", amount: 45000, mode: "Bank Transfer", purpose: "Corpus" },
+];
+
+const dummyDonors = [
+  { donorId: "DR1", name: "Rajesh Kumar Sharma", pan: "ABCDE1234F", city: "Bengaluru, Karnataka" },
+  { donorId: "DR2", name: "Lakshmi Devi Agarwal", pan: "FGHIJ5678K", city: "Mumbai, Maharashtra" },
+  { donorId: "DR3", name: "Suresh Iyer", pan: "KLMNO9012P", city: "Chennai, Tamil Nadu" },
+  { donorId: "DR4", name: "Anita Reddy", pan: "PQRST3456U", city: "Hyderabad, Telangana" },
+  { donorId: "DR5", name: "Mohammed Ali Khan", pan: "UVWXY7890Z", city: "Delhi" },
+  { donorId: "DR6", name: "Priya Nair", pan: "", city: "Kochi, Kerala" },
+  { donorId: "DR7", name: "Venkatesh Murthy", pan: "BCDEF2345G", city: "Mysuru, Karnataka" },
+  { donorId: "DR8", name: "Deepak Choudhary", pan: "-", city: "Jaipur, Rajasthan" },
+  { donorId: "DR9", name: "Sunita Patel", pan: "CDEFG3456H", city: "Ahmedabad, Gujarat" },
+];
 
 // Generate FY options (current + previous 4 years)
 const generateFYOptions = () => {
@@ -21,11 +48,15 @@ const generateFYOptions = () => {
 };
 
 const Form10BD = () => {
-  const donations = useDonations();
-  const donors = useDonors();
+  const realDonations = useDonations();
+  const realDonors = useDonors();
   const { toast } = useToast();
   const fyOptions = useMemo(() => generateFYOptions(), []);
   const [fy, setFy] = useState(fyOptions[0].value);
+
+  // Merge dummy data with real data
+  const donations = useMemo(() => realDonations.length > 0 ? realDonations : dummyDonations, [realDonations]);
+  const donors = useMemo(() => realDonors.length > 0 ? realDonors : dummyDonors, [realDonors]);
 
   const selectedFy = fyOptions.find(f => f.value === fy)!;
 
