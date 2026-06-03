@@ -12,6 +12,7 @@ import { recordDonation } from "@/modules/donations/donationsStore";
 
 type Purpose = "Counter" | "Project" | "Event" | "Other";
 type PaymentMode = "Cash" | "UPI" | "Cheque" | "NEFT";
+type DonationNature = "Cash" | "Non-Cash";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
@@ -48,6 +49,8 @@ const AddDonation = () => {
   const [amount, setAmount] = useState("");
   const [wants80G, setWants80G] = useState<"" | "Yes" | "No">("");
   const [pan, setPan] = useState("");
+  const [nature, setNature] = useState<DonationNature>("Cash");
+  const [nonCashItem, setNonCashItem] = useState("");
 
   // Step 2
   const [donorName, setDonorName] = useState("");
@@ -89,7 +92,8 @@ const AddDonation = () => {
     amt > 0 &&
     (requires80G || wants80G !== "") &&
     panValid &&
-    (!panRequired || pan.trim().length === 10);
+    (!panRequired || pan.trim().length === 10) &&
+    (nature === "Cash" || nonCashItem.trim().length >= 3);
 
   // Step 2 valid?
   const nameValid = donorName.trim().length >= 3 && donorName.trim().length <= 100;
@@ -169,9 +173,11 @@ const AddDonation = () => {
       email: email.trim() || undefined,
       city: address.trim() || undefined,
       pan: panRequired ? pan.toUpperCase().trim() : undefined,
-      nature: "Cash",
+      nature,
       amount: amt,
-      purpose: purposeLabel || "General",
+      purpose: nature === "Non-Cash"
+        ? `${purposeLabel || "General"} (Non-cash: ${nonCashItem.trim()})`
+        : (purposeLabel || "General"),
       channel: channelMap[paymentMode as PaymentMode],
       mode: paymentMode,
       referenceNo,
@@ -204,7 +210,7 @@ const AddDonation = () => {
       <Card>
         <CardContent className="pt-6">
           <StepHeader n={1} title="Donation Information" done={step1Valid} />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Donation Amount (₹) *</Label>
               <Input
@@ -218,6 +224,19 @@ const AddDonation = () => {
                   Amount ≥ ₹2,000 → 80G is auto-enabled and PAN is mandatory.
                 </p>
               )}
+            </div>
+            <div className="space-y-2">
+              <Label>Donation Nature *</Label>
+              <Select value={nature} onValueChange={(v) => setNature(v as DonationNature)}>
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Non-Cash">Non-Cash (Gold, Kind, etc.)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">
+                Choose Non-Cash for gold, silver, kind, or in-kind contributions.
+              </p>
             </div>
             <div className="space-y-2">
               <Label>80G Required *</Label>
@@ -242,8 +261,27 @@ const AddDonation = () => {
                   value={pan}
                   onChange={(e) => setPan(e.target.value.toUpperCase())}
                 />
-                {pan.length === 10 && !panValid && (
-                  <p className="text-[11px] text-destructive">Invalid PAN format.</p>
+                {pan.length === 10 && !panValid ? (
+                  <p className="text-[11px] text-destructive">
+                    Invalid PAN. Expected format: AAAAA9999A (e.g. ABCDE1234F).
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    Format: AAAAA9999A — Example: ABCDE1234F
+                  </p>
+                )}
+              </div>
+            )}
+            {nature === "Non-Cash" && (
+              <div className="space-y-2 md:col-span-4">
+                <Label>Item / Description *</Label>
+                <Input
+                  placeholder="e.g. 10g Gold Chain, 5kg Rice, Silver Lamp"
+                  value={nonCashItem}
+                  onChange={(e) => setNonCashItem(e.target.value)}
+                />
+                {nonCashItem && nonCashItem.trim().length < 3 && (
+                  <p className="text-[11px] text-destructive">Enter at least 3 characters.</p>
                 )}
               </div>
             )}
