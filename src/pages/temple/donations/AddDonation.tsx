@@ -180,7 +180,7 @@ const AddDonation = ({ embedded = false, onSaved, onClose }: AddDonationProps = 
       email: email.trim() || undefined,
       city: address.trim() || undefined,
       pan: panRequired ? pan.toUpperCase().trim() : undefined,
-      nature,
+      nature: nature as DonationNature,
       amount: amt,
       purpose: nature === "Non-Cash"
         ? `${purposeLabel || "General"} (Non-cash: ${nonCashItem.trim()})`
