@@ -55,7 +55,7 @@ const AddDonation = ({ embedded = false, onSaved, onClose }: AddDonationProps = 
   const [amount, setAmount] = useState("");
   const [wants80G, setWants80G] = useState<"" | "Yes" | "No">("");
   const [pan, setPan] = useState("");
-  const [nature, setNature] = useState<DonationNature>("Cash");
+  const [nature, setNature] = useState<"" | DonationNature>("");
   const [nonCashItem, setNonCashItem] = useState("");
 
   // Step 2
@@ -95,6 +95,7 @@ const AddDonation = ({ embedded = false, onSaved, onClose }: AddDonationProps = 
 
   // Step 1 valid?
   const step1Valid =
+    nature !== "" &&
     amt > 0 &&
     (requires80G || wants80G !== "") &&
     panValid &&
@@ -219,82 +220,87 @@ const AddDonation = ({ embedded = false, onSaved, onClose }: AddDonationProps = 
       <Card>
         <CardContent className="pt-6">
           <StepHeader n={1} title="Donation Information" done={step1Valid} />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Donation Amount (₹) *</Label>
-              <Input
-                type="number"
-                placeholder="0"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
-              {requires80G && (
-                <p className="text-[11px] text-amber-600">
-                  Amount ≥ ₹2,000 → 80G is auto-enabled and PAN is mandatory.
-                </p>
+          {/* First ask: Cash or Non-Cash */}
+          <div className="space-y-2 max-w-sm">
+            <Label>Donation Nature *</Label>
+            <Select value={nature} onValueChange={(v) => setNature(v as DonationNature)}>
+              <SelectTrigger><SelectValue placeholder="Select Cash or Non-Cash" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Cash">Cash</SelectItem>
+                <SelectItem value="Non-Cash">Non-Cash (Gold, Kind, etc.)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Choose Non-Cash for gold, silver, kind, or in-kind contributions.
+            </p>
+          </div>
+
+          {/* After choosing nature, show respective details */}
+          {nature !== "" && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
+              {nature === "Non-Cash" && (
+                <div className="space-y-2 md:col-span-4">
+                  <Label>Item / Description *</Label>
+                  <Input
+                    placeholder="e.g. 10g Gold Chain, 5kg Rice, Silver Lamp"
+                    value={nonCashItem}
+                    onChange={(e) => setNonCashItem(e.target.value)}
+                  />
+                  {nonCashItem && nonCashItem.trim().length < 3 && (
+                    <p className="text-[11px] text-destructive">Enter at least 3 characters.</p>
+                  )}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>{nature === "Non-Cash" ? "Estimated Value (₹) *" : "Donation Amount (₹) *"}</Label>
+                <Input
+                  type="number"
+                  placeholder="0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+                {requires80G && (
+                  <p className="text-[11px] text-amber-600">
+                    Amount ≥ ₹2,000 → 80G auto-enabled, PAN mandatory.
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>80G Required *</Label>
+                <Select
+                  value={effectiveWants80G || ""}
+                  onValueChange={(v) => setWants80G(v as "Yes" | "No")}
+                  disabled={requires80G}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Yes">Yes</SelectItem>
+                    <SelectItem value="No">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {panRequired && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>PAN Number *</Label>
+                  <Input
+                    placeholder="ABCDE1234F"
+                    maxLength={10}
+                    value={pan}
+                    onChange={(e) => setPan(e.target.value.toUpperCase())}
+                  />
+                  {pan.length === 10 && !panValid ? (
+                    <p className="text-[11px] text-destructive">
+                      Invalid PAN. Expected format: AAAAA9999A (e.g. ABCDE1234F).
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
+                      Format: AAAAA9999A — Example: ABCDE1234F
+                    </p>
+                  )}
+                </div>
               )}
             </div>
-            <div className="space-y-2">
-              <Label>Donation Nature *</Label>
-              <Select value={nature} onValueChange={(v) => setNature(v as DonationNature)}>
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Cash">Cash</SelectItem>
-                  <SelectItem value="Non-Cash">Non-Cash (Gold, Kind, etc.)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-muted-foreground">
-                Choose Non-Cash for gold, silver, kind, or in-kind contributions.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>80G Required *</Label>
-              <Select
-                value={effectiveWants80G || ""}
-                onValueChange={(v) => setWants80G(v as "Yes" | "No")}
-                disabled={requires80G}
-              >
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Yes">Yes</SelectItem>
-                  <SelectItem value="No">No</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {panRequired && (
-              <div className="space-y-2">
-                <Label>PAN Number *</Label>
-                <Input
-                  placeholder="ABCDE1234F"
-                  maxLength={10}
-                  value={pan}
-                  onChange={(e) => setPan(e.target.value.toUpperCase())}
-                />
-                {pan.length === 10 && !panValid ? (
-                  <p className="text-[11px] text-destructive">
-                    Invalid PAN. Expected format: AAAAA9999A (e.g. ABCDE1234F).
-                  </p>
-                ) : (
-                  <p className="text-[11px] text-muted-foreground">
-                    Format: AAAAA9999A — Example: ABCDE1234F
-                  </p>
-                )}
-              </div>
-            )}
-            {nature === "Non-Cash" && (
-              <div className="space-y-2 md:col-span-4">
-                <Label>Item / Description *</Label>
-                <Input
-                  placeholder="e.g. 10g Gold Chain, 5kg Rice, Silver Lamp"
-                  value={nonCashItem}
-                  onChange={(e) => setNonCashItem(e.target.value)}
-                />
-                {nonCashItem && nonCashItem.trim().length < 3 && (
-                  <p className="text-[11px] text-destructive">Enter at least 3 characters.</p>
-                )}
-              </div>
-            )}
-          </div>
+          )}
         </CardContent>
       </Card>
 
