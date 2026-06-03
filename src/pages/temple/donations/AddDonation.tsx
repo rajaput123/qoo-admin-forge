@@ -12,6 +12,7 @@ import { recordDonation } from "@/modules/donations/donationsStore";
 
 type Purpose = "Counter" | "Project" | "Event" | "Other";
 type PaymentMode = "Cash" | "UPI" | "Cheque" | "NEFT";
+type DonationNature = "Cash" | "Non-cash";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
@@ -48,6 +49,8 @@ const AddDonation = () => {
   const [amount, setAmount] = useState("");
   const [wants80G, setWants80G] = useState<"" | "Yes" | "No">("");
   const [pan, setPan] = useState("");
+  const [nature, setNature] = useState<DonationNature>("Cash");
+  const [nonCashItem, setNonCashItem] = useState("");
 
   // Step 2
   const [donorName, setDonorName] = useState("");
@@ -89,7 +92,8 @@ const AddDonation = () => {
     amt > 0 &&
     (requires80G || wants80G !== "") &&
     panValid &&
-    (!panRequired || pan.trim().length === 10);
+    (!panRequired || pan.trim().length === 10) &&
+    (nature === "Cash" || nonCashItem.trim().length >= 3);
 
   // Step 2 valid?
   const nameValid = donorName.trim().length >= 3 && donorName.trim().length <= 100;
@@ -169,9 +173,11 @@ const AddDonation = () => {
       email: email.trim() || undefined,
       city: address.trim() || undefined,
       pan: panRequired ? pan.toUpperCase().trim() : undefined,
-      nature: "Cash",
+      nature,
       amount: amt,
-      purpose: purposeLabel || "General",
+      purpose: nature === "Non-cash"
+        ? `${purposeLabel || "General"} (Non-cash: ${nonCashItem.trim()})`
+        : (purposeLabel || "General"),
       channel: channelMap[paymentMode as PaymentMode],
       mode: paymentMode,
       referenceNo,
