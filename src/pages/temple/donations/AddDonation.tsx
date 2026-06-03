@@ -1,981 +1,525 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Save, Receipt, Plus, Package, Landmark } from "lucide-react";
-import { getTemplatesByType } from "@/data/receiptTemplateData";
-import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Check, Receipt, MessageCircle, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useDonations, useDonors } from "@/modules/donations/hooks";
 import { recordDonation } from "@/modules/donations/donationsStore";
-import { generateReceiptPDF } from "@/lib/receiptGenerator";
-import { financeSelectors } from "@/modules/finance/financeStore";
 
+type Purpose = "Counter" | "Project" | "Event" | "Other";
+type PaymentMode = "Cash" | "UPI" | "Cheque" | "NEFT";
 
-type DonationType = "Counter" | "Event" | "Project" | "Other";
+const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+const MOBILE_REGEX = /^[6-9]\d{9}$/;
+
+const projectOptions = [
+  { value: "project-1", label: "Temple Renovation" },
+  { value: "project-2", label: "New Hall Construction" },
+  { value: "project-3", label: "Annadanam Fund" },
+];
+const eventOptions = [
+  { value: "event-1", label: "Maha Shivaratri 2025" },
+  { value: "event-2", label: "Karthika Deepam" },
+  { value: "event-3", label: "Brahmotsavam" },
+];
+
+const StepHeader = ({ n, title, done }: { n: number; title: string; done: boolean }) => (
+  <div className="flex items-center gap-3 mb-4">
+    <div
+      className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
+        done ? "bg-emerald-500 text-white" : "bg-primary text-primary-foreground"
+      }`}
+    >
+      {done ? <Check className="h-4 w-4" /> : n}
+    </div>
+    <h3 className="text-base font-semibold">{title}</h3>
+  </div>
+);
 
 const AddDonation = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const donations = useDonations();
-  const donors = useDonors();
-  const bankAccounts = financeSelectors.getBankAccounts();
 
-  const [formData, setFormData] = useState({
-    // Donation Nature
-    donationNature: "Cash" as "Cash" | "Non-Cash",
-    
-    // Step 1: Donation Basics
-    amount: "",
-    date: new Date().toISOString().split('T')[0],
-    
-    donationType: "" as DonationType | "",
-    
-    // Step 2: Donor Section
-    donorName: "",
-    donorPhone: "",
-    
-    // Step 3: Tax Receipt Option
-    wants80G: false,
-    pan: "",
-    address: "",
-    email: "",
-    
-    // Step 4: Channel Details (conditional based on donation type)
-    counterId: "",
-    paymentMode: "Cash" as "Cash" | "UPI" | "QR" | "Cheque" | "In-Kind",
-    paymentReference: "",
-    eventName: "",
-    projectName: "",
-    otherTypeName: "",
-    bankAccountId: "",
+  // Step 1
+  const [amount, setAmount] = useState("");
+  const [wants80G, setWants80G] = useState<"" | "Yes" | "No">("");
+  const [pan, setPan] = useState("");
 
-    // Non-Cash Asset Details
-    assetName: "",
-    assetQuantity: "",
-    assetUnit: "pcs",
-    assetEstimatedValue: "",
-    
-    // Additional
-    receiptTemplate: "",
-    remarks: "",
-  });
+  // Step 2
+  const [donorName, setDonorName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [email, setEmail] = useState("");
+  const [address, setAddress] = useState("");
 
-  
-  const [showAddCounter, setShowAddCounter] = useState(false);
-  const [showAddEvent, setShowAddEvent] = useState(false);
-  const [showAddProject, setShowAddProject] = useState(false);
-  
-  const [newCounterName, setNewCounterName] = useState("");
-  const [newEventName, setNewEventName] = useState("");
-  const [newProjectName, setNewProjectName] = useState("");
+  // Step 3
+  const [purpose, setPurpose] = useState<"" | Purpose>("");
+  const [projectId, setProjectId] = useState("");
+  const [eventId, setEventId] = useState("");
+  const [remarks, setRemarks] = useState("");
 
+  // Step 4
+  const [paymentMode, setPaymentMode] = useState<"" | PaymentMode>("");
+  const [counterNo, setCounterNo] = useState("");
+  const [collectedBy, setCollectedBy] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [paymentLinkSent, setPaymentLinkSent] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<"Pending Payment" | "Paid">("Pending Payment");
+  const [chequeNo, setChequeNo] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [utrNumber, setUtrNumber] = useState("");
 
-  // Get available counters
-  const [availableCounters, setAvailableCounters] = useState([
-    { value: "counter-1", label: "Main Counter" },
-    { value: "counter-2", label: "Donation Counter" },
-    { value: "counter-3", label: "Seva Counter" },
-  ]);
+  // Step 5
+  const [savedIds, setSavedIds] = useState<{ donationId: string; receiptNo: string } | null>(null);
 
-  // Get available events
-  const [availableEvents, setAvailableEvents] = useState([
-    { value: "event-1", label: "Maha Shivaratri 2025", linkedBankAccountId: "ba-1" },
-    { value: "event-2", label: "Karthika Deepam", linkedBankAccountId: "ba-2" },
-  ]);
+  const amt = parseFloat(amount) || 0;
+  const requires80G = amt >= 2000;
+  const effectiveWants80G = requires80G ? "Yes" : wants80G;
+  const panRequired = effectiveWants80G === "Yes";
+  const panValid = !panRequired || PAN_REGEX.test(pan.toUpperCase());
 
-  // Get available projects — each has a pre-linked bank account
-  const [availableProjects, setAvailableProjects] = useState([
-    { value: "project-1", label: "Temple Renovation", linkedBankAccountId: "ba-1" },
-    { value: "project-2", label: "New Hall Construction", linkedBankAccountId: "ba-2" },
-  ]);
+  // Address: strip double quotes, max 400 chars (per project rule)
+  const onAddressChange = (v: string) => setAddress(v.replace(/"/g, "").slice(0, 400));
 
-  // Validate PAN format
-  const validatePAN = (pan: string): boolean => {
-    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    return panRegex.test(pan.toUpperCase());
+  // Step 1 valid?
+  const step1Valid =
+    amt > 0 &&
+    (requires80G || wants80G !== "") &&
+    panValid &&
+    (!panRequired || pan.trim().length === 10);
+
+  // Step 2 valid?
+  const nameValid = donorName.trim().length >= 3 && donorName.trim().length <= 100;
+  const mobileValid = MOBILE_REGEX.test(mobile.trim());
+  const addressValid = address.trim().length === 0 || (address.trim().length >= 10 && address.trim().length <= 400);
+  const step2Valid = step1Valid && nameValid && mobileValid && addressValid;
+
+  // Step 3 valid?
+  const step3Valid =
+    step2Valid &&
+    purpose !== "" &&
+    (purpose !== "Project" || !!projectId) &&
+    (purpose !== "Event" || !!eventId) &&
+    (purpose !== "Other" || remarks.trim().length > 0);
+
+  // Step 4 valid?
+  const step4Valid =
+    step3Valid &&
+    paymentMode !== "" &&
+    (paymentMode !== "Cash" || (counterNo.trim() !== "" && collectedBy.trim() !== "")) &&
+    (paymentMode !== "UPI" || (MOBILE_REGEX.test(whatsappNumber.trim()) && paymentStatus === "Paid")) &&
+    (paymentMode !== "Cheque" || (chequeNo.trim() !== "" && bankName.trim() !== "")) &&
+    (paymentMode !== "NEFT" || (utrNumber.trim() !== "" && bankName.trim() !== ""));
+
+  const showStep2 = step1Valid;
+  const showStep3 = step2Valid;
+  const showStep4 = step3Valid;
+  const showStep5 = step4Valid;
+
+  const purposeLabel = useMemo(() => {
+    if (purpose === "Project") return projectOptions.find(p => p.value === projectId)?.label;
+    if (purpose === "Event") return eventOptions.find(e => e.value === eventId)?.label;
+    if (purpose === "Other") return remarks.slice(0, 60);
+    return "Counter Donation";
+  }, [purpose, projectId, eventId, remarks]);
+
+  const generatePaymentLink = () => {
+    if (!MOBILE_REGEX.test(whatsappNumber.trim())) {
+      toast({ title: "Invalid WhatsApp number", description: "Enter a 10-digit mobile number", variant: "destructive" });
+      return;
+    }
+    setPaymentLinkSent(true);
+    setPaymentStatus("Pending Payment");
+    toast({
+      title: "Payment link sent",
+      description: `WhatsApp link sent to +91 ${whatsappNumber}. Mark as Paid once confirmed.`,
+    });
   };
 
-  // Validate 10-digit Indian mobile number
-  const validateMobile = (mobile: string): boolean => {
-    return /^[6-9]\d{9}$/.test(mobile.replace(/\s+/g, ""));
-  };
-
-  // Validate email format
-  const validateEmail = (email: string): boolean => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
-
-  const handleSubmit = async () => {
-    const isCash = formData.donationNature === "Cash";
-
-    if (isCash) {
-      if (!formData.amount || parseFloat(formData.amount) <= 0) {
-        toast({ title: "Error", description: "Please enter a valid amount", variant: "destructive" });
-        return;
-      }
-      if (parseFloat(formData.amount) > 10000000) {
-        toast({ title: "Error", description: "Amount exceeds reasonable limit (₹1 Cr). Please verify.", variant: "destructive" });
-        return;
-      }
-      // 80G compliance: warn when cash payment exceeds ₹2,000
-      if (formData.paymentMode === "Cash" && parseFloat(formData.amount) > 2000) {
-        toast({
-          title: "Cash Limit Warning",
-          description: "Cash donations above ₹2,000 are not eligible for 80G deduction under Income Tax rules. Consider UPI / Cheque / Bank Transfer.",
-        });
-      }
-    } else {
-      // Non-cash validations
-      if (!formData.assetName.trim()) {
-        toast({ title: "Error", description: "Please enter asset name", variant: "destructive" });
-        return;
-      }
-      if (!formData.assetQuantity || parseFloat(formData.assetQuantity) <= 0) {
-        toast({ title: "Error", description: "Please enter valid quantity", variant: "destructive" });
-        return;
-      }
-      if (!formData.assetEstimatedValue || parseFloat(formData.assetEstimatedValue) <= 0) {
-        toast({ title: "Error", description: "Please enter estimated value", variant: "destructive" });
-        return;
-      }
-    }
-    if (!formData.donationType) {
-      toast({ title: "Error", description: "Please select donation type", variant: "destructive" });
+  const saveDonation = () => {
+    if (!step4Valid) {
+      toast({ title: "Incomplete", description: "Please complete all required fields.", variant: "destructive" });
       return;
     }
 
-    // Donation date validation — required & not in future
-    if (!formData.date) {
-      toast({ title: "Error", description: "Please select donation date", variant: "destructive" });
-      return;
-    }
-    if (new Date(formData.date) > new Date()) {
-      toast({ title: "Error", description: "Donation date cannot be in the future", variant: "destructive" });
-      return;
-    }
-
-    if (!formData.donorName.trim()) {
-      toast({ title: "Error", description: "Please enter donor name", variant: "destructive" });
-      return;
-    }
-    if (formData.donorName.trim().length < 2) {
-      toast({ title: "Error", description: "Donor name must be at least 2 characters", variant: "destructive" });
-      return;
-    }
-
-    if (!formData.donorPhone.trim()) {
-      toast({ title: "Error", description: "Please enter donor mobile number", variant: "destructive" });
-      return;
-    }
-    if (!validateMobile(formData.donorPhone)) {
-      toast({ title: "Error", description: "Invalid mobile number. Enter a 10-digit Indian mobile number.", variant: "destructive" });
-      return;
-    }
-
-    // Optional email — validate format if provided
-    if (formData.email.trim() && !validateEmail(formData.email.trim())) {
-      toast({ title: "Error", description: "Invalid email address format", variant: "destructive" });
-      return;
-    }
-
-    // Tax rule: donations above ₹10,000 mandatorily require donor PAN + Address (Form 10BD reporting)
-    const effectiveAmount = isCash
-      ? parseFloat(formData.amount || "0")
-      : parseFloat(formData.assetEstimatedValue || "0");
-    const panMandatory = effectiveAmount > 10000;
-    if (panMandatory) {
-      if (!formData.pan.trim()) {
-        toast({ title: "PAN Required", description: "PAN is mandatory for donations above ₹10,000 (Form 10BD reporting).", variant: "destructive" });
-        return;
-      }
-      if (!validatePAN(formData.pan)) {
-        toast({ title: "Invalid PAN", description: "Enter valid PAN. Format: ABCDE1234F", variant: "destructive" });
-        return;
-      }
-      if (!formData.address.trim()) {
-        toast({ title: "Address Required", description: "Address is mandatory for donations above ₹10,000.", variant: "destructive" });
-        return;
-      }
-    }
-
-    // Validate 80G fields if requested
-    if (formData.wants80G) {
-      if (!formData.pan.trim()) {
-        toast({ title: "Error", description: "PAN number is required for 80G receipt", variant: "destructive" });
-        return;
-      }
-      if (!validatePAN(formData.pan)) {
-        toast({ title: "Error", description: "Invalid PAN format. Format: ABCDE1234F", variant: "destructive" });
-        return;
-      }
-      if (!formData.address.trim()) {
-        toast({ title: "Error", description: "Address is required for 80G receipt", variant: "destructive" });
-        return;
-      }
-      if (formData.address.trim().length < 10) {
-        toast({ title: "Error", description: "Please enter a complete address (min 10 characters) for 80G receipt", variant: "destructive" });
-        return;
-      }
-    }
-
-    // Conditional validation based on donation type
-    if (formData.donationType === "Event" && !formData.eventName) {
-      toast({ title: "Error", description: "Please select an event", variant: "destructive" });
-      return;
-    }
-
-    if (formData.donationType === "Project" && !formData.projectName) {
-      toast({ title: "Error", description: "Please select a project", variant: "destructive" });
-      return;
-    }
-
-    if (formData.donationType === "Other" && !formData.otherTypeName.trim()) {
-      toast({ title: "Error", description: "Please specify the donation type", variant: "destructive" });
-      return;
-    }
-
-    // Bank account required for non-cash payment modes
-    const needsBank = formData.donationNature === "Cash" && ["UPI", "QR", "Cheque"].includes(formData.paymentMode);
-    if (needsBank && !formData.bankAccountId) {
-      toast({ title: "Error", description: "Please select the bank account where funds are received", variant: "destructive" });
-      return;
-    }
-
-    // Payment reference required for non-cash payment modes (UPI/QR/Cheque)
-    if (needsBank && !formData.paymentReference.trim()) {
-      const refLabel = formData.paymentMode === "Cheque" ? "Cheque number" : "Transaction / UTR reference";
-      toast({ title: "Error", description: `${refLabel} is required for ${formData.paymentMode} payments`, variant: "destructive" });
-      return;
-    }
-
-    // Map donation type to source module
-    const sourceModuleMap: Record<DonationType, string> = {
-      "Counter": "Counter",
-      "Event": "Event",
-      "Project": "Manual",
-      "Other": "Manual",
+    const channelMap: Record<PaymentMode, "Cash" | "UPI" | "Cheque" | "Bank Transfer"> = {
+      Cash: "Cash",
+      UPI: "UPI",
+      Cheque: "Cheque",
+      NEFT: "Bank Transfer",
     };
 
-    const isCashNature = formData.donationNature === "Cash";
-    
-    // Determine channel based on nature and payment mode
-    let channel: "Cash" | "UPI" | "Bank Transfer" | "Online" | "Cheque" | "In-Kind" = "Cash";
-    if (!isCashNature) {
-      channel = "In-Kind";
-    } else {
-      // QR maps to UPI channel (it's UPI under the hood)
-      channel = formData.paymentMode === "QR" ? "UPI" : formData.paymentMode;
-    }
+    const referenceNo =
+      paymentMode === "Cheque" ? chequeNo
+      : paymentMode === "NEFT" ? utrNumber
+      : paymentMode === "UPI" ? `WA:${whatsappNumber}`
+      : undefined;
 
-    const donationAmount = isCashNature
-      ? parseFloat(formData.amount)
-      : parseFloat(formData.assetEstimatedValue);
+    const sourceModule =
+      purpose === "Counter" ? "Counter"
+      : purpose === "Event" ? "Event"
+      : "Manual";
 
-    // Record donation
     const donation = recordDonation({
-      donorName: formData.donorName.trim(),
-      phone: formData.donorPhone.trim(),
-      email: formData.email.trim() || undefined,
-      city: formData.address.trim() || undefined,
-      pan: formData.wants80G ? formData.pan.toUpperCase().trim() : undefined,
-      nature: formData.donationNature,
-      amount: donationAmount,
-      purpose: undefined,
-      channel: channel,
-      mode: isCashNature ? formData.paymentMode : "In-Kind",
-      referenceNo: formData.paymentReference || undefined,
-      remarks: formData.remarks.trim() || undefined,
-      nonCashDetails: !isCashNature ? {
-        assetName: formData.assetName.trim(),
-        quantity: parseFloat(formData.assetQuantity),
-        unit: formData.assetUnit,
-        estimatedValue: parseFloat(formData.assetEstimatedValue),
-      } : undefined,
-      sourceModule: sourceModuleMap[formData.donationType] as any,
-      sourceRecordId: formData.eventName || formData.projectName || undefined,
-      counterId: formData.counterId || undefined,
-      date: formData.date,
-      createdBy: "System",
+      donorName: donorName.trim(),
+      phone: mobile.trim(),
+      email: email.trim() || undefined,
+      city: address.trim() || undefined,
+      pan: panRequired ? pan.toUpperCase().trim() : undefined,
+      nature: "Cash",
+      amount: amt,
+      purpose: purposeLabel || "General",
+      channel: channelMap[paymentMode as PaymentMode],
+      mode: paymentMode,
+      referenceNo,
+      remarks: remarks.trim() || undefined,
+      sourceModule: sourceModule as any,
+      sourceRecordId: projectId || eventId || undefined,
+      counterId: paymentMode === "Cash" ? counterNo.trim() : undefined,
+      createdBy: collectedBy.trim() || "System",
     });
 
-    // Generate receipt (file path stored in donation record)
-    try {
-      const donor = donors.find(d => d.donorId === donation.donorId);
-      await generateReceiptPDF(donation, donor || null, formData.wants80G);
-      
-      toast({
-        title: "Donation Recorded",
-        description: formData.wants80G 
-          ? `80G receipt ${donation.receiptNo} generated successfully. You can download it from the donations list.`
-          : `Receipt ${donation.receiptNo} generated successfully. You can download it from the donations list.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Donation Recorded",
-        description: `Receipt ${donation.receiptNo} generated. You can download it from the donations list.`,
-      });
-    }
-
-    // Navigate back to donations list
-    navigate("/temple/donations/list");
+    setSavedIds({ donationId: donation.donationId, receiptNo: donation.receiptNo });
+    toast({ title: "Donation saved", description: `Receipt ${donation.receiptNo} generated.` });
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate("/temple/donations/list")}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
           <h1 className="text-2xl font-bold">Add Donation</h1>
-          <p className="text-sm text-muted-foreground mt-1">Record a new donation</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Complete each step — the next section opens automatically when valid.
+          </p>
         </div>
       </div>
 
+      {/* Step 1 */}
       <Card>
-        <CardHeader>
-          <CardTitle>Donation Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Donation Nature Toggle */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-semibold">Donation Nature</h3>
-            <div className="flex gap-3">
-              {(["Cash", "Non-Cash"] as const).map(nature => (
-                <button
-                  key={nature}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, donationNature: nature })}
-                  className={`flex-1 p-4 rounded-lg border-2 transition-all text-center ${
-                    formData.donationNature === nature
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-muted-foreground/30"
-                  }`}
-                >
-                  <div className="flex flex-col items-center gap-1.5">
-                    {nature === "Cash" ? (
-                      <span className="text-lg">💰</span>
-                    ) : (
-                      <Package className="h-5 w-5 text-muted-foreground" />
-                    )}
-                    <span className="text-sm font-medium">{nature}</span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {nature === "Cash" ? "Cash, UPI, Bank Transfer" : "Assets, Goods, Materials"}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Step 1: Donation Basics */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold mb-3">Step 1 — Enter Donation Basics</h3>
-
-              {formData.donationNature === "Cash" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Amount (₹) *</Label>
-                    <Input
-                      type="number"
-                      placeholder="Enter amount"
-                      value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Date *</Label>
-                    <Input
-                      type="date"
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Donation Purpose *</Label>
-                    <Select 
-                      value={formData.donationType} 
-                      onValueChange={(v) => setFormData({ ...formData, donationType: v as DonationType })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select donation purpose" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Counter">Counter</SelectItem>
-                        <SelectItem value="Event">Event</SelectItem>
-                        <SelectItem value="Project">Project</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {formData.donationType === "Other" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Specify Donation Purpose *</Label>
-                        <Input
-                          placeholder="e.g., Memorial Fund, Special Occasion, etc."
-                          value={formData.otherTypeName}
-                          onChange={(e) => setFormData({ ...formData, otherTypeName: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Linked Bank Account *</Label>
-                        <Select
-                          value={formData.bankAccountId}
-                          onValueChange={(v) => setFormData({ ...formData, bankAccountId: v })}
-                        >
-                          <SelectTrigger><SelectValue placeholder="Select bank account" /></SelectTrigger>
-                          <SelectContent>
-                            {bankAccounts.map(b => (
-                              <SelectItem key={b.id} value={b.id}>
-                                {b.name} — {b.bankName} ({b.accountNumber})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </>
-                  )}
-                  {formData.donationType === "Event" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Event Name *</Label>
-                        {availableEvents.length === 0 ? (
-                          <div className="p-4 rounded-lg border border-dashed bg-muted/20 flex flex-col items-center gap-2 text-center">
-                            <p className="text-sm text-muted-foreground">No events available yet</p>
-                            <Button type="button" size="sm" variant="outline" onClick={() => navigate("/temple/events/create")}>
-                              <Plus className="h-4 w-4 mr-1" /> Add Event
-                            </Button>
-                          </div>
-                        ) : (
-                        <Select
-                          value={formData.eventName}
-                          onValueChange={(v) => {
-                            const selectedEvent = availableEvents.find(e => e.value === v);
-                            setFormData({
-                              ...formData,
-                              eventName: v,
-                              bankAccountId: selectedEvent?.linkedBankAccountId || "",
-                            });
-                          }}
-                        >
-                          <SelectTrigger><SelectValue placeholder="Select event" /></SelectTrigger>
-                          <SelectContent>
-                            {availableEvents.map(e => (
-                              <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Linked Bank Account</Label>
-                        {(() => {
-                          const selectedEvent = availableEvents.find(e => e.value === formData.eventName);
-                          const linkedBank = bankAccounts.find(b => b.id === selectedEvent?.linkedBankAccountId);
-                          if (!linkedBank) {
-                            return (
-                              <div className="p-3 rounded-lg border bg-muted/30 text-sm text-muted-foreground">
-                                Select an event to view linked bank account
-                              </div>
-                            );
-                          }
-                          return (
-                            <div className="p-3 rounded-lg border bg-primary/5 border-primary/20">
-                              <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                  <Landmark className="h-4 w-4 text-primary" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium truncate">{linkedBank.name}</p>
-                                  <p className="text-xs text-muted-foreground truncate">{linkedBank.bankName} — {linkedBank.accountNumber}</p>
-                                </div>
-                                {linkedBank.isDefaultDonation && (
-                                  <Badge variant="secondary" className="shrink-0 text-[10px]">Default</Badge>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </>
-                  )}
-                  {formData.donationType === "Project" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Project Name *</Label>
-                        {availableProjects.length === 0 ? (
-                          <div className="p-4 rounded-lg border border-dashed bg-muted/20 flex flex-col items-center gap-2 text-center">
-                            <p className="text-sm text-muted-foreground">No projects available yet</p>
-                            <Button type="button" size="sm" variant="outline" onClick={() => navigate("/temple/projects/create")}>
-                              <Plus className="h-4 w-4 mr-1" /> Add Project
-                            </Button>
-                          </div>
-                        ) : (
-                        <Select
-                          value={formData.projectName}
-                          onValueChange={(v) => {
-                            const selectedProject = availableProjects.find(p => p.value === v);
-                            setFormData({
-                              ...formData,
-                              projectName: v,
-                              bankAccountId: selectedProject?.linkedBankAccountId || "",
-                            });
-                          }}
-                        >
-                          <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
-                          <SelectContent>
-                            {availableProjects.map(p => (
-                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Linked Bank Account</Label>
-                        {(() => {
-                          const selectedProject = availableProjects.find(p => p.value === formData.projectName);
-                          const linkedBank = bankAccounts.find(b => b.id === selectedProject?.linkedBankAccountId);
-                          if (!linkedBank) {
-                            return (
-                              <div className="p-3 rounded-lg border bg-muted/30 text-sm text-muted-foreground">
-                                Select a project to view linked bank account
-                              </div>
-                            );
-                          }
-                          return (
-                            <div className="p-3 rounded-lg border bg-primary/5 border-primary/20">
-                              <div className="flex items-center gap-3">
-                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                  <Landmark className="h-4 w-4 text-primary" />
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium truncate">{linkedBank.name}</p>
-                                  <p className="text-xs text-muted-foreground truncate">{linkedBank.bankName} — {linkedBank.accountNumber}</p>
-                                </div>
-                                {linkedBank.isDefaultDonation && (
-                                  <Badge variant="secondary" className="shrink-0 text-[10px]">Default</Badge>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                /* Non-Cash Asset Details */
-                <div className="space-y-4">
-                  <div className="p-4 rounded-lg border bg-muted/20 space-y-1 mb-4">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">Non-Cash Donation</span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Capture asset details. Estimated value will be used for financial records and inventory update.</p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Asset Name *</Label>
-                      <Input
-                        placeholder="e.g., Rice Bags, Gold Ornament, Cooking Vessels"
-                        value={formData.assetName}
-                        onChange={(e) => setFormData({ ...formData, assetName: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Quantity *</Label>
-                      <Input
-                        type="number"
-                        placeholder="Enter quantity"
-                        value={formData.assetQuantity}
-                        onChange={(e) => setFormData({ ...formData, assetQuantity: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Unit</Label>
-                      <Select value={formData.assetUnit} onValueChange={(v) => setFormData({ ...formData, assetUnit: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {["pcs", "kg", "bags", "liters", "units", "grams", "sets"].map(u => (
-                            <SelectItem key={u} value={u}>{u}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Estimated Value (₹) *</Label>
-                      <Input
-                        type="number"
-                        placeholder="Enter estimated value"
-                        value={formData.assetEstimatedValue}
-                        onChange={(e) => setFormData({ ...formData, assetEstimatedValue: e.target.value })}
-                      />
-                      <p className="text-[10px] text-muted-foreground">This value is used for financial entry: Dr Inventory, Cr Donation Income</p>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Date *</Label>
-                      <Input
-                        type="date"
-                        value={formData.date}
-                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Donation Purpose *</Label>
-                      <Select 
-                        value={formData.donationType} 
-                        onValueChange={(v) => setFormData({ ...formData, donationType: v as DonationType })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select donation purpose" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Counter">Counter</SelectItem>
-                          <SelectItem value="Event">Event</SelectItem>
-                          <SelectItem value="Project">Project</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    </div>
-                    {formData.donationType === "Other" && (
-                      <div className="space-y-2">
-                        <Label>Specify Donation Purpose *</Label>
-                        <Input
-                          placeholder="e.g., Memorial Fund, Special Occasion, etc."
-                          value={formData.otherTypeName}
-                          onChange={(e) => setFormData({ ...formData, otherTypeName: e.target.value })}
-                        />
-                      </div>
-                    )}
-                    {formData.donationType === "Project" && (
-                      <>
-                        <div className="space-y-2">
-                          <Label>Project Name *</Label>
-                          <Select
-                            value={formData.projectName}
-                            onValueChange={(v) => {
-                              const selectedProject = availableProjects.find(p => p.value === v);
-                              setFormData({
-                                ...formData,
-                                projectName: v,
-                                bankAccountId: selectedProject?.linkedBankAccountId || "",
-                              });
-                            }}
-                          >
-                            <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
-                            <SelectContent>
-                              {availableProjects.map(p => (
-                                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Linked Bank Account</Label>
-                          {(() => {
-                            const selectedProject = availableProjects.find(p => p.value === formData.projectName);
-                            const linkedBank = bankAccounts.find(b => b.id === selectedProject?.linkedBankAccountId);
-                            if (!linkedBank) {
-                              return (
-                                <div className="p-3 rounded-lg border bg-muted/30 text-sm text-muted-foreground">
-                                  Select a project to view linked bank account
-                                </div>
-                              );
-                            }
-                            return (
-                              <div className="p-3 rounded-lg border bg-primary/5 border-primary/20">
-                                <div className="flex items-center gap-3">
-                                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                    <Landmark className="h-4 w-4 text-primary" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium truncate">{linkedBank.name}</p>
-                                    <p className="text-xs text-muted-foreground truncate">{linkedBank.bankName} — {linkedBank.accountNumber}</p>
-                                  </div>
-                                  {linkedBank.isDefaultDonation && (
-                                    <Badge variant="secondary" className="shrink-0 text-[10px]">Default</Badge>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+        <CardContent className="pt-6">
+          <StepHeader n={1} title="Donation Information" done={step1Valid} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Donation Amount (₹) *</Label>
+              <Input
+                type="number"
+                placeholder="0"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+              />
+              {requires80G && (
+                <p className="text-[11px] text-amber-600">
+                  Amount ≥ ₹2,000 → 80G is auto-enabled and PAN is mandatory.
+                </p>
               )}
             </div>
-          </div>
-
-          <Separator />
-
-          {/* Step 2: Donor Section */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold mb-3">Step 2 — Donor Section</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Donor Name *</Label>
-                  <Input
-                    placeholder="Enter donor name"
-                    value={formData.donorName}
-                    onChange={(e) => setFormData({ ...formData, donorName: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Mobile *</Label>
-                  <Input
-                    placeholder="Enter mobile number"
-                    value={formData.donorPhone}
-                    onChange={(e) => setFormData({ ...formData, donorPhone: e.target.value })}
-                  />
-                </div>
-              </div>
+            <div className="space-y-2">
+              <Label>80G Required *</Label>
+              <Select
+                value={effectiveWants80G || ""}
+                onValueChange={(v) => setWants80G(v as "Yes" | "No")}
+                disabled={requires80G}
+              >
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Yes">Yes</SelectItem>
+                  <SelectItem value="No">No</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </div>
-
-          <Separator />
-
-          {/* Step 3: Tax Receipt Option */}
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-sm font-semibold mb-3">Step 3 — Tax Receipt Option</h3>
-              {(() => {
-                const eff = formData.donationNature === "Cash"
-                  ? parseFloat(formData.amount || "0")
-                  : parseFloat(formData.assetEstimatedValue || "0");
-                const panMandatory = eff > 10000;
-                const showPanBlock = formData.wants80G || panMandatory;
-                return (
-                  <>
-                    {panMandatory && (
-                      <div className="mb-3 p-3 rounded-lg border border-amber-300 bg-amber-50 text-xs text-amber-900">
-                        <strong>PAN & Address are mandatory</strong> for donations above ₹10,000 (required for Form 10BD reporting).
-                      </div>
-                    )}
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="space-y-0.5">
-                  <Label htmlFor="80g-toggle" className="text-base">Donor wants tax receipt (80G)?</Label>
-                  <p className="text-sm text-muted-foreground">Enable to generate 80G certificate</p>
-                </div>
-                <Switch
-                  id="80g-toggle"
-                  checked={formData.wants80G || panMandatory}
-                  disabled={panMandatory}
-                  onCheckedChange={(checked) => setFormData({ ...formData, wants80G: checked })}
+            {panRequired && (
+              <div className="space-y-2">
+                <Label>PAN Number *</Label>
+                <Input
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
+                  value={pan}
+                  onChange={(e) => setPan(e.target.value.toUpperCase())}
                 />
+                {pan.length === 10 && !panValid && (
+                  <p className="text-[11px] text-destructive">Invalid PAN format.</p>
+                )}
               </div>
-
-              {showPanBlock && (
-                <div className="mt-4 space-y-4 p-4 border rounded-lg bg-muted/30">
-                  <div className="space-y-2">
-                    <Label>PAN Number *</Label>
-                    <Input
-                      placeholder="ABCDE1234F"
-                      value={formData.pan}
-                      onChange={(e) => setFormData({ ...formData, pan: e.target.value.toUpperCase() })}
-                      maxLength={10}
-                    />
-                    <p className="text-xs text-muted-foreground">Format: ABCDE1234F (5 letters, 4 digits, 1 letter)</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Address *</Label>
-                    <Textarea
-                      placeholder="Enter complete address"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value.replace(/"/g, "").slice(0, 400) })}
-                      rows={3}
-                      maxLength={400}
-                    />
-                    <p className="text-xs text-muted-foreground">{formData.address.length}/400 characters. Double quotes are not allowed.</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Email (Optional)</Label>
-                    <Input
-                      type="email"
-                      placeholder="Enter email address"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    />
-                  </div>
-                </div>
-              )}
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Step 4: Channel Details */}
-          {formData.donationType && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold mb-3">Step 4 — Channel Details</h3>
-                
-                {formData.donationType === "Counter" && (
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Counter *</Label>
-                      <Select value={formData.counterId} onValueChange={(v) => setFormData({ ...formData, counterId: v })}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select counter" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {availableCounters.map(counter => (
-                            <SelectItem key={counter.value} value={counter.value}>{counter.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                )}
-
-                {formData.donationType === "Event" && (
-                  <div className="space-y-2">
-                    <Label>Event Name *</Label>
-                    <Select value={formData.eventName} onValueChange={(v) => setFormData({ ...formData, eventName: v })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select event" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableEvents.map(event => (
-                          <SelectItem key={event.value} value={event.value}>{event.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {formData.donationType === "Project" && (
-                  null
-                )}
-
-              {/* Payment Mode — shown for ALL donation types when Cash nature */}
-              {formData.donationNature === "Cash" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Payment Mode *</Label>
-                    <Select
-                      value={formData.paymentMode}
-                      onValueChange={(v: any) => setFormData({ ...formData, paymentMode: v, paymentReference: v === "Cash" ? "" : formData.paymentReference })}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Cash">Cash</SelectItem>
-                        <SelectItem value="UPI">UPI</SelectItem>
-                        <SelectItem value="QR">QR Code</SelectItem>
-                        <SelectItem value="Cheque">Cheque</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {formData.paymentMode !== "Cash" && (
-                    <div className="space-y-2">
-                      <Label>
-                        {formData.paymentMode === "UPI" && "UPI Reference / Txn ID *"}
-                        {formData.paymentMode === "QR" && "QR Txn / UPI Ref *"}
-                        {formData.paymentMode === "Cheque" && "Cheque Number *"}
-                      </Label>
-                      <Input
-                        placeholder={
-                          formData.paymentMode === "UPI" ? "e.g. 4XXXXXXXXXXX" :
-                          formData.paymentMode === "QR" ? "e.g. UPI ref from QR scan" :
-                          "e.g. 123456 — Bank, Date"
-                        }
-                        value={formData.paymentReference}
-                        onChange={(e) => setFormData({ ...formData, paymentReference: e.target.value })}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Bank Account — required for non-cash payment modes (any donation type) */}
-              {formData.donationNature === "Cash" && formData.paymentMode !== "Cash" && formData.donationType !== "Project" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div className="space-y-2">
-                    <Label>Receiving Bank Account *</Label>
-                    <Select value={formData.bankAccountId} onValueChange={(v) => setFormData({ ...formData, bankAccountId: v })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select bank account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {bankAccounts.map(b => (
-                          <SelectItem key={b.id} value={b.id}>
-                            {b.name} — {b.bankName} ({b.accountNumber}){b.isDefaultDonation ? " ★" : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-[10px] text-muted-foreground">Account where funds will be credited</p>
-                  </div>
-                </div>
-              )}
-
-              </div>
-            </div>
-          )}
-
-          {/* Receipt Template Selection */}
-          <div className="space-y-2">
-            <Label>Receipt Template</Label>
-            <Select value={formData.receiptTemplate || "default"} onValueChange={(v) => setFormData({ ...formData, receiptTemplate: v === "default" ? "" : v })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Use default template" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="default">Use Default Template</SelectItem>
-                {getTemplatesByType("Donation").map(t => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name} ({t.paperSize}){t.isDefault ? " ★" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">Choose a receipt layout for this donation, or use the default from Settings → Templates</p>
-          </div>
-
-          {/* Additional Remarks */}
-          <div className="space-y-2">
-            <Label>Remarks (Optional)</Label>
-            <Textarea
-              placeholder="Any additional notes..."
-              value={formData.remarks}
-              onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-              rows={2}
-            />
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => navigate("/temple/donations/list")}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit}>
-              <Save className="h-4 w-4 mr-2" />
-              Save Donation
-            </Button>
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Step 2 */}
+      {showStep2 && (
+        <Card>
+          <CardContent className="pt-6">
+            <StepHeader n={2} title="Donor Information" done={step2Valid} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Donor Name *</Label>
+                <Input
+                  placeholder="Full name"
+                  maxLength={100}
+                  value={donorName}
+                  onChange={(e) => setDonorName(e.target.value)}
+                />
+                {donorName && !nameValid && (
+                  <p className="text-[11px] text-destructive">Name must be 3–100 characters.</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Mobile Number *</Label>
+                <Input
+                  placeholder="10-digit mobile"
+                  maxLength={10}
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
+                />
+                {mobile && !mobileValid && (
+                  <p className="text-[11px] text-destructive">Enter a valid 10-digit Indian mobile.</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label>Email Address</Label>
+                <Input
+                  type="email"
+                  placeholder="donor@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Address {panRequired && "*"}</Label>
+                <Textarea
+                  placeholder="Min 10 characters, max 400"
+                  value={address}
+                  onChange={(e) => onAddressChange(e.target.value)}
+                  rows={2}
+                />
+                <p className="text-[10px] text-muted-foreground text-right">{address.length}/400</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 3 */}
+      {showStep3 && (
+        <Card>
+          <CardContent className="pt-6">
+            <StepHeader n={3} title="Donation Purpose" done={step3Valid} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Donation Purpose *</Label>
+                <Select value={purpose} onValueChange={(v) => setPurpose(v as Purpose)}>
+                  <SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Counter">Counter Donation</SelectItem>
+                    <SelectItem value="Project">Project Donation</SelectItem>
+                    <SelectItem value="Event">Event Donation</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {purpose === "Project" && (
+                <div className="space-y-2">
+                  <Label>Search Project *</Label>
+                  <Select value={projectId} onValueChange={setProjectId}>
+                    <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
+                    <SelectContent>
+                      {projectOptions.map(p => (
+                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {purpose === "Event" && (
+                <div className="space-y-2">
+                  <Label>Search Event *</Label>
+                  <Select value={eventId} onValueChange={setEventId}>
+                    <SelectTrigger><SelectValue placeholder="Select event" /></SelectTrigger>
+                    <SelectContent>
+                      {eventOptions.map(e => (
+                        <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {purpose === "Other" && (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Remarks *</Label>
+                  <Textarea
+                    placeholder="Specify the purpose"
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 4 */}
+      {showStep4 && (
+        <Card>
+          <CardContent className="pt-6">
+            <StepHeader n={4} title="Payment Information" done={step4Valid} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Payment Mode *</Label>
+                <Select value={paymentMode} onValueChange={(v) => setPaymentMode(v as PaymentMode)}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="UPI">UPI</SelectItem>
+                    <SelectItem value="Cheque">Cheque</SelectItem>
+                    <SelectItem value="NEFT">NEFT</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {paymentMode === "Cash" && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Counter No *</Label>
+                    <Input value={counterNo} onChange={(e) => setCounterNo(e.target.value)} placeholder="e.g. CTR-01" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Collected By *</Label>
+                    <Input value={collectedBy} onChange={(e) => setCollectedBy(e.target.value)} placeholder="Staff name" />
+                  </div>
+                </>
+              )}
+
+              {paymentMode === "UPI" && (
+                <>
+                  <div className="space-y-2">
+                    <Label>WhatsApp Number *</Label>
+                    <Input
+                      value={whatsappNumber}
+                      onChange={(e) => setWhatsappNumber(e.target.value.replace(/\D/g, ""))}
+                      placeholder="10-digit mobile"
+                      maxLength={10}
+                    />
+                  </div>
+                  <div className="space-y-2 flex flex-col justify-end">
+                    <Button type="button" variant="outline" onClick={generatePaymentLink}>
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Generate Payment Link
+                    </Button>
+                  </div>
+                  {paymentLinkSent && (
+                    <div className="md:col-span-2 flex items-center justify-between p-3 rounded-md border bg-muted/30">
+                      <div className="text-sm">
+                        Status:{" "}
+                        <span className={paymentStatus === "Paid" ? "text-emerald-600 font-medium" : "text-amber-600 font-medium"}>
+                          {paymentStatus}
+                        </span>
+                      </div>
+                      {paymentStatus === "Pending Payment" && (
+                        <Button size="sm" variant="secondary" onClick={() => setPaymentStatus("Paid")}>
+                          Mark as Paid
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {paymentMode === "Cheque" && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Cheque No *</Label>
+                    <Input value={chequeNo} onChange={(e) => setChequeNo(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bank Name *</Label>
+                    <Input value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                  </div>
+                </>
+              )}
+
+              {paymentMode === "NEFT" && (
+                <>
+                  <div className="space-y-2">
+                    <Label>UTR Number *</Label>
+                    <Input value={utrNumber} onChange={(e) => setUtrNumber(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bank Name *</Label>
+                    <Input value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Step 5 */}
+      {showStep5 && (
+        <Card>
+          <CardContent className="pt-6">
+            <StepHeader n={5} title="Review & Generate Receipt" done={!!savedIds} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="p-3 rounded-md bg-muted/40">
+                <p className="text-[10px] text-muted-foreground uppercase">Donation ID</p>
+                <p className="font-mono text-sm font-semibold">
+                  {savedIds?.donationId || "— auto on save —"}
+                </p>
+              </div>
+              <div className="p-3 rounded-md bg-muted/40">
+                <p className="text-[10px] text-muted-foreground uppercase">Receipt Number</p>
+                <p className="font-mono text-sm font-semibold">
+                  {savedIds?.receiptNo || "— auto on save —"}
+                </p>
+              </div>
+              <div className="p-3 rounded-md bg-muted/40">
+                <p className="text-[10px] text-muted-foreground uppercase">Status</p>
+                <p className="text-sm font-semibold">
+                  {paymentMode === "UPI" ? paymentStatus : "Paid"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={saveDonation} disabled={!!savedIds}>
+                <Save className="h-4 w-4 mr-2" /> Save Donation
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!savedIds}
+                onClick={() => toast({ title: "Receipt ready", description: `Generated ${savedIds?.receiptNo}` })}
+              >
+                <Receipt className="h-4 w-4 mr-2" /> Generate Receipt
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!savedIds}
+                onClick={() =>
+                  toast({
+                    title: "Sent via WhatsApp",
+                    description: `Receipt link sent to +91 ${mobile}`,
+                  })
+                }
+              >
+                <MessageCircle className="h-4 w-4 mr-2" /> Send Receipt via WhatsApp
+              </Button>
+              {savedIds && (
+                <Button variant="ghost" className="ml-auto" onClick={() => navigate("/temple/donations/list")}>
+                  Done
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
