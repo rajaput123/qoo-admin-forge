@@ -11,6 +11,7 @@ import { useDonations, useDonors } from "@/modules/donations/hooks";
 import { downloadReceiptPdf } from "@/lib/pdfDocs";
 import { downloadCsv } from "@/lib/csvExport";
 import { useToast } from "@/hooks/use-toast";
+import AddDonationDialog from "./AddDonationDialog";
 const formatCurrency = (val: number | undefined | null): string => {
   try {
     if (val == null || typeof val !== 'number' || !Number.isFinite(val)) {
@@ -26,6 +27,7 @@ type DonationType = "All" | "Counter" | "Online/Booking" | "Event" | "Project" |
 
 const DonationsList = () => {
   const navigate = useNavigate();
+  const [addOpen, setAddOpen] = useState(false);
   // Hooks must be called unconditionally
   const donations = useDonations();
   const donors = useDonors();
@@ -147,12 +149,13 @@ const DonationsList = () => {
             <Download className="h-4 w-4 mr-2" />
             Export
           </Button>
-          <Button onClick={() => navigate("/temple/donations/add")}>
+          <Button onClick={() => setAddOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Add Donation
           </Button>
         </div>
       </div>
+      <AddDonationDialog open={addOpen} onOpenChange={setAddOpen} />
 
       {/* Search */}
       <div className="relative">
