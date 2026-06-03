@@ -31,6 +31,7 @@ const donationTypeColors: Record<string, string> = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [addOpen, setAddOpen] = useState(false);
   // Hooks must be called unconditionally
   const donations = useDonations();
   const donors = useDonors();
@@ -312,11 +313,12 @@ const Dashboard = () => {
 
       {/* Action Button */}
       <div className="flex justify-end">
-        <Button onClick={() => navigate("/temple/donations/add")} size="lg">
+        <Button onClick={() => setAddOpen(true)} size="lg">
           <Plus className="h-4 w-4 mr-2" />
           Add Donation
         </Button>
       </div>
+      <AddDonationDialog open={addOpen} onOpenChange={setAddOpen} />
 
       {/* Charts and Recent Donations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
