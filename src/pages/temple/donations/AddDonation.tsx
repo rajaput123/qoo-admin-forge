@@ -41,7 +41,13 @@ const StepHeader = ({ n, title, done }: { n: number; title: string; done: boolea
   </div>
 );
 
-const AddDonation = () => {
+interface AddDonationProps {
+  embedded?: boolean;
+  onSaved?: () => void;
+  onClose?: () => void;
+}
+
+const AddDonation = ({ embedded = false, onSaved, onClose }: AddDonationProps = {}) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -190,21 +196,24 @@ const AddDonation = () => {
 
     setSavedIds({ donationId: donation.donationId, receiptNo: donation.receiptNo });
     toast({ title: "Donation saved", description: `Receipt ${donation.receiptNo} generated.` });
+    onSaved?.();
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/temple/donations/list")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Add Donation</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Complete each step — the next section opens automatically when valid.
-          </p>
+      {!embedded && (
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/temple/donations/list")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Add Donation</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Complete each step — the next section opens automatically when valid.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Step 1 */}
       <Card>
