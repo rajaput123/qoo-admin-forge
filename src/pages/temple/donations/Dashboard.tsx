@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useDonations, useDonors, useAllocations, useCertificates80G } from "@/modules/donations/hooks";
 import { Badge } from "@/components/ui/badge";
 import ComplianceTracker from "@/components/donations/ComplianceTracker";
+import AddDonationDialog from "./AddDonationDialog";
 
 const formatCurrency = (val: number | undefined | null): string => {
   try {
