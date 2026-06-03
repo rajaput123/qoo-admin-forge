@@ -12,7 +12,7 @@ import { recordDonation } from "@/modules/donations/donationsStore";
 
 type Purpose = "Counter" | "Project" | "Event" | "Other";
 type PaymentMode = "Cash" | "UPI" | "Cheque" | "NEFT";
-type DonationNature = "Cash" | "Non-cash";
+type DonationNature = "Cash" | "Non-Cash";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
@@ -175,7 +175,7 @@ const AddDonation = () => {
       pan: panRequired ? pan.toUpperCase().trim() : undefined,
       nature,
       amount: amt,
-      purpose: nature === "Non-cash"
+      purpose: nature === "Non-Cash"
         ? `${purposeLabel || "General"} (Non-cash: ${nonCashItem.trim()})`
         : (purposeLabel || "General"),
       channel: channelMap[paymentMode as PaymentMode],
