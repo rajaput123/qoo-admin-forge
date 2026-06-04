@@ -10,9 +10,10 @@ interface SelectWithAddNewProps {
   options: string[];
   onAddNew: (value: string) => void;
   className?: string;
+  disabled?: boolean;
 }
 
-const SelectWithAddNew = ({ value, onValueChange, placeholder, options, onAddNew, className }: SelectWithAddNewProps) => {
+const SelectWithAddNew = ({ value, onValueChange, placeholder, options, onAddNew, className, disabled }: SelectWithAddNewProps) => {
   const [showAdd, setShowAdd] = useState(false);
   const [newValue, setNewValue] = useState("");
 
@@ -27,7 +28,7 @@ const SelectWithAddNew = ({ value, onValueChange, placeholder, options, onAddNew
   };
 
   return (
-    <Select value={value} onValueChange={onValueChange}>
+    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
       <SelectTrigger className={className}><SelectValue placeholder={placeholder} /></SelectTrigger>
       <SelectContent>
         {options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
