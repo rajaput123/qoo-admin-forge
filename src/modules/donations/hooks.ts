@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { donationSelectors, getDonationsState, subscribeDonationsStore } from "./donationsStore";
+import { donationSelectors, getDonationsState, subscribeDonationsStore, getSettlements } from "./donationsStore";
 
 export function useDonationsState() {
   return useSyncExternalStore(subscribeDonationsStore, getDonationsState, getDonationsState);
@@ -38,4 +38,8 @@ export function useFunds() {
 export function useFundExpenses() {
   const result = useSyncExternalStore(subscribeDonationsStore, donationSelectors.getFundExpenses, donationSelectors.getFundExpenses);
   return Array.isArray(result) ? result : [];
+}
+
+export function useSettlements() {
+  return useSyncExternalStore(subscribeDonationsStore, getSettlements, getSettlements);
 }

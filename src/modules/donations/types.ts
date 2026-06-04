@@ -42,11 +42,12 @@ export interface NonCashAssetDetails {
   quantity: number;
   unit: string; // e.g. "pcs", "kg", "bags", "units"
   estimatedValue: number; // ₹ equivalent
+  category?: string; // e.g. "Metal", "Grain", "Cloth", "Jewellery"
 }
 
 export interface Donation {
-  donationId: string; // e.g. DON-2025-0891
-  receiptNo: string; // e.g. REC-2025-0891
+  donationId: string; // e.g. DON-C/2026/06/000001 (Cash) or DON-NC/2026/06/000001 (Non-Cash)
+  receiptNo: string; // e.g. REC/2026/06/000001
   templeId: string; // organization owning the donation
   branchId?: string; // optional branch/location ID
   donorId: string; // links to Donor
@@ -67,6 +68,7 @@ export interface Donation {
   status: "Recorded";
   receiptFilePath?: string; // Path to generated PDF receipt
   is80G?: boolean; // Whether this donation is eligible for 80G
+  settlementId?: string; // Linked settlement ID (SET/YYYY/MM/000001) if grouped
   createdAt: string; // ISO datetime
 }
 
@@ -125,6 +127,20 @@ export interface FundExpense {
   createdAt: string; // ISO datetime
 }
 
+/** Settlement — groups multiple recorded donations into a single bank deposit/settlement */
+export interface Settlement {
+  settlementId: string; // e.g. SET/2026/06/000001
+  date: string; // ISO date of settlement
+  bankReference: string; // bank UTR / reference number
+  bankAccountName: string; // destination bank account
+  donationIds: string[]; // list of donation IDs included
+  totalAmount: number; // sum of included donation amounts
+  status: "Open" | "Settled";
+  notes?: string;
+  createdAt: string;
+  createdBy: string;
+}
+
 export interface DonationsState {
   donors: Donor[];
   donations: Donation[];
@@ -133,4 +149,5 @@ export interface DonationsState {
   audit: DonationAuditEntry[];
   funds: Fund[]; // Managed funds list
   fundExpenses: FundExpense[]; // Expenses linked to funds
+  settlements: Settlement[]; // Grouped settlement records
 }

@@ -8,9 +8,6 @@ interface Props {
   fyStartYear: number;    // 2024
   receiptsIssued: number; // total receipts in FY
   registerCount: number;  // total donations recorded in FY
-  tenBDFiled: boolean;
-  tenBEIssued: number;
-  tenBEPending: number;
 }
 
 type Status = "green" | "amber" | "red";
@@ -42,9 +39,6 @@ const ComplianceTracker = ({
   fyStartYear,
   receiptsIssued,
   registerCount,
-  tenBDFiled,
-  tenBEIssued,
-  tenBEPending,
 }: Props) => {
   const checklist: { label: string; status: Status; detail: string }[] = [
     {
@@ -57,23 +51,11 @@ const ComplianceTracker = ({
       status: registerCount > 0 ? "green" : "red",
       detail: `${registerCount} donation${registerCount !== 1 ? "s" : ""} recorded`,
     },
-    {
-      label: "Form 10BD filed",
-      status: tenBDFiled ? "green" : "amber",
-      detail: tenBDFiled ? "Filed with IT Department" : "Not yet filed for this FY",
-    },
-    {
-      label: "Form 10BE issued",
-      status: tenBEPending === 0 && tenBEIssued > 0 ? "green" : tenBEIssued > 0 ? "amber" : "red",
-      detail: `${tenBEIssued} issued${tenBEPending > 0 ? `, ${tenBEPending} pending` : ""}`,
-    },
     { label: "Audit completed", status: "amber", detail: "Track externally — mark when done" },
     { label: "ITR-7 filed", status: "amber", detail: "Annual return to be filed" },
   ];
 
   const deadlines: { item: string; date: string; due: Date; completed: boolean }[] = [
-    { item: "Form 10BD filing", date: `31 May ${fyStartYear + 1}`, due: new Date(`${fyStartYear + 1}-05-31`), completed: tenBDFiled },
-    { item: "Form 10BE issuance", date: `31 May ${fyStartYear + 1}`, due: new Date(`${fyStartYear + 1}-05-31`), completed: tenBEIssued > 0 && tenBEPending === 0 },
     { item: "Audit completion",  date: `30 Sep ${fyStartYear + 1}`, due: new Date(`${fyStartYear + 1}-09-30`), completed: false },
     { item: "ITR-7 filing",      date: `31 Oct ${fyStartYear + 1}`, due: new Date(`${fyStartYear + 1}-10-31`), completed: false },
     { item: "80G renewal",       date: `Mar 2028`,                  due: new Date(`2028-03-31`),               completed: false },

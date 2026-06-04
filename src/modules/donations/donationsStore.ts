@@ -1,4 +1,4 @@
-import { DonationsState, Donor, Donation, Allocation, Certificate80G, DonationAuditEntry, DonationChannel, DonationSourceModule, DonationNature, NonCashAssetDetails, Fund, FundExpense, DonorCategory, DonorVipInfo } from "./types";
+import { DonationsState, Donor, Donation, Allocation, Certificate80G, DonationAuditEntry, DonationChannel, DonationSourceModule, DonationNature, NonCashAssetDetails, Fund, FundExpense, DonorCategory, DonorVipInfo, Settlement } from "./types";
 
 const LS_KEY = "qoo.donations.v2";
 
@@ -48,17 +48,51 @@ function nextDonorId(state: DonationsState) {
   return `DNR-${String(next).padStart(3, "0")}`;
 }
 
-function nextDonationPair(state: DonationsState, year: number) {
-  // DON-YYYY-NNNN and REC-YYYY-NNNN
-  const prefix = `DON-${year}-`;
-  const existing = state.donations.map(d => d.donationId).filter(id => id.startsWith(prefix));
-  const max = getMaxNumericSuffix(existing, prefix);
-  const next = max + 1;
-  const suffix = String(next).padStart(4, "0");
+/**
+ * Monthly sequenced ID generator.
+ * Donation IDs:  DON-C/YYYY/MM/000001  (Cash)  or  DON-NC/YYYY/MM/000001  (Non-Cash)
+ * Receipt IDs:   REC/YYYY/MM/000001
+ * Settlement IDs: SET/YYYY/MM/000001
+ */
+function nextDonationIds(state: DonationsState, nature: DonationNature, date: string) {
+  const [year, month] = date.split("-");
+  const ym = `${year}/${month}`;
+  const typePrefix = nature === "Cash" ? `DON-C/${ym}/` : `DON-NC/${ym}/`;
+  const recPrefix = `REC/${ym}/`;
+
+  const maxDon = state.donations
+    .map(d => d.donationId)
+    .filter(id => id.startsWith(typePrefix))
+    .reduce((m, id) => {
+      const n = Number(id.slice(typePrefix.length));
+      return Number.isFinite(n) ? Math.max(m, n) : m;
+    }, 0);
+  const maxRec = state.donations
+    .map(d => d.receiptNo)
+    .filter(r => r.startsWith(recPrefix))
+    .reduce((m, r) => {
+      const n = Number(r.slice(recPrefix.length));
+      return Number.isFinite(n) ? Math.max(m, n) : m;
+    }, 0);
+
+  const nextSeq = Math.max(maxDon, maxRec) + 1;
+  const suffix = String(nextSeq).padStart(6, "0");
   return {
-    donationId: `DON-${year}-${suffix}`,
-    receiptNo: `REC-${year}-${suffix}`,
+    donationId: `${typePrefix}${suffix}`,
+    receiptNo: `${recPrefix}${suffix}`,
   };
+}
+
+function nextSettlementId(state: DonationsState, date: string) {
+  const [year, month] = date.split("-");
+  const prefix = `SET/${year}/${month}/`;
+  const max = (state.settlements ?? []).map(s => s.settlementId)
+    .filter(id => id.startsWith(prefix))
+    .reduce((m, id) => {
+      const n = Number(id.slice(prefix.length));
+      return Number.isFinite(n) ? Math.max(m, n) : m;
+    }, 0);
+  return `${prefix}${String(max + 1).padStart(6, "0")}`;
 }
 
 function nextAuditId(state: DonationsState) {
@@ -161,8 +195,9 @@ function seedState(): DonationsState {
   ];
 
   const fundExpenses: FundExpense[] = [];
+  const settlements: Settlement[] = [];
 
-  return { donors, donations, allocations, certificates80G, audit, funds, fundExpenses };
+  return { donors, donations, allocations, certificates80G, audit, funds, fundExpenses, settlements };
 }
 
 let stateCache: DonationsState | null = null;
@@ -192,6 +227,7 @@ function isValidDonationsState(state: any): state is DonationsState {
     Array.isArray(state.funds) &&
     Array.isArray(state.fundExpenses)
   );
+  // Note: settlements is optional for backwards compatibility — migrated below
 }
 
 export function getDonationsState(): DonationsState {
@@ -200,6 +236,10 @@ export function getDonationsState(): DonationsState {
     const fromLS = safeJsonParse<DonationsState>(typeof window !== "undefined" ? localStorage.getItem(LS_KEY) : null);
     // Validate the structure before using it
     if (fromLS && isValidDonationsState(fromLS)) {
+      // Migrate: add settlements if not present (backwards compat)
+      if (!Array.isArray(fromLS.settlements)) {
+        (fromLS as any).settlements = [];
+      }
       stateCache = fromLS;
       return stateCache;
     } else {
@@ -424,7 +464,7 @@ export function recordDonation(input: {
   const createdBy = input.createdBy ?? "System";
   const date = input.date ?? isoDate();
   const time = input.time ?? displayTime();
-  const year = Number(date.slice(0, 4)) || new Date().getFullYear();
+  const nature: DonationNature = input.nature ?? "Cash";
 
   const { nextState: afterDonor, donor } = findOrCreateDonor({
     name: input.donorName,
@@ -435,15 +475,12 @@ export function recordDonation(input: {
     category: input.category,
   });
 
-  const ids = nextDonationPair(afterDonor, year);
-  // 80G Rule: Cash donations above ₹2,000 are NOT eligible for 80G
-  const isCashAboveLimit = input.channel === "Cash" && input.amount > 2000;
+  const ids = nextDonationIds(afterDonor, nature, date);
+  // 80G Rule: Donations with PAN provided are eligible for 80G
   const hasPan = input.pan !== undefined && input.pan !== "-" && input.pan.length >= 10;
-  const is80G = hasPan && !isCashAboveLimit;
+  const is80G = hasPan;
   const receiptFilePath = `/receipts/${ids.receiptNo}.pdf`;
-  
-  const nature: DonationNature = input.nature ?? "Cash";
-  
+
   const donation: Donation = {
     donationId: ids.donationId,
     receiptNo: ids.receiptNo,
@@ -935,4 +972,63 @@ export function updateDonorVip(input: {
 
   setState(nextState);
   return updated;
+}
+
+// ─── Settlements ───────────────────────────────────────────────────────────
+
+export function getSettlements(): Settlement[] {
+  return (getDonationsState().settlements ?? []);
+}
+
+export function recordSettlement(input: {
+  date?: string;
+  bankReference: string;
+  bankAccountName: string;
+  donationIds: string[];
+  notes?: string;
+  createdBy?: string;
+}): Settlement {
+  const st = getDonationsState();
+  const date = input.date ?? isoDate();
+  const settlementId = nextSettlementId(st, date);
+
+  // Calculate total from linked donations
+  const linkedDonations = st.donations.filter(d => input.donationIds.includes(d.donationId));
+  const totalAmount = linkedDonations.reduce((sum, d) => sum + (d.amount || 0), 0);
+
+  const settlement: Settlement = {
+    settlementId,
+    date,
+    bankReference: input.bankReference,
+    bankAccountName: input.bankAccountName,
+    donationIds: input.donationIds,
+    totalAmount,
+    status: "Settled",
+    notes: input.notes,
+    createdAt: nowIso(),
+    createdBy: input.createdBy ?? "System",
+  };
+
+  // Mark each included donation with this settlementId
+  const updatedDonations = st.donations.map(d =>
+    input.donationIds.includes(d.donationId) ? { ...d, settlementId } : d
+  );
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "Settlement Created",
+    entity: settlementId,
+    user: input.createdBy ?? "System",
+    details: `Settled ${input.donationIds.length} donations totalling ₹${totalAmount.toLocaleString("en-IN")} — Ref: ${input.bankReference}`,
+  };
+
+  setState({
+    ...st,
+    donations: updatedDonations,
+    settlements: [settlement, ...(st.settlements ?? [])],
+    audit: [audit, ...st.audit],
+  });
+
+  return settlement;
 }

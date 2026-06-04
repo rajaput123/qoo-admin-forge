@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { IndianRupee, Users, Wallet, CalendarCheck, Plus, TrendingUp, AlertTriangle, FileSpreadsheet, FileCheck2, Banknote, Coins } from "lucide-react";
+import { IndianRupee, Users, Wallet, CalendarCheck, Plus, TrendingUp, Banknote, Coins } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import { useDonations, useDonors, useAllocations, useCertificates80G } from "@/modules/donations/hooks";
 import { Badge } from "@/components/ui/badge";
@@ -77,16 +77,7 @@ const Dashboard = () => {
   const fyCashTotal = fyDonations.filter(d => d.nature === "Cash").reduce((s, d) => s + d.amount, 0);
   const fyNonCashTotal = fyDonations.filter(d => d.nature === "Non-Cash").reduce((s, d) => s + d.amount, 0);
 
-  // 10BD status — placeholder rule: filed if certificates exist for this FY
-  const fyCerts = certificates80G.filter(c => c.fy === fyLabel);
-  const tenBDFiled = fyCerts.length > 0 && fyCerts.every(c => c.status === "Generated");
-  const tenBEIssued = fyCerts.filter(c => c.status === "Generated").length;
-  const tenBEPending = fyCerts.filter(c => c.status !== "Generated").length;
 
-  // May 31 deadline reminder
-  const deadline = new Date(`${fyStartYear + 1}-05-31`);
-  const daysToDeadline = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  const showDeadlineBanner = daysToDeadline > 0 && daysToDeadline <= 60 && !tenBDFiled;
 
   const cashSplitData = [
     { name: "Cash / Bank", value: fyCashTotal, color: "#22c55e" },
@@ -163,25 +154,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* 80G Deadline Reminder */}
-      {showDeadlineBanner && (
-        <Card className="border-amber-300 bg-amber-50">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-amber-200 flex items-center justify-center">
-              <AlertTriangle className="h-5 w-5 text-amber-700" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-amber-900">Form 10BD Filing Deadline Approaching</p>
-              <p className="text-sm text-amber-800">
-                Only <strong>{daysToDeadline} day{daysToDeadline === 1 ? "" : "s"}</strong> left to file Form 10BD for FY {fyLabel} (due 31 May {fyStartYear + 1}).
-              </p>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => navigate("/temple/donations/form-10bd")}>
-              File Now
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -241,7 +214,7 @@ const Dashboard = () => {
       {/* 80G Compliance Section */}
       <div>
         <h2 className="text-lg font-semibold mb-3">80G Compliance — FY {fyLabel}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">FY Total Donations</CardTitle>
@@ -271,32 +244,6 @@ const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
-
-          <Card className="cursor-pointer hover:bg-muted/30" onClick={() => navigate("/temple/donations/form-10bd")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Form 10BD</CardTitle>
-              <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <Badge className={tenBDFiled ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}>
-                {tenBDFiled ? "Filed" : "Pending"}
-              </Badge>
-              <p className="text-xs text-muted-foreground mt-1">Due 31 May {fyStartYear + 1}</p>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:bg-muted/30" onClick={() => navigate("/temple/donations/receipts")}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Form 10BE Issuance</CardTitle>
-              <FileCheck2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{tenBEIssued}<span className="text-sm text-muted-foreground font-normal"> / {tenBEIssued + tenBEPending}</span></div>
-              <p className="text-xs text-muted-foreground">
-                {tenBEPending > 0 ? `${tenBEPending} pending` : "All issued"}
-              </p>
-            </CardContent>
-          </Card>
         </div>
       </div>
 
@@ -306,9 +253,6 @@ const Dashboard = () => {
         fyStartYear={fyStartYear}
         receiptsIssued={fyDonations.length}
         registerCount={fyDonations.length}
-        tenBDFiled={tenBDFiled}
-        tenBEIssued={tenBEIssued}
-        tenBEPending={tenBEPending}
       />
 
       {/* Action Button */}

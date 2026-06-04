@@ -1,578 +1,585 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { useMemo, useState, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Check, Receipt, MessageCircle, Save } from "lucide-react";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Check, Receipt, MessageCircle, Save, ArrowLeft, ArrowRight, Search, UserPlus, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { recordDonation } from "@/modules/donations/donationsStore";
+import { useDonors } from "@/modules/donations/hooks";
+import { projects } from "@/data/projectData";
+import { getEvents } from "@/modules/events/eventStore";
+import TempleQRPanel from "@/components/TempleQRPanel";
 
-type Purpose = "Counter" | "Project" | "Event" | "Other";
-type PaymentMode = "Cash" | "UPI" | "Cheque" | "NEFT";
+type PaymentMode = "Cash" | "QR Code" | "UPI" | "Cheque";
 type DonationNature = "Cash" | "Non-Cash";
+type Purpose = "Counter" | "Project" | "Event" | "Other";
 
 const PAN_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
 const MOBILE_REGEX = /^[6-9]\d{9}$/;
+const NC_CATEGORIES = ["Metal/Gold/Silver","Grain/Food","Cloth/Fabric","Jewellery","Electronics","Furniture","Other"];
+const NC_UNITS = ["pcs","kg","g","bags","sets","litres","metres","units"];
 
-const projectOptions = [
-  { value: "project-1", label: "Temple Renovation" },
-  { value: "project-2", label: "New Hall Construction" },
-  { value: "project-3", label: "Annadanam Fund" },
-];
-const eventOptions = [
-  { value: "event-1", label: "Maha Shivaratri 2025" },
-  { value: "event-2", label: "Karthika Deepam" },
-  { value: "event-3", label: "Brahmotsavam" },
-];
-
-const StepHeader = ({ n, title, done }: { n: number; title: string; done: boolean }) => (
-  <div className="flex items-center gap-3 mb-4">
-    <div
-      className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
-        done ? "bg-emerald-500 text-white" : "bg-primary text-primary-foreground"
-      }`}
-    >
-      {done ? <Check className="h-4 w-4" /> : n}
-    </div>
-    <h3 className="text-base font-semibold">{title}</h3>
+// ── Horizontal step indicator ──────────────────────────────────────────────
+const StepBar = ({ steps, current }: { steps: string[]; current: number }) => (
+  <div className="flex items-center w-full mb-8">
+    {steps.map((label, i) => {
+      const done = i < current;
+      const active = i === current;
+      return (
+        <div key={i} className="flex items-center flex-1 last:flex-none">
+          <div className="flex flex-col items-center gap-1">
+            <div className={`h-9 w-9 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all
+              ${done ? "bg-emerald-500 border-emerald-500 text-white" : active ? "bg-primary border-primary text-primary-foreground" : "bg-background border-border text-muted-foreground"}`}>
+              {done ? <Check className="h-4 w-4" /> : i + 1}
+            </div>
+            <span className={`text-[10px] font-medium whitespace-nowrap ${active ? "text-primary" : done ? "text-emerald-600" : "text-muted-foreground"}`}>
+              {label}
+            </span>
+          </div>
+          {i < steps.length - 1 && (
+            <div className={`flex-1 h-0.5 mx-2 mb-4 transition-colors ${done ? "bg-emerald-400" : "bg-border"}`} />
+          )}
+        </div>
+      );
+    })}
   </div>
 );
 
-interface AddDonationProps {
-  embedded?: boolean;
-  onSaved?: () => void;
-  onClose?: () => void;
-}
+const FieldError = ({ t }: { t: string }) => <p className="text-[11px] text-destructive mt-1">{t}</p>;
+const FieldInfo  = ({ t }: { t: string }) => <p className="text-[11px] text-muted-foreground mt-1">{t}</p>;
 
-const AddDonation = ({ embedded = false, onSaved, onClose }: AddDonationProps = {}) => {
+interface Props { embedded?: boolean; initialNature?: DonationNature; onSaved?: () => void; onClose?: () => void; }
+
+const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Props = {}) => {
   const navigate = useNavigate();
+  const location  = useLocation();
   const { toast } = useToast();
 
-  // Step 1
-  const [amount, setAmount] = useState("");
-  const [wants80G, setWants80G] = useState<"" | "Yes" | "No">("");
-  const [pan, setPan] = useState("");
-  const [nature, setNature] = useState<"" | DonationNature>("");
-  const [nonCashItem, setNonCashItem] = useState("");
+  const nature: DonationNature = (location.state as any)?.nature ?? initialNature ?? "Cash";
+  const isCash = nature === "Cash";
 
-  // Step 2
-  const [donorName, setDonorName] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [email, setEmail] = useState("");
-  const [address, setAddress] = useState("");
+  const [step, setStep] = useState(0);
 
-  // Step 3
-  const [purpose, setPurpose] = useState<"" | Purpose>("");
-  const [projectId, setProjectId] = useState("");
-  const [eventId, setEventId] = useState("");
+  // Donor search
+  const allDonors = useDonors();
+  const [donorSearch, setDonorSearch] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [donorSelected, setDonorSelected] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  const donorSuggestions = useMemo(() => {
+    const q = donorSearch.trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+    return allDonors
+      .filter(d =>
+        d.name.toLowerCase().includes(q) ||
+        d.phone.replace(/\D/g, "").includes(q)
+      )
+      .slice(0, 8);
+  }, [allDonors, donorSearch]);
+
+  const selectDonor = (d: typeof allDonors[0]) => {
+    setDonorName(d.name);
+    setDonorSearch(d.name);
+    setMobile(d.phone.replace(/\D/g, "").slice(-10));
+    setEmail(d.email !== "-" ? d.email : "");
+    setAddress(d.city !== "-" ? d.city : "");
+    if (d.pan && d.pan !== "-") setPan(d.pan.toUpperCase());
+    setDonorSelected(true);
+    setShowSuggestions(false);
+  };
+
+  const clearDonorSelection = () => {
+    setDonorName(""); setDonorSearch(""); setMobile("");
+    setEmail(""); setAddress(""); setPan("");
+    setDonorSelected(false);
+  };
+
+  // ── Fields ──
+  const [ncCategory, setNcCategory] = useState("");
+  const [ncName, setNcName]         = useState("");
+  const [ncQty, setNcQty]           = useState("");
+  const [ncUnit, setNcUnit]         = useState("pcs");
+  const [ncValue, setNcValue]       = useState("");
+
+  const [amount, setAmount]         = useState("");
+  const [wants80G, setWants80G]     = useState<""|"Yes"|"No">("");
+  const [pan, setPan]               = useState("");
+
+  const [donorName, setDonorName]   = useState("");
+  const [mobile, setMobile]         = useState("");
+  const [email, setEmail]           = useState("");
+  const [address, setAddress]       = useState("");
+
+  // Combined purpose value: "Counter" | "OTHER" | "PRJ:id" | "EVT:id"
+  const [purposeKey, setPurposeKey] = useState("");
+
+  const decodePurpose = (key: string) => {
+    if (!key || key === "Counter") return { type: "Counter" as Purpose, projectId: "", eventId: "" };
+    if (key === "Other") return { type: "Other" as Purpose, projectId: "", eventId: "" };
+    if (key.startsWith("PRJ:")) return { type: "Project" as Purpose, projectId: key.slice(4), eventId: "" };
+    if (key.startsWith("EVT:")) return { type: "Event" as Purpose, projectId: "", eventId: key.slice(4) };
+    return { type: "Counter" as Purpose, projectId: "", eventId: "" };
+  };
+
+  const decoded = decodePurpose(purposeKey);
   const [remarks, setRemarks] = useState("");
 
-  // Step 4
-  const [paymentMode, setPaymentMode] = useState<"" | PaymentMode>("");
-  const [counterNo, setCounterNo] = useState("");
+  const [paymentMode, setPaymentMode] = useState<""|PaymentMode>("");
+  const [counterNo, setCounterNo]   = useState("");
   const [collectedBy, setCollectedBy] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
   const [paymentLinkSent, setPaymentLinkSent] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState<"Pending Payment" | "Paid">("Pending Payment");
-  const [chequeNo, setChequeNo] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [utrNumber, setUtrNumber] = useState("");
+  const [paymentStatus, setPaymentStatus] = useState<"Pending Payment"|"Paid">("Pending Payment");
+  const [chequeNo, setChequeNo]     = useState("");
+  const [bankName, setBankName]     = useState("");
+  const [utrNumber, setUtrNumber]   = useState("");
+  const [savedIds, setSavedIds]     = useState<{donationId:string;receiptNo:string}|null>(null);
 
-  // Step 5
-  const [savedIds, setSavedIds] = useState<{ donationId: string; receiptNo: string } | null>(null);
+  // ── Derived ──
+  const amt = parseFloat(isCash ? amount : ncValue) || 0;
+  const suggests80G = amt >= 2000;
+  const effective80G = wants80G === "" ? (suggests80G ? "Yes" : "") : wants80G;
+  const panRequired  = effective80G === "Yes";
+  const panValid     = !panRequired || PAN_REGEX.test(pan.toUpperCase());
+  const nameValid    = donorName.trim().length >= 3 && donorName.trim().length <= 100;
+  const mobileValid  = MOBILE_REGEX.test(mobile.trim());
+  const addressValid = !panRequired || (address.trim().length >= 10 && address.trim().length <= 500);
 
-  const amt = parseFloat(amount) || 0;
-  const requires80G = amt >= 2000;
-  const effectiveWants80G = requires80G ? "Yes" : wants80G;
-  const panRequired = effectiveWants80G === "Yes";
-  const panValid = !panRequired || PAN_REGEX.test(pan.toUpperCase());
+  const activeProjects = projects.filter(p => p.status === "Active");
+  const allEvents = useMemo(() => { try { return getEvents(); } catch { return []; } }, []);
 
-  // Address: strip double quotes, max 400 chars (per project rule)
-  const onAddressChange = (v: string) => setAddress(v.replace(/"/g, "").slice(0, 400));
 
-  // Step 1 valid?
-  const step1Valid =
-    nature !== "" &&
-    amt > 0 &&
-    (requires80G || wants80G !== "") &&
-    panValid &&
-    (!panRequired || pan.trim().length === 10) &&
-    (nature === "Cash" || nonCashItem.trim().length >= 3);
+  // ── Step definitions ──
+  const cashSteps   = ["Amount & 80G", "Donor Info", "Purpose", "Payment", "Review"];
+  const ncashSteps  = ["Material", "80G & PAN", "Donor Info", "Purpose", "Review"];
+  const stepLabels  = isCash ? cashSteps : ncashSteps;
 
-  // Step 2 valid?
-  const nameValid = donorName.trim().length >= 3 && donorName.trim().length <= 100;
-  const mobileValid = MOBILE_REGEX.test(mobile.trim());
-  const addressValid = address.trim().length === 0 || (address.trim().length >= 10 && address.trim().length <= 400);
-  const step2Valid = step1Valid && nameValid && mobileValid && addressValid;
+  // ── Step validity ──
+  const ncMaterialOk = ncCategory !== "" && ncName.trim().length >= 2 && parseFloat(ncQty) > 0 && amt > 0;
+  const amtOk        = isCash ? (amt > 0 && (effective80G !== "") && panValid && (!panRequired || pan.trim().length === 10))
+                               : (ncMaterialOk && (effective80G !== "") && panValid && (!panRequired || pan.trim().length === 10));
+  const donorOk      = nameValid && mobileValid && addressValid;
+  const purposeOk    = purposeKey !== "" && (decoded.type !== "Other" || remarks.trim().length > 0);
+  const paymentOk    = paymentMode !== "" &&
+    (paymentMode !== "Cash"     || (counterNo.trim() !== "" && collectedBy.trim() !== "")) &&
+    (paymentMode !== "UPI"      || paymentStatus === "Paid") &&
+    (paymentMode !== "QR Code"  || paymentStatus === "Paid") &&
+    (paymentMode !== "Cheque"   || (chequeNo.trim() !== "" && bankName.trim() !== ""));
 
-  // Step 3 valid?
-  const step3Valid =
-    step2Valid &&
-    purpose !== "" &&
-    (purpose !== "Project" || !!projectId) &&
-    (purpose !== "Event" || !!eventId) &&
-    (purpose !== "Other" || remarks.trim().length > 0);
+  const stepOk = isCash
+    ? [amtOk, donorOk, purposeOk, paymentOk, true]
+    : [ncMaterialOk, amtOk, donorOk, purposeOk, true];
 
-  // Step 4 valid?
-  const step4Valid =
-    step3Valid &&
-    paymentMode !== "" &&
-    (paymentMode !== "Cash" || (counterNo.trim() !== "" && collectedBy.trim() !== "")) &&
-    (paymentMode !== "UPI" || (MOBILE_REGEX.test(whatsappNumber.trim()) && paymentStatus === "Paid")) &&
-    (paymentMode !== "Cheque" || (chequeNo.trim() !== "" && bankName.trim() !== "")) &&
-    (paymentMode !== "NEFT" || (utrNumber.trim() !== "" && bankName.trim() !== ""));
-
-  const showStep2 = step1Valid;
-  const showStep3 = step2Valid;
-  const showStep4 = step3Valid;
-  const showStep5 = step4Valid;
+  const canNext = stepOk[step];
 
   const purposeLabel = useMemo(() => {
-    if (purpose === "Project") return projectOptions.find(p => p.value === projectId)?.label;
-    if (purpose === "Event") return eventOptions.find(e => e.value === eventId)?.label;
-    if (purpose === "Other") return remarks.slice(0, 60);
+    if (decoded.type === "Project") return activeProjects.find(p => p.id === decoded.projectId)?.title ?? "Project";
+    if (decoded.type === "Event")   return allEvents.find(e => e.id === decoded.eventId)?.name ?? "Event";
+    if (decoded.type === "Other")   return remarks.slice(0, 60);
     return "Counter Donation";
-  }, [purpose, projectId, eventId, remarks]);
+  }, [purposeKey, remarks]);
 
-  const generatePaymentLink = () => {
+  const generateLink = () => {
     if (!MOBILE_REGEX.test(whatsappNumber.trim())) {
-      toast({ title: "Invalid WhatsApp number", description: "Enter a 10-digit mobile number", variant: "destructive" });
-      return;
+      toast({ title: "Invalid number", variant: "destructive" }); return;
     }
-    setPaymentLinkSent(true);
-    setPaymentStatus("Pending Payment");
-    toast({
-      title: "Payment link sent",
-      description: `WhatsApp link sent to +91 ${whatsappNumber}. Mark as Paid once confirmed.`,
-    });
+    setPaymentLinkSent(true); setPaymentStatus("Pending Payment");
+    toast({ title: "Payment link sent", description: `Sent to +91 ${whatsappNumber}` });
   };
 
   const saveDonation = () => {
-    if (!step4Valid) {
-      toast({ title: "Incomplete", description: "Please complete all required fields.", variant: "destructive" });
-      return;
-    }
-
-    const channelMap: Record<PaymentMode, "Cash" | "UPI" | "Cheque" | "Bank Transfer"> = {
-      Cash: "Cash",
-      UPI: "UPI",
-      Cheque: "Cheque",
-      NEFT: "Bank Transfer",
+    const channelMap: Record<string, string> = {
+      Cash: "Cash", "QR Code": "UPI", UPI: "UPI", Cheque: "Cheque",
     };
-
-    const referenceNo =
-      paymentMode === "Cheque" ? chequeNo
+    const referenceNo = paymentMode === "Cheque" ? chequeNo
       : paymentMode === "NEFT" ? utrNumber
-      : paymentMode === "UPI" ? `WA:${whatsappNumber}`
-      : undefined;
-
-    const sourceModule =
-      purpose === "Counter" ? "Counter"
-      : purpose === "Event" ? "Event"
-      : "Manual";
+      : paymentMode === "UPI" ? `WA:${whatsappNumber}` : undefined;
 
     const donation = recordDonation({
-      donorName: donorName.trim(),
-      phone: mobile.trim(),
-      email: email.trim() || undefined,
-      city: address.trim() || undefined,
+      donorName: donorName.trim(), phone: mobile.trim(),
+      email: email.trim() || undefined, city: address.trim() || undefined,
       pan: panRequired ? pan.toUpperCase().trim() : undefined,
-      nature: nature as DonationNature,
-      amount: amt,
-      purpose: nature === "Non-Cash"
-        ? `${purposeLabel || "General"} (Non-cash: ${nonCashItem.trim()})`
-        : (purposeLabel || "General"),
-      channel: channelMap[paymentMode as PaymentMode],
-      mode: paymentMode,
+      nature, amount: amt, purpose: purposeLabel || "General",
+      channel: isCash ? (channelMap[paymentMode] as any) : "In-Kind",
+      mode: isCash ? paymentMode : "In-Kind",
       referenceNo,
-      remarks: remarks.trim() || undefined,
-      sourceModule: sourceModule as any,
-      sourceRecordId: projectId || eventId || undefined,
-      counterId: paymentMode === "Cash" ? counterNo.trim() : undefined,
+      nonCashDetails: !isCash ? { assetName:ncName.trim(), quantity:parseFloat(ncQty), unit:ncUnit, estimatedValue:amt, category:ncCategory } : undefined,
+      sourceModule: decoded.type==="Counter"?"Counter" : decoded.type==="Event"?"Event":"Manual",
+      sourceRecordId: decoded.projectId || decoded.eventId || undefined,
+      counterId: paymentMode==="Cash" ? counterNo.trim() : undefined,
       createdBy: collectedBy.trim() || "System",
     });
-
     setSavedIds({ donationId: donation.donationId, receiptNo: donation.receiptNo });
-    toast({ title: "Donation saved", description: `Receipt ${donation.receiptNo} generated.` });
+    toast({ title: "Donation saved ✓", description: `Receipt ${donation.receiptNo} generated.` });
     onSaved?.();
   };
 
-  return (
-    <div className="space-y-6">
-      {!embedded && (
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/temple/donations/list")}>
-            <ArrowLeft className="h-4 w-4" />
+  // ── Step content renderers ──
+  const renderStep = () => {
+    // Non-cash step 0 = Material
+    if (!isCash && step === 0) return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="space-y-2">
+          <Label>Material Category *</Label>
+          <Select value={ncCategory} onValueChange={setNcCategory}>
+            <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+            <SelectContent>{NC_CATEGORIES.map(c=><SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Material Name *</Label>
+          <Input placeholder="e.g. Gold Chain, Rice Bags" value={ncName} onChange={e=>setNcName(e.target.value)} />
+        </div>
+        <div className="space-y-2">
+          <Label>Quantity *</Label>
+          <Input type="number" placeholder="0" value={ncQty} onChange={e=>setNcQty(e.target.value)} min={0} />
+        </div>
+        <div className="space-y-2">
+          <Label>Unit</Label>
+          <Select value={ncUnit} onValueChange={setNcUnit}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>{NC_UNITS.map(u=><SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label>Estimated Value (₹) *</Label>
+          <Input type="number" placeholder="0" value={ncValue} onChange={e=>setNcValue(e.target.value)} />
+          {amt >= 2000 && <FieldInfo t="Value ≥ ₹2,000 — 80G recommended, PAN will be required if 80G selected." />}
+        </div>
+      </div>
+    );
+
+    // Cash step 0 OR Non-cash step 1 = Amount/80G
+    const is80GStep = (isCash && step===0) || (!isCash && step===1);
+    if (is80GStep) return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {isCash && (
+          <div className="space-y-2">
+            <Label>Donation Amount (₹) *</Label>
+            <Input type="number" placeholder="0" value={amount} onChange={e=>setAmount(e.target.value)} />
+            {suggests80G && <p className="text-[11px] text-amber-600">Amount ≥ ₹2,000 — 80G recommended.</p>}
+          </div>
+        )}
+        <div className="space-y-2">
+          <Label>80G Tax Exemption *</Label>
+          <Select value={effective80G} onValueChange={v=>setWants80G(v as "Yes"|"No")}>
+            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Yes">Yes — I want 80G</SelectItem>
+              <SelectItem value="No">No — Skip 80G</SelectItem>
+            </SelectContent>
+          </Select>
+          {suggests80G && effective80G === "Yes" && <FieldInfo t="Auto-suggested (amount ≥ ₹2,000). You can change this." />}
+        </div>
+        {panRequired && (
+          <div className="space-y-2">
+            <Label>PAN Number *</Label>
+            <Input placeholder="ABCDE1234F" maxLength={10} value={pan} onChange={e=>setPan(e.target.value.toUpperCase())} />
+            {pan.length===10 && !panValid ? <FieldError t="Invalid PAN. Format: AAAAA9999A" /> : <FieldInfo t="Format: AAAAA9999A" />}
+          </div>
+        )}
+      </div>
+    );
+
+    // Donor Info step
+    const donorStep = isCash ? 1 : 2;
+    if (step === donorStep) return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Search-or-Add donor */}
+        <div className="space-y-2 md:col-span-2">
+          <Label>Donor Name *</Label>
+          <div className="relative" ref={searchRef}>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                className="pl-9 pr-20"
+                placeholder="Search by name or mobile, or type a new name…"
+                value={donorSearch}
+                onChange={e => {
+                  setDonorSearch(e.target.value);
+                  setDonorName(e.target.value);
+                  setDonorSelected(false);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 180)}
+                maxLength={100}
+              />
+              {donorSelected && (
+                <Badge className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-100 text-emerald-700 text-xs">
+                  <User className="h-3 w-3 mr-1" />Existing
+                </Badge>
+              )}
+            </div>
+            {/* Suggestions dropdown */}
+            {showSuggestions && donorSuggestions.length > 0 && (
+              <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-xl shadow-lg overflow-hidden">
+                {donorSuggestions.map(d => (
+                  <button
+                    key={d.donorId}
+                    type="button"
+                    onMouseDown={() => selectDonor(d)}
+                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/60 text-left transition-colors border-b last:border-b-0"
+                  >
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <span className="text-xs font-semibold text-primary">{d.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{d.name}</p>
+                      <p className="text-xs text-muted-foreground">{d.phone} {d.pan && d.pan !== "-" ? `· PAN: ${d.pan}` : ""}</p>
+                    </div>
+                    {d.eligible80G && <Badge className="bg-green-100 text-green-700 text-xs shrink-0">80G</Badge>}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onMouseDown={() => { setDonorSelected(false); setShowSuggestions(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/60 text-left text-sm text-primary font-medium"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Add "{donorSearch}" as new donor
+                </button>
+              </div>
+            )}
+            {showSuggestions && donorSearch.trim().length >= 2 && donorSuggestions.length === 0 && (
+              <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-xl shadow-lg">
+                <div className="flex items-center gap-3 px-4 py-3 text-sm">
+                  <UserPlus className="h-4 w-4 text-primary" />
+                  <span>No existing donor found — <strong>"{donorSearch}"</strong> will be added as a new donor.</span>
+                </div>
+              </div>
+            )}
+          </div>
+          {donorName && !nameValid && <FieldError t="Name must be 3–100 characters." />}
+          {donorSelected && <p className="text-[11px] text-emerald-600">✓ Existing donor selected — details auto-filled below.</p>}
+        </div>
+        <div className="space-y-2">
+          <Label>Mobile Number *</Label>
+          <Input placeholder="10-digit mobile" maxLength={10} value={mobile} onChange={e=>setMobile(e.target.value.replace(/\D/g,""))} />
+          {mobile && !mobileValid && <FieldError t="Enter a valid 10-digit Indian mobile." />}
+        </div>
+        <div className="space-y-2">
+          <Label>Email <span className="text-xs text-muted-foreground">(optional)</span></Label>
+          <Input type="email" placeholder="donor@example.com" value={email} onChange={e=>setEmail(e.target.value)} />
+        </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label>Address {panRequired && <span className="text-destructive">*</span>}</Label>
+          <Textarea placeholder={panRequired?"Min 10 chars — required for 80G":"Optional"} value={address} onChange={e=>setAddress(e.target.value.slice(0,500))} rows={2} />
+          <div className="flex justify-between">
+            {panRequired && address.length>0 && address.trim().length<10 && <FieldError t="Min 10 characters for 80G." />}
+            <span className="text-[10px] text-muted-foreground ml-auto">{address.length}/500</span>
+          </div>
+        </div>
+      </div>
+    );
+
+    // Purpose step
+    const purposeStep = isCash ? 2 : 3;
+    if (step === purposeStep) return (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Donation Purpose *</Label>
+          <Select value={purposeKey} onValueChange={v => { setPurposeKey(v); setRemarks(""); }}>
+            <SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">General</SelectLabel>
+                <SelectItem value="Counter">Counter Donation</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectGroup>
+              {allEvents.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">Events</SelectLabel>
+                  {allEvents.map(e => (
+                    <SelectItem key={e.id} value={`EVT:${e.id}`}>{e.name}</SelectItem>
+                  ))}
+                </SelectGroup>
+              )}
+              {activeProjects.length > 0 && (
+                <SelectGroup>
+                  <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">Projects</SelectLabel>
+                  {activeProjects.map(p => (
+                    <SelectItem key={p.id} value={`PRJ:${p.id}`}>{p.title}</SelectItem>
+                  ))}
+                </SelectGroup>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+        {(decoded.type === "Other" || decoded.type === "Counter") && (
+          <div className="space-y-2">
+            <Label>Remarks {decoded.type === "Other" && <span className="text-destructive">*</span>}</Label>
+            <Textarea
+              placeholder={decoded.type === "Other" ? "Describe the donation purpose (required)" : "Optional notes"}
+              value={remarks}
+              onChange={e => setRemarks(e.target.value)}
+              rows={2}
+            />
+          </div>
+        )}
+      </div>
+    );
+
+
+    // Payment step (cash only)
+    const payStep = 3;
+    if (isCash && step===payStep) return (
+      <div className="space-y-4">
+        {/* Mode selector */}
+        <div className="space-y-2">
+          <Label>Payment Mode *</Label>
+          <Select value={paymentMode} onValueChange={v => { setPaymentMode(v as PaymentMode); setPaymentStatus("Pending Payment"); }}>
+            <SelectTrigger><SelectValue placeholder="Select payment mode" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Cash">Cash</SelectItem>
+              <SelectItem value="QR Code">QR Code</SelectItem>
+              <SelectItem value="UPI">UPI</SelectItem>
+              <SelectItem value="Cheque">Cheque</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Cash */}
+        {paymentMode === "Cash" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2"><Label>Counter No *</Label><Input value={counterNo} onChange={e => setCounterNo(e.target.value)} placeholder="e.g. CTR-01" /></div>
+            <div className="space-y-2"><Label>Collected By *</Label><Input value={collectedBy} onChange={e => setCollectedBy(e.target.value)} placeholder="Staff name" /></div>
+          </div>
+        )}
+
+        {/* QR Code — official temple QR */}
+        {paymentMode === "QR Code" && (
+          <TempleQRPanel
+            amount={amt}
+            mode="QR Code"
+            paymentStatus={paymentStatus}
+            onConfirmPaid={() => setPaymentStatus("Paid")}
+          />
+        )}
+
+        {/* UPI — official temple UPI ID */}
+        {paymentMode === "UPI" && (
+          <TempleQRPanel
+            amount={amt}
+            mode="UPI"
+            paymentStatus={paymentStatus}
+            onConfirmPaid={() => setPaymentStatus("Paid")}
+          />
+        )}
+
+        {/* Cheque */}
+        {paymentMode === "Cheque" && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2"><Label>Cheque No *</Label><Input value={chequeNo} onChange={e => setChequeNo(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Bank Name *</Label><Input value={bankName} onChange={e => setBankName(e.target.value)} /></div>
+          </div>
+        )}
+      </div>
+    );
+
+    // Review & Save (last step)
+    return (
+      <div className="space-y-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            {label:"Donation ID",   val: savedIds?.donationId || "— auto on save —", mono:true},
+            {label:"Receipt No",    val: savedIds?.receiptNo  || "— auto on save —", mono:true},
+            {label:"Amount",        val: `₹${amt.toLocaleString("en-IN")}`, mono:false},
+            {label:"80G",           val: "", mono:false, badge:true},
+          ].map(({label,val,mono,badge})=>(
+            <div key={label} className="p-4 rounded-xl bg-muted/40 border space-y-1">
+              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+              {badge
+                ? (panRequired ? <Badge className="bg-green-100 text-green-700 text-xs">Eligible</Badge> : <Badge variant="outline" className="text-xs">Not Applied</Badge>)
+                : <p className={`text-sm font-semibold ${mono?"font-mono":""}`}>{val}</p>}
+            </div>
+          ))}
+        </div>
+        {/* Summary table */}
+        <div className="rounded-xl border divide-y text-sm">
+          {[
+            ["Donor", donorName],
+            ["Mobile", mobile],
+            ["Purpose", purposeLabel],
+            isCash ? ["Payment Mode", paymentMode] : ["Material", `${ncQty} ${ncUnit} ${ncName} (${ncCategory})`],
+            panRequired ? ["PAN", pan.toUpperCase()] : null,
+          ].filter(Boolean).map(([k,v])=>(
+            <div key={k} className="flex px-4 py-2.5 gap-4">
+              <span className="w-32 text-muted-foreground shrink-0">{k}</span>
+              <span className="font-medium">{v}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Button onClick={saveDonation} disabled={!!savedIds} size="lg">
+            <Save className="h-4 w-4 mr-2"/>Save Donation
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Add Donation</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Complete each step — the next section opens automatically when valid.
-            </p>
+          <Button variant="outline" disabled={!savedIds} onClick={()=>toast({title:"Receipt ready",description:`${savedIds?.receiptNo}`})}>
+            <Receipt className="h-4 w-4 mr-2"/>Download Receipt
+          </Button>
+          <Button variant="outline" disabled={!savedIds} onClick={()=>toast({title:"Sent via WhatsApp",description:`Receipt sent to +91 ${mobile}`})}>
+            <MessageCircle className="h-4 w-4 mr-2"/>Send via WhatsApp
+          </Button>
+          {savedIds && (
+            <Button variant="ghost" className="ml-auto" onClick={onClose ?? (() => navigate("/temple/donations"))}>Done</Button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const totalSteps = stepLabels.length;
+
+  return (
+    <div className="space-y-0">
+      {/* Page header */}
+      {!embedded && (
+        <div className="flex items-center gap-3 mb-6">
+          <Button variant="ghost" size="icon" onClick={()=>navigate("/temple/donations")}>
+            <ArrowLeft className="h-4 w-4"/>
+          </Button>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">{isCash?"Cash Donation":"Non-Cash Donation"}</h1>
+            <Badge className={isCash?"bg-emerald-100 text-emerald-700":"bg-blue-100 text-blue-700"}>
+              {isCash?"Cash":"In-Kind"}
+            </Badge>
           </div>
         </div>
       )}
 
-      {/* Step 1 */}
-      <Card>
-        <CardContent className="pt-6">
-          <StepHeader n={1} title="Donation Information" done={step1Valid} />
-          {/* First ask: Cash or Non-Cash */}
-          <div className="space-y-2 max-w-sm">
-            <Label>Donation Nature *</Label>
-            <Select value={nature} onValueChange={(v) => setNature(v as DonationNature)}>
-              <SelectTrigger><SelectValue placeholder="Select Cash or Non-Cash" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Cash">Cash</SelectItem>
-                <SelectItem value="Non-Cash">Non-Cash (Gold, Kind, etc.)</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">
-              Choose Non-Cash for gold, silver, kind, or in-kind contributions.
-            </p>
-          </div>
+      {/* Horizontal step bar */}
+      <div className="bg-card rounded-2xl border shadow-sm p-6 mb-5">
+        <StepBar steps={stepLabels} current={step} />
 
-          {/* After choosing nature, show respective details */}
-          {nature !== "" && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
-              {nature === "Non-Cash" && (
-                <div className="space-y-2 md:col-span-4">
-                  <Label>Item / Description *</Label>
-                  <Input
-                    placeholder="e.g. 10g Gold Chain, 5kg Rice, Silver Lamp"
-                    value={nonCashItem}
-                    onChange={(e) => setNonCashItem(e.target.value)}
-                  />
-                  {nonCashItem && nonCashItem.trim().length < 3 && (
-                    <p className="text-[11px] text-destructive">Enter at least 3 characters.</p>
-                  )}
-                </div>
-              )}
-              <div className="space-y-2">
-                <Label>{nature === "Non-Cash" ? "Estimated Value (₹) *" : "Donation Amount (₹) *"}</Label>
-                <Input
-                  type="number"
-                  placeholder="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
-                {requires80G && (
-                  <p className="text-[11px] text-amber-600">
-                    Amount ≥ ₹2,000 → 80G auto-enabled, PAN mandatory.
-                  </p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>80G Required *</Label>
-                <Select
-                  value={effectiveWants80G || ""}
-                  onValueChange={(v) => setWants80G(v as "Yes" | "No")}
-                  disabled={requires80G}
-                >
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Yes">Yes</SelectItem>
-                    <SelectItem value="No">No</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {panRequired && (
-                <div className="space-y-2 md:col-span-2">
-                  <Label>PAN Number *</Label>
-                  <Input
-                    placeholder="ABCDE1234F"
-                    maxLength={10}
-                    value={pan}
-                    onChange={(e) => setPan(e.target.value.toUpperCase())}
-                  />
-                  {pan.length === 10 && !panValid ? (
-                    <p className="text-[11px] text-destructive">
-                      Invalid PAN. Expected format: AAAAA9999A (e.g. ABCDE1234F).
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">
-                      Format: AAAAA9999A — Example: ABCDE1234F
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {/* Step content */}
+        <div className="min-h-[220px]">
+          {renderStep()}
+        </div>
 
-      {/* Step 2 */}
-      {showStep2 && (
-        <Card>
-          <CardContent className="pt-6">
-            <StepHeader n={2} title="Donor Information" done={step2Valid} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Donor Name *</Label>
-                <Input
-                  placeholder="Full name"
-                  maxLength={100}
-                  value={donorName}
-                  onChange={(e) => setDonorName(e.target.value)}
-                />
-                {donorName && !nameValid && (
-                  <p className="text-[11px] text-destructive">Name must be 3–100 characters.</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Mobile Number *</Label>
-                <Input
-                  placeholder="10-digit mobile"
-                  maxLength={10}
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
-                />
-                {mobile && !mobileValid && (
-                  <p className="text-[11px] text-destructive">Enter a valid 10-digit Indian mobile.</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label>Email Address</Label>
-                <Input
-                  type="email"
-                  placeholder="donor@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label>Address {panRequired && "*"}</Label>
-                <Textarea
-                  placeholder="Min 10 characters, max 400"
-                  value={address}
-                  onChange={(e) => onAddressChange(e.target.value)}
-                  rows={2}
-                />
-                <p className="text-[10px] text-muted-foreground text-right">{address.length}/400</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 3 */}
-      {showStep3 && (
-        <Card>
-          <CardContent className="pt-6">
-            <StepHeader n={3} title="Donation Purpose" done={step3Valid} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Donation Purpose *</Label>
-                <Select value={purpose} onValueChange={(v) => setPurpose(v as Purpose)}>
-                  <SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Counter">Counter Donation</SelectItem>
-                    <SelectItem value="Project">Project Donation</SelectItem>
-                    <SelectItem value="Event">Event Donation</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {purpose === "Project" && (
-                <div className="space-y-2">
-                  <Label>Search Project *</Label>
-                  <Select value={projectId} onValueChange={setProjectId}>
-                    <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
-                    <SelectContent>
-                      {projectOptions.map(p => (
-                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {purpose === "Event" && (
-                <div className="space-y-2">
-                  <Label>Search Event *</Label>
-                  <Select value={eventId} onValueChange={setEventId}>
-                    <SelectTrigger><SelectValue placeholder="Select event" /></SelectTrigger>
-                    <SelectContent>
-                      {eventOptions.map(e => (
-                        <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {purpose === "Other" && (
-                <div className="space-y-2 md:col-span-2">
-                  <Label>Remarks *</Label>
-                  <Textarea
-                    placeholder="Specify the purpose"
-                    value={remarks}
-                    onChange={(e) => setRemarks(e.target.value)}
-                    rows={2}
-                  />
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 4 */}
-      {showStep4 && (
-        <Card>
-          <CardContent className="pt-6">
-            <StepHeader n={4} title="Payment Information" done={step4Valid} />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Payment Mode *</Label>
-                <Select value={paymentMode} onValueChange={(v) => setPaymentMode(v as PaymentMode)}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="UPI">UPI</SelectItem>
-                    <SelectItem value="Cheque">Cheque</SelectItem>
-                    <SelectItem value="NEFT">NEFT</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {paymentMode === "Cash" && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Counter No *</Label>
-                    <Input value={counterNo} onChange={(e) => setCounterNo(e.target.value)} placeholder="e.g. CTR-01" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Collected By *</Label>
-                    <Input value={collectedBy} onChange={(e) => setCollectedBy(e.target.value)} placeholder="Staff name" />
-                  </div>
-                </>
-              )}
-
-              {paymentMode === "UPI" && (
-                <>
-                  <div className="space-y-2">
-                    <Label>WhatsApp Number *</Label>
-                    <Input
-                      value={whatsappNumber}
-                      onChange={(e) => setWhatsappNumber(e.target.value.replace(/\D/g, ""))}
-                      placeholder="10-digit mobile"
-                      maxLength={10}
-                    />
-                  </div>
-                  <div className="space-y-2 flex flex-col justify-end">
-                    <Button type="button" variant="outline" onClick={generatePaymentLink}>
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      Generate Payment Link
-                    </Button>
-                  </div>
-                  {paymentLinkSent && (
-                    <div className="md:col-span-2 flex items-center justify-between p-3 rounded-md border bg-muted/30">
-                      <div className="text-sm">
-                        Status:{" "}
-                        <span className={paymentStatus === "Paid" ? "text-emerald-600 font-medium" : "text-amber-600 font-medium"}>
-                          {paymentStatus}
-                        </span>
-                      </div>
-                      {paymentStatus === "Pending Payment" && (
-                        <Button size="sm" variant="secondary" onClick={() => setPaymentStatus("Paid")}>
-                          Mark as Paid
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {paymentMode === "Cheque" && (
-                <>
-                  <div className="space-y-2">
-                    <Label>Cheque No *</Label>
-                    <Input value={chequeNo} onChange={(e) => setChequeNo(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Bank Name *</Label>
-                    <Input value={bankName} onChange={(e) => setBankName(e.target.value)} />
-                  </div>
-                </>
-              )}
-
-              {paymentMode === "NEFT" && (
-                <>
-                  <div className="space-y-2">
-                    <Label>UTR Number *</Label>
-                    <Input value={utrNumber} onChange={(e) => setUtrNumber(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Bank Name *</Label>
-                    <Input value={bankName} onChange={(e) => setBankName(e.target.value)} />
-                  </div>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Step 5 */}
-      {showStep5 && (
-        <Card>
-          <CardContent className="pt-6">
-            <StepHeader n={5} title="Review & Generate Receipt" done={!!savedIds} />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="p-3 rounded-md bg-muted/40">
-                <p className="text-[10px] text-muted-foreground uppercase">Donation ID</p>
-                <p className="font-mono text-sm font-semibold">
-                  {savedIds?.donationId || "— auto on save —"}
-                </p>
-              </div>
-              <div className="p-3 rounded-md bg-muted/40">
-                <p className="text-[10px] text-muted-foreground uppercase">Receipt Number</p>
-                <p className="font-mono text-sm font-semibold">
-                  {savedIds?.receiptNo || "— auto on save —"}
-                </p>
-              </div>
-              <div className="p-3 rounded-md bg-muted/40">
-                <p className="text-[10px] text-muted-foreground uppercase">Status</p>
-                <p className="text-sm font-semibold">
-                  {paymentMode === "UPI" ? paymentStatus : "Paid"}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
+        {/* Navigation */}
+        {!savedIds && (
+          <div className="flex items-center justify-between mt-8 pt-5 border-t">
+            <Button variant="outline" disabled={step===0} onClick={()=>setStep(s=>s-1)}>
+              <ArrowLeft className="h-4 w-4 mr-2"/>Back
+            </Button>
+            <span className="text-sm text-muted-foreground">Step {step+1} of {totalSteps}</span>
+            {step < totalSteps-1 ? (
+              <Button disabled={!canNext} onClick={()=>setStep(s=>s+1)}>
+                Next<ArrowRight className="h-4 w-4 ml-2"/>
+              </Button>
+            ) : (
               <Button onClick={saveDonation} disabled={!!savedIds}>
-                <Save className="h-4 w-4 mr-2" /> Save Donation
+                <Save className="h-4 w-4 mr-2"/>Save Donation
               </Button>
-              <Button
-                variant="outline"
-                disabled={!savedIds}
-                onClick={() => toast({ title: "Receipt ready", description: `Generated ${savedIds?.receiptNo}` })}
-              >
-                <Receipt className="h-4 w-4 mr-2" /> Generate Receipt
-              </Button>
-              <Button
-                variant="outline"
-                disabled={!savedIds}
-                onClick={() =>
-                  toast({
-                    title: "Sent via WhatsApp",
-                    description: `Receipt link sent to +91 ${mobile}`,
-                  })
-                }
-              >
-                <MessageCircle className="h-4 w-4 mr-2" /> Send Receipt via WhatsApp
-              </Button>
-              {savedIds && (
-                <Button variant="ghost" className="ml-auto" onClick={() => navigate("/temple/donations/list")}>
-                  Done
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

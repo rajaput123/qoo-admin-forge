@@ -165,6 +165,7 @@ import FundDetails from "./pages/temple/donations/FundDetails";
 import Reports from "./pages/temple/donations/Reports";
 import Receipts80G from "./pages/temple/donations/Receipts80G";
 import Form10BD from "./pages/temple/donations/Form10BD";
+import SettlementsPage from "./pages/temple/donations/Settlements";
 // Feedback & Analytics Module
 import FeedbackLayout from "./pages/temple/FeedbackLayout";
 import FeedbackDashboard from "./pages/temple/feedback/Dashboard";
@@ -400,6 +401,7 @@ const App = () => {
               <Route path="reports" element={<ErrorBoundary><Reports /></ErrorBoundary>} />
               <Route path="receipts" element={<ErrorBoundary><Receipts80G /></ErrorBoundary>} />
               <Route path="form-10bd" element={<ErrorBoundary><Form10BD /></ErrorBoundary>} />
+              <Route path="settlements" element={<ErrorBoundary><SettlementsPage /></ErrorBoundary>} />
             </Route>
             {/* Finance & Accounts Module */}
             <Route path="/temple/finance" element={<FinanceLayout />}>
