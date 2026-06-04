@@ -3,7 +3,8 @@ import {
   MapPin, Phone, Mail, Clock, Heart, Calendar, ChevronRight,
   Facebook, Instagram, Youtube, ArrowRight, Sparkles, Sun,
   Users, Gift, Camera, Flower2, Bell, PlayCircle, Star, Award,
-  TrendingUp, Quote, ChevronDown,
+  TrendingUp, Quote, ChevronDown, Building2, BookOpen, Megaphone,
+  AlertCircle, Info, PartyPopper,
 } from "lucide-react";
 import templeHero from "@/assets/temple-hero.jpg";
 
@@ -16,6 +17,7 @@ interface ThemeConfig {
   sections: {
     about: boolean; timings: boolean; gallery: boolean;
     donations: boolean; contact: boolean; sevas: boolean; events: boolean;
+    childTemples?: boolean; sacredDetails?: boolean; announcements?: boolean;
   };
 }
 
@@ -96,6 +98,33 @@ const data = {
     text: "Visiting Tirumala is not a journey — it is a homecoming. The serenity, devotion and divine grace touch your soul.",
     by: "Ramesh Iyer", role: "Devotee since 1985",
   },
+  childTemples: [
+    { name: "Padmavathi Ammavari Temple", location: "Tiruchanur, Tirupati", deity: "Goddess Padmavathi", emoji: "🌸", timings: "6 AM – 8 PM", distance: "3 km" },
+    { name: "Govindaraja Swamy Temple", location: "Tirupati Town", deity: "Lord Govindaraja", emoji: "🛕", timings: "6 AM – 9 PM", distance: "12 km" },
+    { name: "Kapila Theertham Temple", location: "Tirupati", deity: "Lord Shiva", emoji: "🔱", timings: "5 AM – 8 PM", distance: "8 km" },
+    { name: "Sri Kodandarama Swamy Temple", location: "Tirupati", deity: "Lord Rama", emoji: "🏹", timings: "6 AM – 8 PM", distance: "5 km" },
+  ],
+  sacredDetails: {
+    scriptures: [
+      { t: "Sri Venkateswara Swamy", desc: "Principal deity enshrined in the Garbhagriha — Lord Venkateswara, the Kaliyuga Daivam" },
+      { t: "Sri Bhudevi & Sri Sridevi", desc: "Consorts of Lord Venkateswara enshrined on either side of the sanctum" },
+      { t: "Yoga Narasimha Swamy", desc: "Fierce form of Lord Vishnu enshrined in the Snapana Mandapam" },
+      { t: "Sri Varadaraja Swamy", desc: "Benevolent form of Lord Vishnu worshipped in the inner prakara" },
+    ],
+    rituals: [
+      { t: "Sri Ramanujacharya Adhishtanam", emoji: "🛕", desc: "Sacred samadhi of the revered Vaishnava philosopher-saint Sri Ramanujacharya" },
+      { t: "Sri Annangaracharya Brindavanam", emoji: "🌸", desc: "Samadhi of the composer of Venkatesha Suprabhatam, located in the inner complex" },
+      { t: "Hathiramji Mutt Adhishtanam", emoji: "✨", desc: "Ancient mutt serving the temple since the 16th century, with sacred shrines within" },
+      { t: "Sri Govindaraja Swamy Shrine", emoji: "🔱", desc: "Reclining form of Lord Vishnu enshrined in the outer prakara of the main temple" },
+    ],
+    significance: "Tirumala is considered the most sacred Vaishnava shrine in the world. The presiding deity, Lord Venkateswara, is believed to be the Kaliyuga Daivam — the God of this era. The seven hills represent the seven-headed serpent Adisesha, and the temple sits atop the highest hill at 3,200 feet.",
+  },
+  announcements: [
+    { id: 1, type: "urgent", title: "Brahmotsavam 2024 — Booking Now Open", desc: "Online booking for Brahmotsavam special sevas starts Sep 1. Limited slots available.", date: "Sep 1 – Oct 9", emoji: "🎊" },
+    { id: 2, type: "info", title: "New Darshan Token System", desc: "Digital token-based darshan queue system launched for smoother devotee experience.", date: "From Aug 15", emoji: "📱" },
+    { id: 3, type: "festival", title: "Vaikunta Ekadasi — Vaikunta Dwara Darshanam", desc: "The golden gate to Vaikuntam opens at 3 AM on Dec 22. Early registration mandatory.", date: "Dec 22", emoji: "🚪" },
+    { id: 4, type: "info", title: "Dress Code Strictly Enforced", desc: "Traditional attire mandatory. Men: Dhoti/Veshti. Women: Saree/Churidar. No shorts or sleeveless.", date: "Ongoing", emoji: "👘" },
+  ],
 };
 
 /* ─────── Reusable bits ─────── */
@@ -345,6 +374,166 @@ const TempleWebsitePreview = ({ theme }: { theme: ThemeConfig }) => {
           </div>
         </section>
       )}
+
+      {/* ═══════ CHILD TEMPLES ═══════ */}
+      {theme.sections.childTemples && (
+        <section className="py-24" style={{ background: p.surface }}>
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="text-center mb-14">
+              <Eyebrow color={p.accent}>Associated Temples</Eyebrow>
+              <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-3" style={{ color: p.text }}>
+                Child <span className="italic font-serif" style={{ color: p.accent }}>Temples</span>
+              </h2>
+              <p className="text-sm max-w-xl mx-auto" style={{ color: p.muted }}>
+                Visit the sacred temples associated with Tirumala — each a divine abode in its own right.
+              </p>
+            </div>
+
+            <div className={data.childTemples.length === 1
+              ? 'max-w-sm mx-auto'
+              : data.childTemples.length === 2
+              ? 'grid md:grid-cols-2 gap-5 max-w-3xl mx-auto'
+              : 'grid md:grid-cols-2 lg:grid-cols-4 gap-5'
+            }>
+              {data.childTemples.map((ct, i) => (
+                <motion.div
+                  key={ct.name}
+                  initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }} transition={{ delay: i * 0.08 }}
+                  className="group rounded-2xl overflow-hidden border cursor-pointer transition-all hover:-translate-y-2 hover:shadow-2xl"
+                  style={{ background: p.bg, borderColor: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }}
+                >
+                  {/* Gradient top banner */}
+                  <div className="h-36 relative overflow-hidden flex flex-col items-center justify-center" style={{ background: p.gradient }}>
+                    <div className="absolute inset-0 opacity-15" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "14px 14px" }} />
+                    {/* Floating emoji */}
+                    <div className="relative z-10 text-5xl mb-2 drop-shadow-lg group-hover:scale-110 transition-transform duration-300">
+                      {ct.emoji}
+                    </div>
+                    {/* Distance badge — top right */}
+                    <div className="absolute top-3 right-3 text-[10px] font-bold px-2.5 py-1 rounded-full backdrop-blur-md bg-white/20 border border-white/30 text-white">
+                      {ct.distance}
+                    </div>
+                  </div>
+
+                  {/* Card body */}
+                  <div className="p-5">
+                    <div className="text-base font-bold leading-tight mb-1" style={{ color: p.text }}>{ct.name}</div>
+                    <div className="text-xs font-semibold mb-3" style={{ color: p.accent }}>{ct.deity}</div>
+
+                    {/* Info rows */}
+                    <div className="space-y-2 pt-3 border-t" style={{ borderColor: dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" }}>
+                      <div className="flex items-center gap-2 text-[11px]" style={{ color: p.muted }}>
+                        <MapPin className="h-3 w-3 shrink-0" style={{ color: p.accent }} />
+                        <span className="truncate">{ct.location}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px]" style={{ color: p.muted }}>
+                        <Clock className="h-3 w-3 shrink-0" style={{ color: p.accent }} />
+                        <span>{ct.timings}</span>
+                      </div>
+                    </div>
+
+                    {/* CTA */}
+                    <div className="mt-4 flex items-center justify-between text-[11px] font-semibold" style={{ color: p.accent }}>
+                      <span>View details</span>
+                      <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+
+      {/* ═══════ ADHISHTANAMS ═══════ */}
+      {theme.sections.sacredDetails && (
+        <section className="py-24" style={{ background: p.bg }}>
+          <div className="max-w-6xl mx-auto px-6">
+
+            {/* Header */}
+            <div className="text-center mb-16">
+              <Eyebrow color={p.accent}>Sacred Shrines</Eyebrow>
+              <h2 className="text-4xl md:text-5xl font-black tracking-tight mb-4" style={{ color: p.text }}>
+                Adhish<span className="italic font-serif" style={{ color: p.accent }}>tanams</span>
+              </h2>
+              <p className="text-sm leading-relaxed max-w-2xl mx-auto" style={{ color: p.muted }}>
+                {data.sacredDetails.significance}
+              </p>
+            </div>
+
+            {/* Deity Shrines — premium 2×2 gradient cards */}
+            {data.sacredDetails.scriptures.length > 0 && (
+              <div className="mb-16">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="h-px flex-1" style={{ background: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }} />
+                  <span className="text-[11px] uppercase tracking-[0.25em] font-bold px-4" style={{ color: p.accent }}>Deity Shrines</span>
+                  <div className="h-px flex-1" style={{ background: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }} />
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {data.sacredDetails.scriptures.map((s, i) => (
+                    <motion.div
+                      key={s.t}
+                      initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }} transition={{ delay: i * 0.07 }}
+                      className="group rounded-2xl overflow-hidden border cursor-pointer transition-all hover:-translate-y-1 hover:shadow-2xl"
+                      style={{ background: p.surface, borderColor: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }}
+                    >
+                      {/* Gradient top band with deity number */}
+                      <div className="h-28 relative flex items-center justify-center" style={{ background: p.gradient }}>
+                        <div className="absolute inset-0 opacity-15" style={{ backgroundImage: "radial-gradient(circle, white 1px, transparent 1px)", backgroundSize: "14px 14px" }} />
+                        <div className="relative text-center text-white">
+                          <div className="text-4xl mb-1">🛕</div>
+                          <div className="text-[9px] uppercase tracking-[0.2em] opacity-70 font-semibold">Shrine {i + 1}</div>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <div className="text-sm font-bold leading-tight mb-2" style={{ color: p.text }}>{s.t}</div>
+                        <div className="text-[11px] leading-relaxed" style={{ color: p.muted }}>{s.desc}</div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Samadhi & Brindavana — elegant timeline */}
+            {data.sacredDetails.rituals.length > 0 && (
+              <div>
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="h-px flex-1" style={{ background: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }} />
+                  <span className="text-[11px] uppercase tracking-[0.25em] font-bold px-4" style={{ color: p.accent }}>Samadhi & Brindavana</span>
+                  <div className="h-px flex-1" style={{ background: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)" }} />
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {data.sacredDetails.rituals.map((r, i) => (
+                    <motion.div
+                      key={r.t}
+                      initial={{ opacity: 0, x: i % 2 === 0 ? -16 : 16 }} whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }} transition={{ delay: i * 0.08 }}
+                      className="group flex items-start gap-4 rounded-2xl p-5 border transition-all hover:shadow-xl cursor-pointer"
+                      style={{ background: p.surface, borderColor: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }}
+                    >
+                      {/* Left accent line */}
+                      <div className="w-1 self-stretch rounded-full shrink-0" style={{ background: p.gradient, minHeight: 48 }} />
+                      <div className="h-12 w-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ background: p.accentSoft }}>
+                        {r.emoji}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold mb-1 leading-tight" style={{ color: p.text }}>{r.t}</div>
+                        <div className="text-[11px] leading-relaxed" style={{ color: p.muted }}>{r.desc}</div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          </div>
+        </section>
+      )}
+
 
       {/* ═══════ TIMINGS ═══════ */}
       {theme.sections.timings && (
@@ -608,6 +797,84 @@ const TempleWebsitePreview = ({ theme }: { theme: ThemeConfig }) => {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* ═══════ ANNOUNCEMENTS ═══════ */}
+      {theme.sections.announcements && (
+        <section className="py-24" style={{ background: p.bg }}>
+          <div className="max-w-6xl mx-auto px-6">
+            <div className="flex items-end justify-between mb-12 flex-wrap gap-4">
+              <div>
+                <Eyebrow color={p.accent}>Temple Notices</Eyebrow>
+                <h2 className="text-4xl md:text-5xl font-black tracking-tight" style={{ color: p.text }}>
+                  Announce<span className="italic font-serif" style={{ color: p.accent }}>ments</span>
+                </h2>
+              </div>
+              {data.announcements.length > 2 && (
+                <button className="text-sm font-semibold flex items-center gap-1" style={{ color: p.accent }}>
+                  View all <ArrowRight className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {data.announcements.length === 1 ? (
+              <motion.div
+                initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="rounded-3xl p-8 border flex items-start gap-6"
+                style={{ background: p.surface, borderColor: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)" }}
+              >
+                <div className="h-16 w-16 rounded-2xl flex items-center justify-center text-4xl shrink-0" style={{ background: p.gradient }}>
+                  {data.announcements[0].emoji}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="text-lg font-bold" style={{ color: p.text }}>{data.announcements[0].title}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: p.accentSoft, color: p.accent }}>
+                      {data.announcements[0].type}
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed mb-3" style={{ color: p.muted }}>{data.announcements[0].desc}</p>
+                  <div className="text-sm font-bold" style={{ color: p.accent }}>{data.announcements[0].date}</div>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="space-y-4">
+                {data.announcements.map((ann, i) => {
+                  const TypeIcon = ann.type === "urgent" ? AlertCircle : ann.type === "festival" ? PartyPopper : Info;
+                  const typeColor = ann.type === "urgent" ? "#ef4444" : ann.type === "festival" ? p.accent : "#3b82f6";
+                  const typeBg = ann.type === "urgent" ? "#fef2f2" : ann.type === "festival" ? p.accentSoft : "#eff6ff";
+                  return (
+                    <motion.div
+                      key={ann.id}
+                      initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }} transition={{ delay: i * 0.06 }}
+                      className="group flex items-start gap-5 rounded-2xl p-5 border transition-all hover:shadow-lg cursor-pointer"
+                      style={{ background: p.surface, borderColor: dark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)" }}
+                    >
+                      <div className="h-12 w-12 rounded-xl flex items-center justify-center text-2xl shrink-0" style={{ background: p.gradient }}>
+                        {ann.emoji}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-sm font-bold" style={{ color: p.text }}>{ann.title}</span>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: typeBg, color: typeColor }}>
+                            <TypeIcon className="h-2.5 w-2.5" />
+                            {ann.type}
+                          </span>
+                        </div>
+                        <p className="text-xs leading-relaxed" style={{ color: p.muted }}>{ann.desc}</p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-xs font-bold" style={{ color: p.accent }}>{ann.date}</div>
+                        <ChevronRight className="h-4 w-4 mt-2 ml-auto transition-transform group-hover:translate-x-1" style={{ color: p.muted }} />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
       )}
