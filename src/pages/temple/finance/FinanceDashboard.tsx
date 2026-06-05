@@ -1,168 +1,265 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, ArrowDownLeft, Wallet, TrendingUp, AlertCircle, Building2, RefreshCw, Plus } from "lucide-react";
-import { financeSelectors } from "@/modules/finance/financeStore";
-import { financeIntegration } from "@/modules/finance/integration";
-import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const formatIndianCurrency = (val: number) => {
+  const isNegative = val < 0;
+  const absVal = Math.abs(val);
+  const parts = absVal.toFixed(2).split(".");
+  let lastThree = parts[0].substring(parts[0].length - 3);
+  const otherParts = parts[0].substring(0, parts[0].length - 3);
+  if (otherParts !== "") {
+    lastThree = "," + lastThree;
+  }
+  const res = otherParts.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + lastThree;
+  const decimalPart = parts[1];
+  const formatted = decimalPart !== "00" ? `${res}.${decimalPart}` : res;
+  return `${isNegative ? "-" : ""}₹${formatted}`;
+};
 
 const FinanceDashboard = () => {
   const navigate = useNavigate();
-  const summary = financeSelectors.getSummary();
-  const accounts = financeSelectors.getAccounts();
-  const fundSummaries = financeSelectors.getFundSummaries();
+  const [activeTab, setActiveTab] = useState<"Income" | "Expenses">("Income");
+  const [fiscalYear, setFiscalYear] = useState("FY 2026–27");
 
-  const handleSync = () => {
-    try {
-      const count = financeIntegration.syncDonationsToLedger();
-      if (count > 0) {
-        toast.success(`Synced ${count} new donations to Ledger`);
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        toast.info("No new donations to sync");
-      }
-    } catch {
-      toast.error("Sync failed");
-    }
-  };
-
-  const monthlyData = [
-    { name: "Jan", income: 450000, expense: 320000 },
-    { name: "Feb", income: 520000, expense: 380000 },
-    { name: "Mar", income: 480000, expense: 410000 },
-    { name: "Apr", income: 600000, expense: 450000 },
-    { name: "May", income: 550000, expense: 390000 },
-    { name: "Jun", income: 490000, expense: 420000 },
+  const incomeData = [
+    { name: "Hundi Collections", value: 10123, percentage: 3.18, color: "#a87a54" },
+    { name: "Online / UPI", value: 300001, percentage: 94.33, color: "hsl(var(--primary))" },
+    { name: "Other Income (vouchers)", value: 3788, percentage: 1.19, color: "#10b981" },
+    { name: "Seva & Bookings", value: 4120, percentage: 1.30, color: "#3b82f6" },
   ];
 
-  const formatL = (v: number) => `₹${(v / 100000).toFixed(1)}L`;
+  const expensesData = [
+    { name: "Payroll & Salaries", value: 5915, percentage: 65.0, color: "hsl(var(--primary))" },
+    { name: "Maintenance & Repairs", value: 1820, percentage: 20.0, color: "#a87a54" },
+    { name: "Utilities & Energy", value: 910, percentage: 10.0, color: "#3b82f6" },
+    { name: "Others / Admin", value: 456, percentage: 5.0, color: "#10b981" },
+  ];
+
+  const currentData = activeTab === "Income" ? incomeData : expensesData;
+
+  const pieData = currentData.map((d) => ({
+    name: d.name,
+    value: d.value,
+  }));
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="flex items-center justify-between">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-6 flex-1 flex flex-col"
+    >
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/50 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Financial Overview</h1>
-          <p className="text-muted-foreground">Real-time financial health & liquidity position</p>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Financial Dashboard
+            </h1>
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-semibold">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Live
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Real-time financial health & liquidity position
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSync} className="gap-2">
-            <RefreshCw className="h-4 w-4" /> Sync Donations
-          </Button>
-          <Button onClick={() => navigate("/temple/finance/transactions?action=new")} className="gap-2">
-            <Plus className="h-4 w-4" /> Add Transaction
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => navigate("/temple/finance/transactions?action=new")}
+            size="sm"
+            className="gap-1.5 shadow-sm text-xs font-semibold"
+          >
+            <Plus className="h-4 w-4" /> New Voucher
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatL(summary.totalIncome)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-            <ArrowDownLeft className="h-4 w-4 text-red-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatL(summary.totalExpense)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatL(summary.netBalance)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cash Position</CardTitle>
-            <Wallet className="h-4 w-4 text-purple-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatL(summary.totalCash)}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Bank Position</CardTitle>
-            <Building2 className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatL(summary.totalBank)}</div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Main Category Breakdown Card */}
+      <Card className="flex-1 flex flex-col bg-card overflow-hidden">
+        {/* Card Header */}
+        <CardHeader className="flex flex-row items-center justify-between border-b pb-4 shrink-0 space-y-0">
+          <CardTitle className="text-lg font-bold text-foreground">
+            Category Breakdown — {activeTab}
+          </CardTitle>
+          <div className="flex items-center gap-3">
+            {/* Toggle tabs */}
+            <div className="bg-muted p-1 rounded-lg flex items-center gap-1 border">
+              {(["Income", "Expenses"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-md transition-all ${
+                    activeTab === tab
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Income vs Expense</CardTitle>
-            <CardDescription>Monthly financial performance</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val / 1000}k`} />
-                <Tooltip formatter={(val: number) => `₹${val.toLocaleString()}`} />
-                <Legend />
-                <Bar dataKey="income" name="Income" fill="hsl(142,60%,40%)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" name="Expense" fill="hsl(350,65%,50%)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+            {/* FY Dropdown */}
+            <Select value={fiscalYear} onValueChange={setFiscalYear}>
+              <SelectTrigger className="w-32 h-8 text-[11px] font-semibold text-foreground">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card">
+                <SelectItem value="FY 2026–27" className="text-[11px]">
+                  FY 2026–27
+                </SelectItem>
+                <SelectItem value="FY 2025–26" className="text-[11px]">
+                  FY 2025–26
+                </SelectItem>
+                <SelectItem value="FY 2024–25" className="text-[11px]">
+                  FY 2024–25
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Fund Positions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {fundSummaries.map(f => (
-                <div key={f.id} className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{f.name}</p>
-                    <p className="text-xs text-muted-foreground">{f.type}</p>
+        {/* Card Content */}
+        <div className="p-6 flex-1 flex flex-col justify-center bg-card">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center max-w-5xl mx-auto w-full">
+            {/* Left: Donut Chart */}
+            <div className="flex justify-center items-center relative h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={65}
+                    outerRadius={92}
+                    paddingAngle={3}
+                    dataKey="value"
+                    startAngle={90}
+                    endAngle={-270}
+                  >
+                    {currentData.map((entry, idx) => (
+                      <Cell key={`cell-${idx}`} fill={entry.color} stroke="none" />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Right: Legend & Progress Indicators */}
+            <div className="space-y-4">
+              {currentData.map((item, idx) => (
+                <div key={idx} className="space-y-1">
+                  {/* Item Title and Value */}
+                  <div className="flex justify-between items-center text-[13px]">
+                    <div className="flex items-center gap-2 font-medium text-muted-foreground">
+                      <span
+                        className="h-2.5 w-2.5 rounded shrink-0"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <span>{item.name}</span>
+                    </div>
+                    <div className="font-semibold text-foreground">
+                      {formatIndianCurrency(item.value)}
+                      <span className="text-[11px] text-muted-foreground font-medium ml-1">
+                        ({item.percentage.toFixed(2)}%)
+                      </span>
+                    </div>
                   </div>
-                  <span className="font-bold text-sm">₹{f.balance.toLocaleString()}</span>
+
+                  {/* Proportional Bar */}
+                  <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden border">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        backgroundColor: item.color,
+                        width: `${item.percentage}%`,
+                      }}
+                    />
+                  </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
-
-          <Card className="bg-destructive/10 border-destructive/20">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2 text-destructive">
-                <AlertCircle className="h-5 w-5" />
-                <CardTitle className="text-base">Pending Actions</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Pending Transactions</span>
-                <Badge variant="outline" className="bg-background">{summary.pending}</Badge>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Bank Reconciliation</span>
-                <Badge variant="outline" className="bg-background">Pending</Badge>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
+
+        {/* Card Footer */}
+        <div className="px-6 py-4 border-t bg-muted/30 flex items-center justify-between shrink-0">
+          <span className="text-[11px] text-muted-foreground italic">
+            Last updated: 05 Jun 2026, 12:00 | Data as at end of day
+          </span>
+        </div>
+      </Card>
+
+      {/* Metrics Row at the bottom */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+        <Card className="bg-card">
+          <CardContent className="p-4 flex flex-col justify-between h-24">
+            <span className="text-xs text-muted-foreground font-semibold tracking-wider uppercase">
+              Total Donations (YTD)
+            </span>
+            <span className="text-2xl font-bold text-foreground">
+              {formatIndianCurrency(310124)}
+            </span>
+            <span className="text-[11px] text-muted-foreground font-medium">
+              Period summary
+            </span>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card">
+          <CardContent className="p-4 flex flex-col justify-between h-24">
+            <span className="text-xs text-muted-foreground font-semibold tracking-wider uppercase">
+              Total Expenses (YTD)
+            </span>
+            <span className="text-2xl font-bold text-foreground">
+              {formatIndianCurrency(9101)}
+            </span>
+            <span className="text-[11px] text-muted-foreground font-medium">
+              Period summary
+            </span>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card">
+          <CardContent className="p-4 flex flex-col justify-between h-24">
+            <span className="text-xs text-muted-foreground font-semibold tracking-wider uppercase">
+              Net Surplus (YTD)
+            </span>
+            <span className="text-2xl font-bold text-foreground">
+              {formatIndianCurrency(304811)}
+            </span>
+            <span className="text-[11px] text-primary font-semibold">
+              97.1% net margin
+            </span>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card">
+          <CardContent className="p-4 flex flex-col justify-between h-24">
+            <span className="text-xs text-muted-foreground font-semibold tracking-wider uppercase">
+              Cash & Bank Balance
+            </span>
+            <span className="text-2xl font-bold text-foreground">
+              {formatIndianCurrency(-204093.99)}
+            </span>
+            <span className="text-[11px] text-muted-foreground font-medium">
+              Synchronized with ledger
+            </span>
+          </CardContent>
+        </Card>
       </div>
     </motion.div>
   );

@@ -196,12 +196,17 @@ import TransactionsPage from "./pages/temple/finance/TransactionsPage";
 import FundManagement from "./pages/temple/finance/FundManagement";
 
 import FinanceLedgerPage from "./pages/temple/finance/FinanceLedgerPage";
+import JournalVoucherPage from "./pages/temple/finance/JournalVoucherPage";
 import ReconciliationPage from "./pages/temple/finance/ReconciliationPage";
 import FinancePayroll from "./pages/temple/finance/FinancePayroll";
 import FinanceReportsPage from "./pages/temple/finance/FinanceReportsPage";
 import FinancialReports from "./pages/temple/finance/FinancialReports";
 import FinanceCategories from "./pages/temple/finance/FinanceCategories";
 import PaymentMethods from "./pages/temple/finance/PaymentMethods";
+import FinancePurchaseOrders from "./pages/temple/finance/PurchaseOrders";
+import ProcurementInvoicePage from "./pages/temple/finance/ProcurementInvoice";
+import ProcurementPaymentPage from "./pages/temple/finance/ProcurementPayment";
+import PaymentGatewayReceiptsPage from "./pages/temple/finance/PaymentGatewayReceiptsPage";
 // Projects & Initiatives Module
 import ProjectsLayout from "./pages/temple/ProjectsLayout";
 import ProjectsDashboard from "./pages/temple/projects/Dashboard";
@@ -410,9 +415,14 @@ const App = () => {
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="bank" element={<BankManagement />} />
               <Route path="transactions" element={<TransactionsPage />} />
+              <Route path="gateway-receipts" element={<PaymentGatewayReceiptsPage />} />
               <Route path="funds" element={<FundManagement />} />
+              <Route path="purchase-orders" element={<FinancePurchaseOrders />} />
+              <Route path="invoices" element={<ProcurementInvoicePage />} />
+              <Route path="payments" element={<ProcurementPaymentPage />} />
               
               <Route path="ledger" element={<FinanceLedgerPage />} />
+              <Route path="vouchers" element={<JournalVoucherPage />} />
               <Route path="reconciliation" element={<ReconciliationPage />} />
               <Route path="payroll" element={<FinancePayroll />} />
               <Route path="reports" element={<FinanceReportsPage />} />

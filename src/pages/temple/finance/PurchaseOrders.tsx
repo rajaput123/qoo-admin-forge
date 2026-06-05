@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,10 +28,19 @@ const statusColor: Record<POStatus, string> = {
 const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN")}`;
 
 const FinancePurchaseOrders = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [, setTick] = useState(0);
   const refresh = () => setTick(t => t + 1);
   const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(searchParams.get("action") === "create");
+  
+  useEffect(() => {
+    if (searchParams.get("action") === "create") {
+      setShowCreate(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
+
   const [selected, setSelected] = useState<ProcurementPO | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
