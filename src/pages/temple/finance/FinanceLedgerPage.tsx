@@ -1,205 +1,149 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BookOpen, Search, Filter, Download, ArrowUpRight, ArrowDownRight, IndianRupee } from "lucide-react";
+import { Download } from "lucide-react";
 import { toast } from "sonner";
-import FinanceDateFilter, { type DateRange } from "@/components/finance/FinanceDateFilter";
+import { FinanceTableRadioGroup, FinanceTableRadioHead, FinanceTableRadioCell } from "@/components/finance/FinanceTableRadio";
 
 interface LedgerEntry {
   id: string;
   date: string;
-  type: "Income" | "Expense" | "Transfer" | "Payroll";
-  referenceId: string;
-  referenceType: string;
-  description: string;
-  debit: number;
-  credit: number;
+  voucher_no: string;
+  account_head: string;
+  sub_ledger: string;
+  narration: string;
+  income: number;
+  expense: number;
   balance: number;
-  category: string;
-  linkedTo: string;
 }
 
-const dummyLedger: LedgerEntry[] = [
-  { id: "TXN-001", date: "2025-03-28", type: "Income", referenceId: "DON-2025-0345", referenceType: "Donation", description: "General Donation - Ramesh Kumar", debit: 0, credit: 51000, balance: 3251000, category: "Donations", linkedTo: "" },
-  { id: "TXN-002", date: "2025-03-28", type: "Income", referenceId: "SVA-2025-0789", referenceType: "Seva Booking", description: "Abhishekam Booking - Lakshmi Devi", debit: 0, credit: 5000, balance: 3256000, category: "Seva Revenue", linkedTo: "" },
-  { id: "TXN-003", date: "2025-03-27", type: "Expense", referenceId: "VCH-2025-001", referenceType: "Voucher", description: "Pooja Materials - Sri Pooja Stores", debit: 8750, credit: 0, balance: 3247250, category: "Pooja & Rituals", linkedTo: "" },
-  { id: "TXN-004", date: "2025-03-27", type: "Income", referenceId: "DON-2025-0344", referenceType: "Donation", description: "Event Donation - Sri Trust Foundation", debit: 0, credit: 100000, balance: 3347250, category: "Donations", linkedTo: "Brahmotsavam 2025" },
-  { id: "TXN-005", date: "2025-03-26", type: "Expense", referenceId: "VCH-2025-005", referenceType: "Voucher", description: "LED Bulbs & Wiring - Philips", debit: 9800, credit: 0, balance: 3337450, category: "Utilities", linkedTo: "" },
-  { id: "TXN-006", date: "2025-03-26", type: "Income", referenceId: "DON-2025-0343", referenceType: "Donation", description: "Project Donation - Venkat Reddy", debit: 0, credit: 200000, balance: 3537450, category: "Donations", linkedTo: "Gopuram Renovation" },
-  { id: "TXN-007", date: "2025-03-25", type: "Income", referenceId: "HND-2025-028", referenceType: "Hundi", description: "Main Hundi Collection", debit: 0, credit: 85000, balance: 3622450, category: "Hundi", linkedTo: "" },
-  { id: "TXN-008", date: "2025-03-25", type: "Expense", referenceId: "EXP-2025-031", referenceType: "Expense", description: "Monthly Electricity Bill", debit: 45000, credit: 0, balance: 3577450, category: "Utilities", linkedTo: "" },
-  { id: "TXN-009", date: "2025-03-24", type: "Payroll", referenceId: "PAY-2025-003", referenceType: "Salary", description: "Staff Salary - March 2025", debit: 185000, credit: 0, balance: 3392450, category: "Salaries", linkedTo: "" },
-  { id: "TXN-010", date: "2025-03-24", type: "Income", referenceId: "SLS-2025-056", referenceType: "Sales", description: "Prasadam Counter Sales", debit: 0, credit: 12500, balance: 3404950, category: "Sales", linkedTo: "" },
-  { id: "TXN-011", date: "2025-03-23", type: "Expense", referenceId: "VCH-2025-006", referenceType: "Voucher", description: "Brahmotsavam Day 1 Arrangements", debit: 40000, credit: 0, balance: 3364950, category: "Events", linkedTo: "Brahmotsavam 2025" },
-  { id: "TXN-012", date: "2025-03-22", type: "Transfer", referenceId: "TRF-2025-004", referenceType: "Fund Transfer", description: "Transfer to Building Fund", debit: 100000, credit: 0, balance: 3264950, category: "Transfers", linkedTo: "Gopuram Renovation" },
+const mockLedger: LedgerEntry[] = [
+  { id: "1", date: "2026-06-05", voucher_no: "JV-2026-F17C90", account_head: "Donations", sub_ledger: "General Fund", narration: "General Donation - Ramesh Kumar", income: 51000, expense: 0, balance: 3251000 },
+  { id: "2", date: "2026-06-04", voucher_no: "JV-2026-DDB879", account_head: "Seva Revenue", sub_ledger: "Abhishekam", narration: "Abhishekam Booking - Lakshmi Devi", income: 5000, expense: 0, balance: 3256000 },
+  { id: "3", date: "2026-06-03", voucher_no: "JV-2026-C50BF9", account_head: "Pooja Materials", sub_ledger: "Vendor Payables", narration: "Pooja Materials - Sri Pooja Stores", income: 0, expense: 8750, balance: 3247250 },
+  { id: "4", date: "2026-06-02", voucher_no: "JV-2026-AD8156", account_head: "Utilities", sub_ledger: "Electricity", narration: "Monthly Electricity Bill", income: 0, expense: 45000, balance: 3202250 },
+  { id: "5", date: "2026-06-01", voucher_no: "JV-2026-B12C34", account_head: "Hundi", sub_ledger: "Main Counter", narration: "Main Hundi Collection", income: 85000, expense: 0, balance: 3287250 },
+  { id: "6", date: "2026-05-30", voucher_no: "PAY-2026-003", account_head: "Salaries", sub_ledger: "Staff Payroll", narration: "Staff Salary - May 2026", income: 0, expense: 185000, balance: 3102250 },
 ];
 
-const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN")}`;
+const formatCurrency = (val: number) => (val > 0 ? val.toLocaleString("en-IN") : "—");
+const formatVoucher = (v: string) => (v.length > 10 ? `${v.slice(0, 10)}...` : v);
 
 const FinanceLedgerPage = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
-  const [dateRange, setDateRange] = useState<DateRange>({ from: null, to: null });
+  const [selectedId, setSelectedId] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState("All Accounts");
 
-  const filtered = dummyLedger.filter(e => {
-    if (typeFilter !== "all" && e.type !== typeFilter) return false;
-    if (categoryFilter !== "all" && e.category !== categoryFilter) return false;
-    if (searchTerm && !Object.values(e).some(v => String(v).toLowerCase().includes(searchTerm.toLowerCase()))) return false;
-    if (dateRange.from || dateRange.to) {
-      const d = new Date(e.date);
-      if (dateRange.from && d < dateRange.from) return false;
-      if (dateRange.to && d > dateRange.to) return false;
-    }
+  const accountHeads = [...new Set(mockLedger.map((t) => t.account_head))];
+  const filtered = mockLedger.filter((txn) => {
+    if (selectedAccount !== "All Accounts" && txn.account_head !== selectedAccount) return false;
+    if (startDate && txn.date < startDate) return false;
+    if (endDate && txn.date > endDate) return false;
     return true;
   });
 
-  const totalDebit = filtered.reduce((s, e) => s + e.debit, 0);
-  const totalCredit = filtered.reduce((s, e) => s + e.credit, 0);
-  const categories = [...new Set(dummyLedger.map(e => e.category))];
+  const totalIncome = filtered.reduce((s, t) => s + t.income, 0);
+  const totalExpense = filtered.reduce((s, t) => s + t.expense, 0);
+  const netBalance = totalIncome - totalExpense;
 
   const handleExport = () => {
-    const csv = ["Date,Type,Reference,Description,Debit,Credit,Balance,Category,Linked To", ...filtered.map(e => `${e.date},${e.type},${e.referenceId},"${e.description}",${e.debit},${e.credit},${e.balance},${e.category},"${e.linkedTo}"`)].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "ledger.csv"; a.click(); URL.revokeObjectURL(url);
-    toast.success("Ledger exported");
+    toast.success("Ledger exported (mock PDF)");
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <BookOpen className="h-6 w-6 text-primary" /> Central Ledger
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Every transaction recorded — full traceability</p>
-        </div>
-        <Button variant="outline" className="gap-2" onClick={handleExport}>
-          <Download className="h-4 w-4" /> Export Ledger
-        </Button>
-      </div>
-
-      {/* Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-green-500">
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-4">
+        <Card>
           <CardContent className="p-4">
-            <span className="text-[11px] text-muted-foreground">Total Credits (Income)</span>
-            <p className="text-lg font-bold text-green-700">{formatCurrency(totalCredit)}</p>
+            <div className="text-xs text-muted-foreground mb-1.5 font-medium">Total Income</div>
+            <div className="text-2xl font-bold">₹{formatCurrency(totalIncome)}</div>
+            <div className="text-xs text-green-700 mt-1">Up to date</div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-red-400">
+        <Card>
           <CardContent className="p-4">
-            <span className="text-[11px] text-muted-foreground">Total Debits (Outflow)</span>
-            <p className="text-lg font-bold text-red-600">{formatCurrency(totalDebit)}</p>
+            <div className="text-xs text-muted-foreground mb-1.5 font-medium">Total Expense</div>
+            <div className="text-2xl font-bold">₹{formatCurrency(totalExpense)}</div>
+            <div className="text-xs text-red-700 mt-1">Up to date</div>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-blue-500">
+        <Card>
           <CardContent className="p-4">
-            <span className="text-[11px] text-muted-foreground">Net Position</span>
-            <p className="text-lg font-bold">{formatCurrency(totalCredit - totalDebit)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-primary">
-          <CardContent className="p-4">
-            <span className="text-[11px] text-muted-foreground">Transactions</span>
-            <p className="text-lg font-bold">{filtered.length}</p>
+            <div className="text-xs text-muted-foreground mb-1.5 font-medium">Net Balance</div>
+            <div className="text-2xl font-bold">₹{formatCurrency(netBalance)}</div>
+            <div className="text-xs text-muted-foreground mt-1">Current period</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search description, reference..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
-        </div>
-        <FinanceDateFilter onDateRangeChange={setDateRange} />
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="Income">Income</SelectItem>
-            <SelectItem value="Expense">Expense</SelectItem>
-            <SelectItem value="Payroll">Payroll</SelectItem>
-            <SelectItem value="Transfer">Transfer</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Ledger Table */}
       <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
+        <CardContent className="p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <span className="text-sm font-semibold">General Ledger</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="text-xs h-9 w-[140px]" />
+              <span className="text-xs text-muted-foreground">to</span>
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="text-xs h-9 w-[140px]" />
+              <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                <SelectTrigger className="text-xs h-9 w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All Accounts">All Accounts</SelectItem>
+                  {accountHeads.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleExport}>
+                <Download className="h-3.5 w-3.5" /> Export PDF
+              </Button>
+            </div>
+          </div>
+
+          <FinanceTableRadioGroup value={selectedId} onValueChange={setSelectedId}>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <FinanceTableRadioHead />
+                <TableHead className="text-xs">Date</TableHead>
+                <TableHead className="text-xs">Voucher No</TableHead>
+                <TableHead className="text-xs">Account Head</TableHead>
+                <TableHead className="text-xs">Sub-Ledger</TableHead>
+                <TableHead className="text-xs">Narration</TableHead>
+                <TableHead className="text-xs text-right">Income (+) (₹)</TableHead>
+                <TableHead className="text-xs text-right">Expense (−) (₹)</TableHead>
+                <TableHead className="text-xs text-right">Balance (₹)</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.length === 0 ? (
                 <TableRow>
-                  <TableHead className="text-xs">Date</TableHead>
-                  <TableHead className="text-xs">Type</TableHead>
-                  <TableHead className="text-xs">Reference</TableHead>
-                  <TableHead className="text-xs">Description</TableHead>
-                  <TableHead className="text-xs">Category</TableHead>
-                  <TableHead className="text-xs text-right text-red-600">Debit</TableHead>
-                  <TableHead className="text-xs text-right text-green-600">Credit</TableHead>
-                  <TableHead className="text-xs text-right">Balance</TableHead>
+                  <TableCell colSpan={9} className="text-center py-10 text-muted-foreground text-xs">
+                    No ledger entries found.
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map(entry => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(entry.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        {entry.type === "Income" && <ArrowUpRight className="h-3 w-3 text-green-600" />}
-                        {entry.type === "Expense" && <ArrowDownRight className="h-3 w-3 text-red-500" />}
-                        {entry.type === "Payroll" && <IndianRupee className="h-3 w-3 text-purple-600" />}
-                        {entry.type === "Transfer" && <ArrowUpRight className="h-3 w-3 text-blue-600" />}
-                        <Badge variant="outline" className={`text-[10px] ${
-                          entry.type === "Income" ? "bg-green-50 text-green-700 border-green-200" :
-                          entry.type === "Expense" ? "bg-red-50 text-red-700 border-red-200" :
-                          entry.type === "Payroll" ? "bg-purple-50 text-purple-700 border-purple-200" :
-                          "bg-blue-50 text-blue-700 border-blue-200"
-                        }`}>{entry.type}</Badge>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs font-mono text-primary">{entry.referenceId}</TableCell>
-                    <TableCell className="text-xs max-w-[200px] truncate">
-                      {entry.description}
-                      {entry.linkedTo && <span className="text-primary ml-1">({entry.linkedTo})</span>}
-                    </TableCell>
-                    <TableCell><Badge variant="secondary" className="text-[10px]">{entry.category}</Badge></TableCell>
-                    <TableCell className="text-xs text-right font-medium text-red-600">
-                      {entry.debit > 0 ? formatCurrency(entry.debit) : ""}
-                    </TableCell>
-                    <TableCell className="text-xs text-right font-medium text-green-700">
-                      {entry.credit > 0 ? formatCurrency(entry.credit) : ""}
-                    </TableCell>
-                    <TableCell className="text-xs text-right font-bold whitespace-nowrap">{formatCurrency(entry.balance)}</TableCell>
+              ) : (
+                filtered.map((txn) => (
+                  <TableRow key={txn.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setSelectedId(txn.id)}>
+                    <FinanceTableRadioCell value={txn.id} />
+                    <TableCell className="text-xs">{txn.date}</TableCell>
+                    <TableCell className="text-xs font-mono text-primary" title={txn.voucher_no}>{formatVoucher(txn.voucher_no)}</TableCell>
+                    <TableCell className="text-xs font-semibold">{txn.account_head}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{txn.sub_ledger}</TableCell>
+                    <TableCell className="text-xs max-w-[200px] truncate text-muted-foreground">{txn.narration}</TableCell>
+                    <TableCell className="text-xs text-right font-mono text-green-700">{formatCurrency(txn.income)}</TableCell>
+                    <TableCell className="text-xs text-right font-mono text-red-700">{formatCurrency(txn.expense)}</TableCell>
+                    <TableCell className="text-xs text-right font-mono font-semibold">{txn.balance.toLocaleString("en-IN")}</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-              <tfoot>
-                <tr className="bg-muted/30 font-medium text-sm">
-                  <td colSpan={5} className="p-3 text-right">Totals</td>
-                  <td className="p-3 text-right text-red-600">{formatCurrency(totalDebit)}</td>
-                  <td className="p-3 text-right text-green-700">{formatCurrency(totalCredit)}</td>
-                  <td className="p-3 text-right font-bold">{formatCurrency(totalCredit - totalDebit)}</td>
-                </tr>
-              </tfoot>
-            </Table>
+                ))
+              )}
+            </TableBody>
+          </Table>
+          </FinanceTableRadioGroup>
+
+          <div className="flex justify-between pt-4 mt-2 border-t text-xs text-muted-foreground">
+            <span>Showing {filtered.length} of {mockLedger.length} records</span>
           </div>
         </CardContent>
       </Card>

@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tag, Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { financeSelectors, financeActions } from "@/modules/finance/financeStore";
+import { FinanceTableRadioGroup, FinanceTableRadioHead, FinanceTableRadioCell } from "@/components/finance/FinanceTableRadio";
 
 const FinanceCategories = () => {
   const [, setTick] = useState(0);
@@ -31,6 +32,8 @@ const FinanceCategories = () => {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<"Income" | "Expense">("Income");
   const [newFund, setNewFund] = useState("");
+  const [selectedIncomeId, setSelectedIncomeId] = useState("");
+  const [selectedExpenseId, setSelectedExpenseId] = useState("");
 
   const handleAdd = () => {
     if (!newName.trim()) { toast.error("Category name is required"); return; }
@@ -50,13 +53,15 @@ const FinanceCategories = () => {
     }
   };
 
-  const CategoryTable = ({ cats }: { cats: typeof categories }) => (
+  const CategoryTable = ({ cats, selectedId, onSelectedIdChange }: { cats: typeof categories; selectedId: string; onSelectedIdChange: (v: string) => void }) => (
     <Card>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
+          <FinanceTableRadioGroup value={selectedId} onValueChange={onSelectedIdChange}>
           <Table>
             <TableHeader>
               <TableRow>
+                <FinanceTableRadioHead />
                 <TableHead className="text-xs">Category</TableHead>
                 <TableHead className="text-xs">ID</TableHead>
                 <TableHead className="text-xs">Suggested Fund</TableHead>
@@ -66,12 +71,13 @@ const FinanceCategories = () => {
             </TableHeader>
             <TableBody>
               {cats.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No categories</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No categories</TableCell></TableRow>
               ) : cats.map(c => {
                 const count = getCategoryTxnCount(c.name);
                 const fundName = funds.find(f => f.id === c.suggestedFund)?.name || "—";
                 return (
-                  <TableRow key={c.id}>
+                  <TableRow key={c.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => onSelectedIdChange(c.id)}>
+                    <FinanceTableRadioCell value={c.id} />
                     <TableCell className="text-sm font-medium">{c.name}</TableCell>
                     <TableCell className="text-xs font-mono text-muted-foreground">{c.id}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{fundName}</TableCell>
@@ -84,6 +90,7 @@ const FinanceCategories = () => {
               })}
             </TableBody>
           </Table>
+          </FinanceTableRadioGroup>
         </div>
       </CardContent>
     </Card>
@@ -92,12 +99,7 @@ const FinanceCategories = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Tag className="h-6 w-6 text-primary" /> Categories
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Manage income & expense categories</p>
-        </div>
+        <p className="text-sm text-muted-foreground">Manage income & expense categories</p>
         <Button className="gap-2" onClick={() => setShowAdd(true)}>
           <Plus className="h-4 w-4" /> Add Category
         </Button>
@@ -109,10 +111,10 @@ const FinanceCategories = () => {
           <TabsTrigger value="expense">Expense ({expenseCategories.length})</TabsTrigger>
         </TabsList>
         <TabsContent value="income" className="mt-4">
-          <CategoryTable cats={incomeCategories} />
+          <CategoryTable cats={incomeCategories} selectedId={selectedIncomeId} onSelectedIdChange={setSelectedIncomeId} />
         </TabsContent>
         <TabsContent value="expense" className="mt-4">
-          <CategoryTable cats={expenseCategories} />
+          <CategoryTable cats={expenseCategories} selectedId={selectedExpenseId} onSelectedIdChange={setSelectedExpenseId} />
         </TabsContent>
       </Tabs>
 

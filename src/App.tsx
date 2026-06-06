@@ -12,6 +12,7 @@ import TempleHub from "./pages/TempleHub";
 import ApplicationStatus from "./pages/ApplicationStatus";
 import FirstLoginSetup from "./pages/FirstLoginSetup";
 import Welcome from "./pages/Welcome";
+import OnboardingSubscription from "./pages/OnboardingSubscription";
 import OutOfCreditScreen from "./pages/OutOfCreditScreen";
 import UpcomingModule from "./pages/temple/UpcomingModule";
 import Profile from "./pages/Profile";
@@ -163,7 +164,7 @@ import DonorRegistry from "./pages/temple/donations/DonorRegistry";
 import Funds from "./pages/temple/donations/Funds";
 import FundDetails from "./pages/temple/donations/FundDetails";
 import Reports from "./pages/temple/donations/Reports";
-import Receipts80G from "./pages/temple/donations/Receipts80G";
+import Section80G from "./pages/temple/donations/Section80G";
 import Form10BD from "./pages/temple/donations/Form10BD";
 import SettlementsPage from "./pages/temple/donations/Settlements";
 // Feedback & Analytics Module
@@ -189,11 +190,11 @@ import VipEligibility from "./pages/temple/vip/Eligibility";
 // Finance Module
 import FinanceLayout from "./pages/temple/FinanceLayout";
 import FinanceDashboard from "./pages/temple/finance/FinanceDashboard";
-import AccountsPage from "./pages/temple/finance/AccountsPage";
+import CashNonCashPage from "./pages/temple/finance/CashNonCashPage";
+import PaymentsExpensesPage from "./pages/temple/finance/PaymentsExpensesPage";
+import CashFundFlowPage from "./pages/temple/finance/CashFundFlowPage";
 import ChartOfAccounts from "./pages/temple/finance/ChartOfAccounts";
 import BankManagement from "./pages/temple/finance/BankManagement";
-import TransactionsPage from "./pages/temple/finance/TransactionsPage";
-import FundManagement from "./pages/temple/finance/FundManagement";
 
 import FinanceLedgerPage from "./pages/temple/finance/FinanceLedgerPage";
 import JournalVoucherPage from "./pages/temple/finance/JournalVoucherPage";
@@ -204,6 +205,7 @@ import FinancialReports from "./pages/temple/finance/FinancialReports";
 import FinanceCategories from "./pages/temple/finance/FinanceCategories";
 import PaymentMethods from "./pages/temple/finance/PaymentMethods";
 import FinancePurchaseOrders from "./pages/temple/finance/PurchaseOrders";
+import CreatePurchaseOrderPage from "./pages/temple/finance/CreatePurchaseOrderPage";
 import ProcurementInvoicePage from "./pages/temple/finance/ProcurementInvoice";
 import ProcurementPaymentPage from "./pages/temple/finance/ProcurementPayment";
 import PaymentGatewayReceiptsPage from "./pages/temple/finance/PaymentGatewayReceiptsPage";
@@ -279,6 +281,7 @@ const App = () => {
             <Route path="/application-status" element={<ApplicationStatus />} />
             <Route path="/temple-welcome" element={<FirstLoginSetup />} />
             <Route path="/welcome" element={<Welcome />} />
+            <Route path="/onboarding/subscription" element={<OnboardingSubscription />} />
             <Route path="/out-of-credits" element={<OutOfCreditScreen />} />
 
             {/* Temple Admin Routes */}
@@ -404,19 +407,21 @@ const App = () => {
               <Route path="funds" element={<ErrorBoundary><Funds /></ErrorBoundary>} />
               <Route path="funds/:fundId" element={<ErrorBoundary><FundDetails /></ErrorBoundary>} />
               <Route path="reports" element={<ErrorBoundary><Reports /></ErrorBoundary>} />
-              <Route path="receipts" element={<ErrorBoundary><Receipts80G /></ErrorBoundary>} />
+              <Route path="80g" element={<ErrorBoundary><Section80G /></ErrorBoundary>} />
+              <Route path="receipts" element={<ErrorBoundary><Section80G /></ErrorBoundary>} />
               <Route path="form-10bd" element={<ErrorBoundary><Form10BD /></ErrorBoundary>} />
               <Route path="settlements" element={<ErrorBoundary><SettlementsPage /></ErrorBoundary>} />
             </Route>
             {/* Finance & Accounts Module */}
             <Route path="/temple/finance" element={<FinanceLayout />}>
               <Route index element={<FinanceDashboard />} />
-              <Route path="accounts" element={<AccountsPage />} />
+              <Route path="accounts" element={<CashNonCashPage />} />
               <Route path="chart-of-accounts" element={<ChartOfAccounts />} />
               <Route path="bank" element={<BankManagement />} />
-              <Route path="transactions" element={<TransactionsPage />} />
+              <Route path="transactions" element={<PaymentsExpensesPage />} />
               <Route path="gateway-receipts" element={<PaymentGatewayReceiptsPage />} />
-              <Route path="funds" element={<FundManagement />} />
+              <Route path="funds" element={<CashFundFlowPage />} />
+              <Route path="create-po" element={<CreatePurchaseOrderPage />} />
               <Route path="purchase-orders" element={<FinancePurchaseOrders />} />
               <Route path="invoices" element={<ProcurementInvoicePage />} />
               <Route path="payments" element={<ProcurementPaymentPage />} />

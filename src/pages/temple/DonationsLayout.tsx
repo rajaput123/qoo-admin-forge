@@ -1,12 +1,12 @@
-import { Heart, LayoutDashboard, Users, IndianRupee, FileSpreadsheet, BarChart3 } from "lucide-react";
+import { Heart, LayoutDashboard, Users, IndianRupee, BarChart3, Award } from "lucide-react";
 import TempleLayout from "@/components/TempleLayout";
 
 const navItems = [
   { label: "Dashboard",  path: "/temple/donations",          icon: LayoutDashboard, description: "Donation overview & summary" },
   { label: "Donations",  path: "/temple/donations/list",     icon: IndianRupee,     description: "View all donations by type" },
-  { label: "Donors",     path: "/temple/donations/donors",   icon: Users,           description: "Donors, receipts & 80G certificates" },
+  { label: "Donors",     path: "/temple/donations/donors",   icon: Users,           description: "Donor registry & contact details" },
+  { label: "80G Certificates", path: "/temple/donations/80g", icon: Award,          description: "Generate & download 80G receipts for IT filing" },
   { label: "Reports",    path: "/temple/donations/reports",  icon: BarChart3,       description: "Donation & 80G reports" },
-  { label: "Form 10BD", path: "/temple/donations/form-10bd", icon: FileSpreadsheet, description: "Annual statement CSV for IT e-filing" },
 ];
 
 const DonationsLayout = () => {

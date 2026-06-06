@@ -68,8 +68,27 @@ export interface Donation {
   status: "Recorded";
   receiptFilePath?: string; // Path to generated PDF receipt
   is80G?: boolean; // Whether this donation is eligible for 80G
+  receipt80GId?: string; // Per-donation 80G certificate ID (80GR-YYYY-XXXX)
   settlementId?: string; // Linked settlement ID (SET/YYYY/MM/000001) if grouped
   createdAt: string; // ISO datetime
+}
+
+/** Per-donation 80G receipt — generated when an eligible donation is recorded */
+export interface Donation80GReceipt {
+  receipt80GId: string; // e.g. 80GR-2026-0001
+  donationId: string;
+  receiptNo: string;
+  donorId: string;
+  donorName: string;
+  pan: string;
+  amount: number;
+  date: string;
+  mode: string;
+  donationType: string;
+  fy: string; // e.g. 2025-26
+  status: "Generated" | "Pending" | "PAN Missing";
+  generatedDate: string;
+  createdAt: string;
 }
 
 export type AllocationLinkedType = "Project" | "Kitchen" | "Prasadam" | "Seva" | "Event" | "General";
@@ -146,6 +165,7 @@ export interface DonationsState {
   donations: Donation[];
   allocations: Allocation[];
   certificates80G: Certificate80G[];
+  receipts80G: Donation80GReceipt[];
   audit: DonationAuditEntry[];
   funds: Fund[]; // Managed funds list
   fundExpenses: FundExpense[]; // Expenses linked to funds

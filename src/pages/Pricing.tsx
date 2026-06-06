@@ -31,6 +31,8 @@ import {
   type BillingCycle,
   type Plan,
 } from "@/lib/plans";
+import { markSubscriptionComplete } from "@/lib/templeConfig";
+import { toast } from "sonner";
 
 const planIcons: Record<string, typeof Zap> = {
   seva: Zap,
@@ -107,9 +109,11 @@ const planFeatureGroups: Record<string, FeatureGroup[]> = {
 
 interface PricingProps {
   embedded?: boolean;
+  /** Post-login onboarding: any plan completes subscription and goes to hub */
+  onboarding?: boolean;
 }
 
-const Pricing = ({ embedded = false }: PricingProps) => {
+const Pricing = ({ embedded = false, onboarding = false }: PricingProps) => {
   const navigate = useNavigate();
   const [cycle, setCycle] = useState<BillingCycle>("annual");
 
@@ -216,7 +220,21 @@ const Pricing = ({ embedded = false }: PricingProps) => {
                 cycle={cycle}
                 index={idx}
                 previousPlanName={idx > 0 ? plans[idx - 1].name : undefined}
-                onSelect={() => navigate("/temple/settings/upgrade")}
+                onSelect={() => {
+                  if (onboarding) {
+                    markSubscriptionComplete();
+                    toast.success(`${plan.name} plan activated!`);
+                    navigate("/temple-hub");
+                    return;
+                  }
+                  if (embedded && plan.price === 0) {
+                    markSubscriptionComplete();
+                    toast.success("Free plan activated!");
+                    navigate("/temple-hub");
+                    return;
+                  }
+                  navigate("/temple/settings/upgrade");
+                }}
               />
             ))}
           </div>

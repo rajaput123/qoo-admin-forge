@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { Wallet, Plus, Pencil, CreditCard, Banknote, Smartphone, Building2, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { FinanceTableRadioGroup, FinanceTableRadioHead, FinanceTableRadioCell } from "@/components/finance/FinanceTableRadio";
 
 const methods = [
   { id: 1, name: "Cash", icon: Banknote, transactions: 890, status: true, description: "Physical cash payments" },
@@ -18,6 +19,7 @@ const methods = [
 
 const PaymentMethods = () => {
   const [methodList, setMethodList] = useState(methods);
+  const [selectedId, setSelectedId] = useState("");
 
   const toggleStatus = (id: number) => {
     setMethodList(prev => prev.map(m => m.id === id ? { ...m, status: !m.status } : m));
@@ -27,21 +29,18 @@ const PaymentMethods = () => {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Wallet className="h-6 w-6 text-primary" /> Payment Methods
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Configure accepted payment modes</p>
-        </div>
+        <p className="text-sm text-muted-foreground">Configure accepted payment modes</p>
         <Button className="gap-2" onClick={() => toast.info("Add payment method")}><Plus className="h-4 w-4" /> Add Method</Button>
       </div>
 
       <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
+            <FinanceTableRadioGroup value={selectedId} onValueChange={setSelectedId}>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <FinanceTableRadioHead />
                   <TableHead className="text-xs">Method</TableHead>
                   <TableHead className="text-xs">Description</TableHead>
                   <TableHead className="text-xs text-center">Transactions</TableHead>
@@ -52,7 +51,8 @@ const PaymentMethods = () => {
               </TableHeader>
               <TableBody>
                 {methodList.map(m => (
-                  <TableRow key={m.id}>
+                  <TableRow key={m.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setSelectedId(String(m.id))}>
+                    <FinanceTableRadioCell value={String(m.id)} />
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <m.icon className="h-4 w-4 text-primary" />
@@ -76,6 +76,7 @@ const PaymentMethods = () => {
                 ))}
               </TableBody>
             </Table>
+            </FinanceTableRadioGroup>
           </div>
         </CardContent>
       </Card>

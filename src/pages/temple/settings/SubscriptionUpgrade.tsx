@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { markSubscriptionComplete } from "@/lib/templeConfig";
 
 const plans = [
   {
@@ -145,7 +146,15 @@ const SubscriptionUpgrade = () => {
                 </div>
               </div>
 
-              <Button className="w-full gap-2 mt-4" size="lg" onClick={() => toast.success("Payment successful! Plan upgraded.")}>
+              <Button
+                className="w-full gap-2 mt-4"
+                size="lg"
+                onClick={() => {
+                  markSubscriptionComplete();
+                  toast.success("Payment successful! Plan upgraded.");
+                  navigate("/temple-hub");
+                }}
+              >
                 Pay ₹{price.toLocaleString()}
               </Button>
             </CardContent>

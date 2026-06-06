@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,10 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Edit, CheckCircle2, XCircle, Building2, CreditCard, Calendar, MoreHorizontal, Link2, Eye } from "lucide-react";
+import { Plus, Trash2, Edit, CheckCircle2, XCircle, Building2, CreditCard, Calendar, MoreHorizontal, Link2, Eye, Shield, Landmark } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import {
+  getTempleConfig,
+  saveTempleConfig,
+  markFinanceSetupComplete,
+  format80GValidity,
+} from "@/lib/templeConfig";
+
+const BANKS_LS_KEY = "qoo.finance.banks";
 
 interface BankAccount {
   id: string;
@@ -31,9 +39,7 @@ interface BankAccount {
 
 const PURPOSE_OPTIONS = ["Donations", "Seva Payments", "Event Payments", "Salaries", "General Expenses", "Project Funds"];
 
-const FinanceSettings = () => {
-  const navigate = useNavigate();
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([
+const defaultBankAccounts: BankAccount[] = [
     {
       id: "BANK-001",
       accountName: "Main Temple Account",
@@ -62,7 +68,33 @@ const FinanceSettings = () => {
       purpose: "Event Payments",
       status: "Active",
     },
-  ]);
+];
+
+function loadBankAccounts(): BankAccount[] {
+  if (typeof window === "undefined") return defaultBankAccounts;
+  try {
+    const raw = localStorage.getItem(BANKS_LS_KEY);
+    if (raw) return JSON.parse(raw) as BankAccount[];
+  } catch {
+    /* ignore */
+  }
+  return defaultBankAccounts;
+}
+
+const FinanceSettings = () => {
+  const navigate = useNavigate();
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(loadBankAccounts);
+  const templeCfg = getTempleConfig();
+  const [associatedBankId, setAssociatedBankId] = useState<string>(
+    templeCfg.associatedBankAccountId || defaultBankAccounts.find(b => b.isPrimary)?.id || ""
+  );
+  const [eightyGEnabled, setEightyGEnabled] = useState(templeCfg.eightyGEnabled);
+  const [eightyGForm, setEightyGForm] = useState({
+    registration80G: templeCfg.registration80G,
+    pan: templeCfg.pan,
+    validityFrom: templeCfg.validityFrom,
+    validityTo: templeCfg.validityTo,
+  });
   const [showAddBank, setShowAddBank] = useState(false);
   const [editingBank, setEditingBank] = useState<BankAccount | null>(null);
   const [bankForm, setBankForm] = useState({
@@ -88,6 +120,32 @@ const FinanceSettings = () => {
   const [accountIdTarget, setAccountIdTarget] = useState<string | null>(null);
   const [gatewayAccountId, setGatewayAccountId] = useState("");
   const [financialYear, setFinancialYear] = useState("2024-2025");
+
+  useEffect(() => {
+    localStorage.setItem(BANKS_LS_KEY, JSON.stringify(bankAccounts));
+  }, [bankAccounts]);
+
+  const handleSaveFinanceSetup = () => {
+    if (!associatedBankId) {
+      toast.error("Please select an associated bank account");
+      return;
+    }
+    if (eightyGEnabled && (!eightyGForm.registration80G || eightyGForm.pan.length !== 10)) {
+      toast.error("Please provide valid 80G registration number and PAN");
+      return;
+    }
+    saveTempleConfig({
+      associatedBankAccountId: associatedBankId,
+      eightyGEnabled,
+      registration80G: eightyGForm.registration80G,
+      pan: eightyGForm.pan.toUpperCase(),
+      validityFrom: eightyGForm.validityFrom,
+      validityTo: eightyGForm.validityTo,
+    });
+    markFinanceSetupComplete();
+    localStorage.removeItem("financeSetupPromptDismissed");
+    toast.success("Finance setup saved successfully");
+  };
 
   const handleAddBank = () => {
     if (!bankForm.accountName || !bankForm.bankName || !bankForm.accountNumber) {
@@ -205,6 +263,102 @@ const FinanceSettings = () => {
           View Accounts
         </Button>
       </div>
+
+      {/* Associated Bank Account & 80G */}
+      <Card className="border-primary/20">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Landmark className="h-4 w-4" /> Finance Onboarding
+          </CardTitle>
+          <CardDescription>
+            Link your primary bank account and configure 80G for donation receipts
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <Label className="mb-2 block">Associated Bank Account *</Label>
+            <Select value={associatedBankId} onValueChange={setAssociatedBankId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select bank account for donations & payouts" />
+              </SelectTrigger>
+              <SelectContent>
+                {bankAccounts.map((acc) => (
+                  <SelectItem key={acc.id} value={acc.id}>
+                    {acc.accountName} — {acc.bankName} ({acc.accountNumber})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              This account is used for online donations, NEFT payouts and finance reconciliation.
+            </p>
+          </div>
+
+          <div className="rounded-lg border p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  Enable 80G
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, eligible donations auto-generate 80G certificates
+                </p>
+              </div>
+              <Switch checked={eightyGEnabled} onCheckedChange={setEightyGEnabled} />
+            </div>
+
+            {eightyGEnabled && (
+              <div className="grid md:grid-cols-2 gap-4 pt-2 border-t">
+                <div className="md:col-span-2">
+                  <Label>80G Registration Number</Label>
+                  <Input
+                    value={eightyGForm.registration80G}
+                    onChange={(e) => setEightyGForm({ ...eightyGForm, registration80G: e.target.value })}
+                    placeholder="AAATS1234A/80G/2023-24"
+                  />
+                </div>
+                <div>
+                  <Label>PAN</Label>
+                  <Input
+                    value={eightyGForm.pan}
+                    onChange={(e) => setEightyGForm({ ...eightyGForm, pan: e.target.value.toUpperCase() })}
+                    maxLength={10}
+                    className="font-mono uppercase"
+                  />
+                </div>
+                <div>
+                  <Label>Validity Period</Label>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {eightyGForm.validityFrom && eightyGForm.validityTo
+                      ? format80GValidity(eightyGForm.validityFrom, eightyGForm.validityTo)
+                      : "Not set"}
+                  </p>
+                </div>
+                <div>
+                  <Label>Valid From</Label>
+                  <Input
+                    type="date"
+                    value={eightyGForm.validityFrom}
+                    onChange={(e) => setEightyGForm({ ...eightyGForm, validityFrom: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Valid To</Label>
+                  <Input
+                    type="date"
+                    value={eightyGForm.validityTo}
+                    min={eightyGForm.validityFrom || undefined}
+                    onChange={(e) => setEightyGForm({ ...eightyGForm, validityTo: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Button onClick={handleSaveFinanceSetup}>Save Finance Setup</Button>
+        </CardContent>
+      </Card>
 
       {/* Bank Account Management */}
       <Card>

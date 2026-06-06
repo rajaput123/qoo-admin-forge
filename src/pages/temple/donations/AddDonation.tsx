@@ -6,10 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Check, Receipt, MessageCircle, Save, ArrowLeft, ArrowRight, Search, UserPlus, User } from "lucide-react";
+import { Check, Receipt, MessageCircle, Save, ArrowLeft, ArrowRight, Search, UserPlus, User, Award } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { recordDonation } from "@/modules/donations/donationsStore";
+import { recordDonation, getReceipt80GForDonation } from "@/modules/donations/donationsStore";
 import { useDonors } from "@/modules/donations/hooks";
+import { downloadReceiptPdf } from "@/lib/pdfDocs";
+import { download80GReceiptPdf } from "@/lib/eightyGReceipt";
 import { projects } from "@/data/projectData";
 import { getEvents } from "@/modules/events/eventStore";
 import TempleQRPanel from "@/components/TempleQRPanel";
@@ -138,7 +140,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
   const [chequeNo, setChequeNo]     = useState("");
   const [bankName, setBankName]     = useState("");
   const [utrNumber, setUtrNumber]   = useState("");
-  const [savedIds, setSavedIds]     = useState<{donationId:string;receiptNo:string}|null>(null);
+  const [savedIds, setSavedIds]     = useState<{donationId:string;receiptNo:string;receipt80GId?:string}|null>(null);
 
   // ── Derived ──
   const amt = parseFloat(isCash ? amount : ncValue) || 0;
@@ -204,6 +206,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
       donorName: donorName.trim(), phone: mobile.trim(),
       email: email.trim() || undefined, city: address.trim() || undefined,
       pan: panRequired ? pan.toUpperCase().trim() : undefined,
+      wants80G: effective80G === "Yes",
       nature, amount: amt, purpose: purposeLabel || "General",
       channel: isCash ? (channelMap[paymentMode] as any) : "In-Kind",
       mode: isCash ? paymentMode : "In-Kind",
@@ -214,9 +217,46 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
       counterId: paymentMode==="Cash" ? counterNo.trim() : undefined,
       createdBy: collectedBy.trim() || "System",
     });
-    setSavedIds({ donationId: donation.donationId, receiptNo: donation.receiptNo });
-    toast({ title: "Donation saved ✓", description: `Receipt ${donation.receiptNo} generated.` });
+    const receipt80G = getReceipt80GForDonation(donation.donationId);
+    setSavedIds({
+      donationId: donation.donationId,
+      receiptNo: donation.receiptNo,
+      receipt80GId: receipt80G?.receipt80GId ?? donation.receipt80GId,
+    });
+    toast({
+      title: "Donation saved ✓",
+      description: receipt80G
+        ? `Receipt ${donation.receiptNo} · 80G ${receipt80G.receipt80GId} generated`
+        : `Receipt ${donation.receiptNo} generated.`,
+    });
     onSaved?.();
+  };
+
+  const handleDownloadReceipt = () => {
+    if (!savedIds) return;
+    downloadReceiptPdf({
+      receiptNo: savedIds.receiptNo,
+      date: new Date().toISOString().slice(0, 10),
+      donorName: donorName.trim(),
+      donorPan: panRequired ? pan.toUpperCase().trim() : undefined,
+      donorAddress: address.trim() || undefined,
+      amount: amt,
+      mode: isCash ? paymentMode : "In-Kind",
+      donationType: purposeLabel.toLowerCase().includes("corpus") ? "Corpus" : "General",
+      is80G: panRequired,
+    });
+    toast({ title: "Receipt downloaded", description: `${savedIds.receiptNo}.pdf` });
+  };
+
+  const handleDownload80G = () => {
+    if (!savedIds?.receipt80GId) return;
+    const receipt80G = getReceipt80GForDonation(savedIds.donationId);
+    if (!receipt80G) {
+      toast({ title: "Not found", description: "80G receipt not generated", variant: "destructive" });
+      return;
+    }
+    download80GReceiptPdf(receipt80G, address.trim() || undefined);
+    toast({ title: "80G receipt downloaded", description: "Ready for Income Tax portal submission" });
   };
 
   // ── Step content renderers ──
@@ -519,9 +559,14 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
           <Button onClick={saveDonation} disabled={!!savedIds} size="lg">
             <Save className="h-4 w-4 mr-2"/>Save Donation
           </Button>
-          <Button variant="outline" disabled={!savedIds} onClick={()=>toast({title:"Receipt ready",description:`${savedIds?.receiptNo}`})}>
+          <Button variant="outline" disabled={!savedIds} onClick={handleDownloadReceipt}>
             <Receipt className="h-4 w-4 mr-2"/>Download Receipt
           </Button>
+          {panRequired && (
+            <Button variant="outline" disabled={!savedIds?.receipt80GId} onClick={handleDownload80G}>
+              <Award className="h-4 w-4 mr-2"/>Download 80G
+            </Button>
+          )}
           <Button variant="outline" disabled={!savedIds} onClick={()=>toast({title:"Sent via WhatsApp",description:`Receipt sent to +91 ${mobile}`})}>
             <MessageCircle className="h-4 w-4 mr-2"/>Send via WhatsApp
           </Button>

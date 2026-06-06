@@ -7,14 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Download,
-  Printer,
-  Plus,
   Search,
   CreditCard,
   Clock,
   CheckCircle,
   IndianRupee,
-  RefreshCw
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -155,10 +155,13 @@ const trendData = [
 
 const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN")}`;
 
+const RECEIPTS_PAGE_SIZE = 8;
+
 const PaymentGatewayReceiptsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [page, setPage] = useState(1);
 
   const filteredTransactions = useMemo(() => {
     return mockTransactions.filter((t) => {
@@ -173,6 +176,9 @@ const PaymentGatewayReceiptsPage = () => {
       return matchesSearch && matchesStart && matchesEnd;
     });
   }, [searchTerm, startDate, endDate]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / RECEIPTS_PAGE_SIZE));
+  const paginatedTransactions = filteredTransactions.slice((page - 1) * RECEIPTS_PAGE_SIZE, page * RECEIPTS_PAGE_SIZE);
 
   const handleExportCSV = () => {
     const csvContent = [
@@ -197,6 +203,7 @@ const PaymentGatewayReceiptsPage = () => {
     setSearchTerm("");
     setStartDate("");
     setEndDate("");
+    setPage(1);
   };
 
   return (
@@ -205,27 +212,7 @@ const PaymentGatewayReceiptsPage = () => {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {/* Header section */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Payment Gateway Receipts
-          </h1>
-          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs font-semibold px-2 py-0.5" variant="outline">
-            Live
-          </Badge>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" className="bg-[#7a3411] hover:bg-[#63290d] text-white gap-1.5 text-xs">
-            <Plus className="h-3.5 w-3.5" /> New Voucher
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.print()}>
-            <Printer className="h-3.5 w-3.5" /> Print
-          </Button>
-        </div>
-      </div>
-
-      {/* Gateway status banner */}
+      {/* Gateway status banner — page title/actions are in FinanceLayout topbar */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between border-l-4 border-l-blue-600 bg-white border border-y border-r border-border rounded-r-lg p-4 gap-4">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-lg bg-blue-600 flex items-center justify-center text-white shrink-0 font-bold text-lg">
@@ -422,7 +409,7 @@ const PaymentGatewayReceiptsPage = () => {
                   placeholder="Search name, order ID, UTR..."
                   className="pl-9 h-9 text-xs"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
                 />
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -430,14 +417,14 @@ const PaymentGatewayReceiptsPage = () => {
                   type="date"
                   className="h-9 text-xs w-full sm:w-36"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
                 />
                 <span className="text-xs text-muted-foreground">to</span>
                 <Input
                   type="date"
                   className="h-9 text-xs w-full sm:w-36"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
                 />
               </div>
             </div>
@@ -487,7 +474,7 @@ const PaymentGatewayReceiptsPage = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredTransactions.map((t) => (
+                  paginatedTransactions.map((t) => (
                     <TableRow key={t.orderId} className="hover:bg-muted/30 transition-colors">
                       <TableCell className="text-xs font-medium text-foreground/80 whitespace-nowrap">
                         {t.date}
@@ -530,6 +517,18 @@ const PaymentGatewayReceiptsPage = () => {
                 )}
               </TableBody>
             </Table>
+          </div>
+          <div className="flex items-center justify-between pt-4 mt-2 border-t text-xs text-muted-foreground">
+            <span>Showing {filteredTransactions.length === 0 ? 0 : (page - 1) * RECEIPTS_PAGE_SIZE + 1}–{Math.min(page * RECEIPTS_PAGE_SIZE, filteredTransactions.length)} of {filteredTransactions.length} records</span>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon" className="h-7 w-7" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="px-2">Page {page} of {totalPages}</span>
+              <Button variant="outline" size="icon" className="h-7 w-7" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -14,10 +14,7 @@ const BankManagement = () => {
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Bank & Cash Management</h1>
-                    <p className="text-muted-foreground">Monitor liquidity, bank accounts, and perform reconciliations</p>
-                </div>
+                <p className="text-muted-foreground">Monitor liquidity, bank accounts, and perform reconciliations</p>
                 <Button className="gap-2">
                     <Plus className="h-4 w-4" /> Add Bank Account
                 </Button>

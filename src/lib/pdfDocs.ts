@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { TEMPLE_CONFIG } from "./templeConfig";
+import { getTempleConfig, format80GValidity } from "./templeConfig";
 import { rupeesInWords } from "./numberToWords";
 
 export interface ReceiptInput {
@@ -24,6 +24,8 @@ export interface Form10BEInput {
   mode: string;
   donationType: string;
   fy: string;            // e.g. "2024-25"
+  receiptNo?: string;
+  certificateId?: string;
 }
 
 function formatDateLong(iso: string): string {
@@ -37,6 +39,7 @@ function formatDateLong(iso: string): string {
 }
 
 function addTempleHeader(doc: jsPDF, subtitle: string): number {
+  const cfg = getTempleConfig();
   const w = doc.internal.pageSize.getWidth();
   doc.setDrawColor(124, 45, 18);
   doc.setLineWidth(0.8);
@@ -45,19 +48,19 @@ function addTempleHeader(doc: jsPDF, subtitle: string): number {
   doc.setFont("times", "bold");
   doc.setFontSize(18);
   doc.setTextColor(124, 45, 18);
-  doc.text(TEMPLE_CONFIG.name.toUpperCase(), w / 2, 22, { align: "center" });
+  doc.text(cfg.name.toUpperCase(), w / 2, 22, { align: "center" });
 
   doc.setFont("times", "normal");
   doc.setFontSize(10);
   doc.setTextColor(60, 60, 60);
-  doc.text(TEMPLE_CONFIG.address, w / 2, 28, { align: "center" });
+  doc.text(cfg.address, w / 2, 28, { align: "center" });
   doc.text(
-    `PAN: ${TEMPLE_CONFIG.pan}   |   80G Reg: ${TEMPLE_CONFIG.registration80G}`,
+    `PAN: ${cfg.pan}   |   80G Reg: ${cfg.registration80G}`,
     w / 2, 33.5, { align: "center" }
   );
   doc.text(
-    `80G Validity: ${TEMPLE_CONFIG.validityFrom} to ${TEMPLE_CONFIG.validityTo}`,
-    w / 2, 38.5, { align: "center" }
+    `80G Validity: ${format80GValidity(cfg.validityFrom, cfg.validityTo)}`,
+    w / 2,  38.5, { align: "center" }
   );
 
   doc.setDrawColor(180, 180, 180);
@@ -73,6 +76,7 @@ function addTempleHeader(doc: jsPDF, subtitle: string): number {
 }
 
 function addSignatures(doc: jsPDF, y: number) {
+  const cfg = getTempleConfig();
   const w = doc.internal.pageSize.getWidth();
   doc.setDrawColor(120, 120, 120);
   doc.line(25, y, 80, y);
@@ -83,7 +87,7 @@ function addSignatures(doc: jsPDF, y: number) {
   doc.text("Date and Stamp", 52, y + 5, { align: "center" });
   doc.text("Authorised Signatory", w - 52, y + 5, { align: "center" });
   doc.setFontSize(9);
-  doc.text(TEMPLE_CONFIG.signatory, w - 52, y + 10, { align: "center" });
+  doc.text(cfg.signatory, w - 52, y + 10, { align: "center" });
 }
 
 function drawField(doc: jsPDF, label: string, value: string, y: number, opts?: { bold?: boolean }) {
@@ -100,6 +104,7 @@ function drawField(doc: jsPDF, label: string, value: string, y: number, opts?: {
 
 /* ---------------- DONATION RECEIPT ---------------- */
 export function buildReceiptPdf(input: ReceiptInput): jsPDF {
+  const cfg = getTempleConfig();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   let y = addTempleHeader(doc, "DONATION RECEIPT");
 
@@ -133,7 +138,7 @@ export function buildReceiptPdf(input: ReceiptInput): jsPDF {
   doc.setTextColor(80, 30, 10);
   const declaration =
     "This donation is eligible for 50% deduction under Section 80G of the Income Tax Act, 1961. " +
-    `(80G Registration: ${TEMPLE_CONFIG.registration80G})`;
+    `(80G Registration: ${cfg.registration80G})`;
   const wrapped = doc.splitTextToSize(declaration, doc.internal.pageSize.getWidth() - 50);
   doc.text(wrapped, doc.internal.pageSize.getWidth() / 2, y + 7, { align: "center" });
   y += 26;
@@ -149,6 +154,7 @@ export function downloadReceiptPdf(input: ReceiptInput) {
 
 /* ---------------- FORM 10BE CERTIFICATE ---------------- */
 export function buildForm10BEPdf(input: Form10BEInput): jsPDF {
+  const cfg = getTempleConfig();
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   let y = addTempleHeader(doc, "80G DONATION CERTIFICATE");
 
@@ -159,13 +165,22 @@ export function buildForm10BEPdf(input: Form10BEInput): jsPDF {
     doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
   y += 10;
 
+  if (input.certificateId || input.receiptNo) {
+    doc.setFont("times", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(124, 45, 18);
+    if (input.certificateId) doc.text(`80G Certificate No: ${input.certificateId}`, 22, y);
+    if (input.receiptNo) doc.text(`Donation Receipt No: ${input.receiptNo}`, doc.internal.pageSize.getWidth() - 22, y, { align: "right" });
+    y += 8;
+  }
+
   doc.setFont("times", "normal");
   doc.setFontSize(11);
   doc.setTextColor(20, 20, 20);
 
   const body =
-    `I/We, ${TEMPLE_CONFIG.name}, having PAN ${TEMPLE_CONFIG.pan}, registered under section 80G ` +
-    `vide reference number ${TEMPLE_CONFIG.registration80G}, hereby certify that ${input.donorName}, ` +
+    `I/We, ${cfg.name}, having PAN ${cfg.pan}, registered under section 80G ` +
+    `vide reference number ${cfg.registration80G}, hereby certify that ${input.donorName}, ` +
     `PAN ${input.donorPan}, residing at ${input.donorAddress}, made a donation of ` +
     `Rs. ${input.amount.toLocaleString("en-IN")} (${rupeesInWords(input.amount)}) ` +
     `on ${formatDateLong(input.date)} by ${input.mode}. ` +

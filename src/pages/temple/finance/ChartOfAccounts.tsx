@@ -21,6 +21,7 @@ import {
 import { financeSelectors, financeActions } from "@/modules/finance/financeStore";
 import { toast } from "sonner";
 import { AccountType } from "@/modules/finance/types";
+import { FinanceTableRadioGroup, FinanceTableRadioHead, FinanceTableRadioCell } from "@/components/finance/FinanceTableRadio";
 
 const ChartOfAccounts = () => {
     const accounts = financeSelectors.getAccounts();
@@ -29,6 +30,7 @@ const ChartOfAccounts = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
     const [showAdd, setShowAdd] = useState(false);
+    const [selectedId, setSelectedId] = useState("");
     const [newAccount, setNewAccount] = useState({
         name: "",
         code: "",
@@ -77,10 +79,7 @@ const ChartOfAccounts = () => {
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Chart of Accounts</h1>
-                    <p className="text-muted-foreground">Manage your general ledger accounts and hierarchy</p>
-                </div>
+                <p className="text-muted-foreground">Manage your general ledger accounts and hierarchy</p>
                 <Button onClick={() => setShowAdd(true)} className="gap-2">
                     <Plus className="h-4 w-4" /> Add Account
                 </Button>
@@ -129,9 +128,11 @@ const ChartOfAccounts = () => {
                         </TabsList>
 
                         <div className="rounded-md border">
+                            <FinanceTableRadioGroup value={selectedId} onValueChange={setSelectedId}>
                             <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <FinanceTableRadioHead />
                                         <TableHead className="w-[100px]">Code</TableHead>
                                         <TableHead>Account Name</TableHead>
                                         <TableHead>Type</TableHead>
@@ -143,11 +144,12 @@ const ChartOfAccounts = () => {
                                 <TableBody>
                                     {filtered.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No accounts found</TableCell>
+                                            <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">No accounts found</TableCell>
                                         </TableRow>
                                     ) : (
                                         paginatedAccounts.map(account => (
-                                            <TableRow key={account.id}>
+                                            <TableRow key={account.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setSelectedId(account.id)}>
+                                                <FinanceTableRadioCell value={account.id} />
                                                 <TableCell className="font-mono text-xs">{account.code}</TableCell>
                                                 <TableCell className="font-medium">
                                                     <div className="flex items-center gap-2">
@@ -168,6 +170,7 @@ const ChartOfAccounts = () => {
                                     )}
                                 </TableBody>
                             </Table>
+                            </FinanceTableRadioGroup>
                         </div>
                     </Tabs>
                 </CardContent>

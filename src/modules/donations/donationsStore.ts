@@ -1,6 +1,7 @@
-import { DonationsState, Donor, Donation, Allocation, Certificate80G, DonationAuditEntry, DonationChannel, DonationSourceModule, DonationNature, NonCashAssetDetails, Fund, FundExpense, DonorCategory, DonorVipInfo, Settlement } from "./types";
+import { DonationsState, Donor, Donation, Allocation, Certificate80G, Donation80GReceipt, DonationAuditEntry, DonationChannel, DonationSourceModule, DonationNature, NonCashAssetDetails, Fund, FundExpense, DonorCategory, DonorVipInfo, Settlement } from "./types";
+import { getTempleConfig } from "@/lib/templeConfig";
 
-const LS_KEY = "qoo.donations.v2";
+const LS_KEY = "qoo.donations.v3";
 
 function nowIso() {
   return new Date().toISOString();
@@ -109,6 +110,57 @@ function next80GId(state: DonationsState, year: number) {
   return `80G-${year}-${String(max + 1).padStart(4, "0")}`;
 }
 
+export function getFinancialYear(dateIso: string): string {
+  const [y, m] = dateIso.split("-").map(Number);
+  if (!y || !m) return `${new Date().getFullYear()}-${String(new Date().getFullYear() + 1).slice(2)}`;
+  const startYear = m >= 4 ? y : y - 1;
+  return `${startYear}-${String(startYear + 1).slice(2)}`;
+}
+
+function next80GReceiptId(state: DonationsState, year: number) {
+  const prefix = `80GR-${year}-`;
+  const existing = (state.receipts80G ?? []).map(r => r.receipt80GId).filter(id => id.startsWith(prefix));
+  const max = getMaxNumericSuffix(existing, prefix);
+  return `80GR-${year}-${String(max + 1).padStart(4, "0")}`;
+}
+
+function donationTypeFromPurpose(purpose: string): string {
+  return (purpose || "").toLowerCase().includes("corpus") ? "Corpus" : "General";
+}
+
+function build80GReceiptRecord(
+  state: DonationsState,
+  donation: Donation,
+  donor: Donor,
+  createdBy: string
+): Donation80GReceipt {
+  const fy = getFinancialYear(donation.date);
+  const fyYear = Number(fy.slice(0, 4)) || new Date().getFullYear();
+  const hasPan = donor.pan && donor.pan !== "-" && donor.pan.length >= 10;
+  const status: Donation80GReceipt["status"] = !hasPan
+    ? "PAN Missing"
+    : donation.is80G
+      ? "Generated"
+      : "Pending";
+
+  return {
+    receipt80GId: next80GReceiptId(state, fyYear),
+    donationId: donation.donationId,
+    receiptNo: donation.receiptNo,
+    donorId: donor.donorId,
+    donorName: donor.name,
+    pan: donor.pan,
+    amount: donation.amount,
+    date: donation.date,
+    mode: donation.mode || donation.channel,
+    donationType: donationTypeFromPurpose(donation.purpose),
+    fy,
+    status,
+    generatedDate: status === "Generated" ? isoDate() : "-",
+    createdAt: nowIso(),
+  };
+}
+
 function seedState(): DonationsState {
   const createdAt = nowIso();
 
@@ -125,6 +177,8 @@ function seedState(): DonationsState {
     { donorId: "DNR-010", name: "Sundaram Charitable Trust", phone: "+91 90000 22233", email: "trust@sundaram.org", city: "12 Cathedral Rd, Chennai - 600086", pan: "AAGTS1122F", category: "Trust", eligible80G: true, createdAt },
     { donorId: "DNR-011", name: "Vikram Mehta", phone: "+91 90000 33344", email: "vikram@email.com", city: "B-22 Vasant Vihar, New Delhi - 110057", pan: "CKMPM7788Q", category: "Patron", eligible80G: true, createdAt },
     { donorId: "DNR-012", name: "Priya Krishnan", phone: "+91 90000 44455", email: "priya.k@email.com", city: "5 Adyar Main Rd, Chennai - 600020", pan: "DLNPK9911R", category: "Regular", eligible80G: true, createdAt },
+    // Example donor — 80G enabled with PAN (demo)
+    { donorId: "DNR-013", name: "Meera Nair", phone: "+91 98765 12340", email: "meera.nair@email.com", city: "HSR Layout, Bengaluru 560102", pan: "ABCPM5678K", category: "Regular", eligible80G: true, createdAt },
   ];
 
   // ===== 80G Compliance sample donors (FY 2024-25 spec) =====
@@ -137,6 +191,28 @@ function seedState(): DonationsState {
   );
 
   const donations: Donation[] = [
+    // Example — 80G donation with both receipts auto-generated
+    {
+      donationId: "DON-C/2026/06/000001",
+      receiptNo: "REC/2026/06/000001",
+      templeId: "TMPL-001",
+      branchId: "BR-MAIN",
+      donorId: "DNR-013",
+      donorName: "Meera Nair",
+      nature: "Cash",
+      amount: 25000,
+      purpose: "General / Hundi",
+      channel: "UPI",
+      mode: "UPI",
+      referenceNo: "UPI-MEERA-25000",
+      sourceModule: "Manual",
+      date: "2026-06-04",
+      time: "10:30 AM",
+      status: "Recorded",
+      is80G: true,
+      remarks: "80G enabled — donation receipt + 80G certificate issued",
+      createdAt,
+    },
     { donationId: "DON-2025-0891", receiptNo: "REC-2025-0891", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-001", donorName: "Sri Ramesh Agarwal", nature: "Cash", amount: 500000, purpose: "Project-linked", channel: "Bank Transfer", mode: "NEFT", sourceModule: "Manual", date: "2025-02-10", time: "10:30 AM", status: "Recorded", createdAt },
     { donationId: "DON-2025-0890", receiptNo: "REC-2025-0890", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-006", donorName: "Anonymous Devotee", nature: "Cash", amount: 25000, purpose: "General / Hundi", channel: "Cash", mode: "Cash", sourceModule: "Counter", counterId: "CTR-001", date: "2025-02-10", time: "09:15 AM", status: "Recorded", createdAt },
     { donationId: "DON-2025-0889", receiptNo: "REC-2025-0889", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-004", donorName: "Karthik Reddy", nature: "Cash", amount: 100000, purpose: "Annadanam Sponsorship", channel: "UPI", mode: "GPay", sourceModule: "Online Portal", date: "2025-02-09", time: "04:45 PM", status: "Recorded", createdAt },
@@ -145,8 +221,8 @@ function seedState(): DonationsState {
     { donationId: "DON-2025-0886", receiptNo: "REC-2025-0886", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-002", donorName: "Smt. Padma Foundation", nature: "Cash", amount: 2500000, purpose: "Event-linked", channel: "Bank Transfer", mode: "NEFT", sourceModule: "Event", sourceRecordId: "EVT-2025-003", date: "2025-02-07", time: "02:00 PM", status: "Recorded", createdAt },
     { donationId: "DON-2025-0885", receiptNo: "REC-2025-0885", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-007", donorName: "Lakshmi Narasimha Bhakta Mandali", nature: "Cash", amount: 50000, purpose: "Seva Sponsorship", channel: "Cash", mode: "Cash", sourceModule: "Booking", sourceRecordId: "BKG-2025-0142", counterId: "CTR-002", date: "2025-02-06", time: "08:30 AM", status: "Recorded", createdAt },
     { donationId: "DON-2025-0884", receiptNo: "REC-2025-0884", templeId: "TMPL-001", branchId: "BR-TIRUCHANUR", donorId: "DNR-005", donorName: "Village Dev Committee", nature: "Non-Cash", amount: 75000, purpose: "Corpus Fund", channel: "In-Kind", mode: "In-Kind", sourceModule: "Campaign", sourceRecordId: "CMP-2025-001", date: "2025-02-05", time: "11:45 AM", status: "Recorded", nonCashDetails: { assetName: "Rice Bags", quantity: 50, unit: "bags", estimatedValue: 75000 }, createdAt },
-    { donationId: "DON-2025-0892", receiptNo: "REC-2025-0892", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-008", donorName: "Dr. Suresh Iyer", nature: "Cash", amount: 51000, purpose: "Corpus Fund", channel: "Bank Transfer", mode: "NEFT", referenceNo: "NEFT-SBI-786543210", sourceModule: "Manual", date: "2025-02-11", time: "11:20 AM", status: "Recorded", remarks: "80G eligible donation — Corpus contribution towards temple development", createdAt },
-    { donationId: "DON-2024-0501", receiptNo: "REC-2024-0501", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-009", donorName: "Anitha Rao", nature: "Cash", amount: 25000, purpose: "General / Hundi", channel: "UPI", mode: "UPI", referenceNo: "UPI-512987654321", sourceModule: "Online Portal", date: "2024-06-12", time: "10:00 AM", status: "Recorded", remarks: "80G eligible — general donation", createdAt },
+    { donationId: "DON-2025-0892", receiptNo: "REC-2025-0892", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-008", donorName: "Dr. Suresh Iyer", nature: "Cash", amount: 51000, purpose: "Corpus Fund", channel: "Bank Transfer", mode: "NEFT", referenceNo: "NEFT-SBI-786543210", sourceModule: "Manual", date: "2025-02-11", time: "11:20 AM", status: "Recorded", is80G: true, remarks: "80G eligible donation — Corpus contribution towards temple development", createdAt },
+    { donationId: "DON-2024-0501", receiptNo: "REC-2024-0501", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-009", donorName: "Anitha Rao", nature: "Cash", amount: 25000, purpose: "General / Hundi", channel: "UPI", mode: "UPI", referenceNo: "UPI-512987654321", sourceModule: "Online Portal", date: "2024-06-12", time: "10:00 AM", status: "Recorded", is80G: true, remarks: "80G eligible — general donation", createdAt },
     { donationId: "DON-2024-0502", receiptNo: "REC-2024-0502", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-010", donorName: "Sundaram Charitable Trust", nature: "Cash", amount: 500000, purpose: "Corpus Fund", channel: "Bank Transfer", mode: "RTGS", referenceNo: "RTGS-HDFC-998877665", sourceModule: "Manual", date: "2024-08-21", time: "03:00 PM", status: "Recorded", remarks: "Corpus contribution from trust", createdAt },
     { donationId: "DON-2024-0503", receiptNo: "REC-2024-0503", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-011", donorName: "Vikram Mehta", nature: "Cash", amount: 150000, purpose: "Project-linked", channel: "Bank Transfer", mode: "NEFT", referenceNo: "NEFT-ICICI-445566778", sourceModule: "Manual", date: "2024-11-05", time: "12:30 PM", status: "Recorded", remarks: "Gopuram renovation contribution", createdAt },
     { donationId: "DON-2024-0504", receiptNo: "REC-2024-0504", templeId: "TMPL-001", branchId: "BR-MAIN", donorId: "DNR-012", donorName: "Priya Krishnan", nature: "Cash", amount: 11000, purpose: "Annadanam Sponsorship", channel: "UPI", mode: "UPI", referenceNo: "UPI-339911228877", sourceModule: "Online Portal", date: "2024-12-18", time: "07:45 PM", status: "Recorded", remarks: "Annadanam sponsorship", createdAt },
@@ -197,7 +273,38 @@ function seedState(): DonationsState {
   const fundExpenses: FundExpense[] = [];
   const settlements: Settlement[] = [];
 
-  return { donors, donations, allocations, certificates80G, audit, funds, fundExpenses, settlements };
+  const receipts80G: Donation80GReceipt[] = donations
+    .filter((d) => d.is80G)
+    .map((d, i) => {
+      const donor = donors.find((x) => x.donorId === d.donorId);
+      if (!donor) return null;
+      const fy = getFinancialYear(d.date);
+      const fyYear = Number(fy.slice(0, 4));
+      return {
+        receipt80GId: `80GR-${fyYear}-${String(i + 1).padStart(4, "0")}`,
+        donationId: d.donationId,
+        receiptNo: d.receiptNo,
+        donorId: d.donorId,
+        donorName: d.donorName,
+        pan: donor.pan,
+        amount: d.amount,
+        date: d.date,
+        mode: d.mode || d.channel,
+        donationType: donationTypeFromPurpose(d.purpose),
+        fy,
+        status: donor.pan && donor.pan !== "-" ? "Generated" as const : "PAN Missing" as const,
+        generatedDate: donor.pan && donor.pan !== "-" ? d.date : "-",
+        createdAt: d.createdAt,
+      };
+    })
+    .filter(Boolean) as Donation80GReceipt[];
+
+  donations.forEach((d) => {
+    const rec = receipts80G.find((r) => r.donationId === d.donationId);
+    if (rec) d.receipt80GId = rec.receipt80GId;
+  });
+
+  return { donors, donations, allocations, certificates80G, receipts80G, audit, funds, fundExpenses, settlements };
 }
 
 let stateCache: DonationsState | null = null;
@@ -239,6 +346,9 @@ export function getDonationsState(): DonationsState {
       // Migrate: add settlements if not present (backwards compat)
       if (!Array.isArray(fromLS.settlements)) {
         (fromLS as any).settlements = [];
+      }
+      if (!Array.isArray(fromLS.receipts80G)) {
+        (fromLS as any).receipts80G = [];
       }
       stateCache = fromLS;
       return stateCache;
@@ -285,6 +395,7 @@ function getSafeDonationsState(): DonationsState {
         donations: [],
         allocations: [],
         certificates80G: [],
+        receipts80G: [],
         audit: [],
         funds: [],
         fundExpenses: [],
@@ -323,6 +434,14 @@ export const donationSelectors = {
     try {
       const state = getSafeDonationsState();
       return Array.isArray(state?.certificates80G) ? state.certificates80G : [];
+    } catch {
+      return [];
+    }
+  },
+  getReceipts80G(): Donation80GReceipt[] {
+    try {
+      const state = getSafeDonationsState();
+      return Array.isArray(state?.receipts80G) ? state.receipts80G : [];
     } catch {
       return [];
     }
@@ -460,6 +579,7 @@ export function recordDonation(input: {
   date?: string;
   time?: string;
   createdBy?: string;
+  wants80G?: boolean;
 }) {
   const createdBy = input.createdBy ?? "System";
   const date = input.date ?? isoDate();
@@ -476,9 +596,8 @@ export function recordDonation(input: {
   });
 
   const ids = nextDonationIds(afterDonor, nature, date);
-  // 80G Rule: Donations with PAN provided are eligible for 80G
   const hasPan = input.pan !== undefined && input.pan !== "-" && input.pan.length >= 10;
-  const is80G = hasPan;
+  const is80G = getTempleConfig().eightyGEnabled && input.wants80G !== false && hasPan;
   const receiptFilePath = `/receipts/${ids.receiptNo}.pdf`;
 
   const donation: Donation = {
@@ -524,13 +643,37 @@ export function recordDonation(input: {
     details: `Auto-generated receipt for ${donation.donationId}`,
   };
 
-  const nextState: DonationsState = {
+  let nextState: DonationsState = {
     ...afterDonor,
     donations: [donation, ...afterDonor.donations],
     audit: [auditReceipt, auditDonation, ...afterDonor.audit],
+    receipts80G: afterDonor.receipts80G ?? [],
   };
+
+  if (is80G) {
+    const receipt80G = build80GReceiptRecord(nextState, donation, donor, createdBy);
+    donation.receipt80GId = receipt80G.receipt80GId;
+    const audit80G: DonationAuditEntry = {
+      id: nextAuditId(nextState),
+      timestamp: displayTimestamp(),
+      action: "80G Receipt Generated",
+      entity: receipt80G.receipt80GId,
+      user: createdBy,
+      details: `80G certificate for ${donation.receiptNo} — ${donor.name}`,
+    };
+    nextState = {
+      ...nextState,
+      donations: [{ ...donation, receipt80GId: receipt80G.receipt80GId }, ...afterDonor.donations],
+      receipts80G: [receipt80G, ...(nextState.receipts80G ?? [])],
+      audit: [audit80G, ...nextState.audit],
+    };
+  } else {
+    setState(nextState);
+    return donation;
+  }
+
   setState(nextState);
-  return donation;
+  return { ...donation, receipt80GId: donation.receipt80GId };
 }
 
 export function allocateFund(input: {
@@ -569,6 +712,49 @@ export function allocateFund(input: {
   };
   setState(nextState);
   return allocation;
+}
+
+export function getReceipt80GForDonation(donationId: string): Donation80GReceipt | null {
+  const st = getDonationsState();
+  return (st.receipts80G ?? []).find((r) => r.donationId === donationId) ?? null;
+}
+
+export function generate80GReceiptForDonation(donationId: string, createdBy = "System"): Donation80GReceipt | null {
+  const st = getDonationsState();
+  const donation = st.donations.find((d) => d.donationId === donationId);
+  if (!donation) return null;
+
+  const existing = (st.receipts80G ?? []).find((r) => r.donationId === donationId);
+  if (existing?.status === "Generated") return existing;
+
+  const donor = st.donors.find((d) => d.donorId === donation.donorId);
+  if (!donor) return null;
+
+  const receipt80G = build80GReceiptRecord(st, { ...donation, is80G: true }, donor, createdBy);
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "80G Receipt Generated",
+    entity: receipt80G.receipt80GId,
+    user: createdBy,
+    details: `80G certificate for ${donation.receiptNo} — ${donor.name}`,
+  };
+
+  const nextReceipts = existing
+    ? (st.receipts80G ?? []).map((r) => (r.donationId === donationId ? receipt80G : r))
+    : [receipt80G, ...(st.receipts80G ?? [])];
+
+  const nextState: DonationsState = {
+    ...st,
+    donations: st.donations.map((d) =>
+      d.donationId === donationId ? { ...d, is80G: true, receipt80GId: receipt80G.receipt80GId } : d
+    ),
+    receipts80G: nextReceipts,
+    audit: [audit, ...st.audit],
+  };
+  setState(nextState);
+  return receipt80G;
 }
 
 export function generate80GCertificate(input: { donorId: string; fy: string; createdBy?: string }) {

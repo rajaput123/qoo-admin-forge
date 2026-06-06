@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -63,6 +63,15 @@ import {
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { shouldShowFinanceSetupPrompt } from "@/lib/onboardingFlow";
 
 // Account status types
 type AccountStatus = "active" | "trial" | "expired" | "suspended" | "compliance_pending";
@@ -207,6 +216,13 @@ const TempleHub = () => {
   // Upgrade modal state
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectedLockedModule, setSelectedLockedModule] = useState<typeof allModules[0] | null>(null);
+  const [financeSetupOpen, setFinanceSetupOpen] = useState(false);
+
+  useEffect(() => {
+    if (shouldShowFinanceSetupPrompt()) {
+      setFinanceSetupOpen(true);
+    }
+  }, []);
 
   // Guided tour steps highlight key modules for first-time admins
   const tourSteps: TourStep[] = [
@@ -804,6 +820,42 @@ const TempleHub = () => {
         startSignal={tourStartSignal}
         onClose={() => localStorage.setItem("templeSetupComplete", "1")}
       />
+
+      {/* Finance setup prompt after subscription */}
+      <Dialog open={financeSetupOpen} onOpenChange={setFinanceSetupOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <IndianRupee className="h-5 w-5 text-primary" />
+              Complete your setup
+            </DialogTitle>
+            <DialogDescription>
+              Please complete your finance configuration in Settings — link your associated bank account and enable or disable 80G for donations.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                localStorage.setItem("financeSetupPromptDismissed", "1");
+                setFinanceSetupOpen(false);
+              }}
+            >
+              Later
+            </Button>
+            <Button
+              className="gap-2"
+              onClick={() => {
+                setFinanceSetupOpen(false);
+                navigate("/temple/settings/finance");
+              }}
+            >
+              Go to Finance Settings
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Upgrade Modal */}
       {selectedLockedModule && (

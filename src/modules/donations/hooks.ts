@@ -25,6 +25,11 @@ export function useCertificates80G() {
   return Array.isArray(result) ? result : [];
 }
 
+export function useReceipts80G() {
+  const result = useSyncExternalStore(subscribeDonationsStore, donationSelectors.getReceipts80G, donationSelectors.getReceipts80G);
+  return Array.isArray(result) ? result : [];
+}
+
 export function useDonationAudit() {
   const result = useSyncExternalStore(subscribeDonationsStore, donationSelectors.getAudit, donationSelectors.getAudit);
   return Array.isArray(result) ? result : [];

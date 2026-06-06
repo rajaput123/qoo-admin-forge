@@ -1,793 +1,397 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, IndianRupee, Search, Download, RefreshCw, PlayCircle, CheckCircle2, AlertTriangle, Eye, CalendarDays, UserCheck, Banknote, FileDown, RotateCcw, History } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { PlayCircle, Download, Search, Eye, Printer, Banknote } from "lucide-react";
 import { toast } from "sonner";
-import { exportToCSV } from "@/utils/exportCSV";
-import { financeSelectors, financeActions } from "@/modules/finance/financeStore";
-import { MONTH_NAMES } from "@/modules/finance/payrollCalculator";
-import type { PayrollRecord } from "@/modules/finance/types";
+import { NeftRtgsFormPanel } from "@/components/finance/NeftRtgsFormPanel";
+import { emptyNeftRtgsForm, type NeftRtgsFormData } from "@/data/neftRtgsTemplateData";
+import { buildPayrollNeftForm, mergeNeftForm } from "@/lib/neftRtgsUtils";
 
 const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN")}`;
 
+interface Employee {
+  id: string;
+  name: string;
+  dept: string;
+  basicPay: number;
+  allowance: number;
+  gross: number;
+  deductions: number;
+  netPay: number;
+  bankName: string;
+  status: string;
+}
+
+const mockEmployees: Employee[] = [
+  { id: "EMP-001", name: "Ramesh Kumar", dept: "Priest", basicPay: 25000, allowance: 5000, gross: 30000, deductions: 2000, netPay: 28000, bankName: "SBI", status: "Paid" },
+  { id: "EMP-002", name: "Lakshmi Devi", dept: "Administration", basicPay: 22000, allowance: 3000, gross: 25000, deductions: 1500, netPay: 23500, bankName: "HDFC", status: "Paid" },
+  { id: "EMP-003", name: "Venkat Sharma", dept: "Security", basicPay: 18000, allowance: 2000, gross: 20000, deductions: 1000, netPay: 19000, bankName: "SBI", status: "Pending" },
+  { id: "EMP-004", name: "Priya Patel", dept: "Accounts", basicPay: 28000, allowance: 4000, gross: 32000, deductions: 2500, netPay: 29500, bankName: "HDFC", status: "Pending" },
+  { id: "EMP-005", name: "Suresh Reddy", dept: "Maintenance", basicPay: 16000, allowance: 1500, gross: 17500, deductions: 800, netPay: 16700, bankName: "", status: "Pending" },
+];
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 const FinancePayroll = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(MONTHS[new Date().getMonth()]);
+  const [selectedYear, setSelectedYear] = useState("2026");
+  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [, setTick] = useState(0);
-
-  // Month/Year selectors
-  const [selectedMonth, setSelectedMonth] = useState(MONTH_NAMES[new Date().getMonth()]);
-  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
-
-  // Selection for bulk actions
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [runAllOpen, setRunAllOpen] = useState(false);
+  const [viewEmployee, setViewEmployee] = useState<Employee | null>(null);
+  const [neftForm, setNeftForm] = useState<NeftRtgsFormData>(emptyNeftRtgsForm);
+  const [bulkNeftForms, setBulkNeftForms] = useState<Record<string, NeftRtgsFormData>>({});
 
-  // Confirm dialogs
-  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
-  const [showRunAllConfirm, setShowRunAllConfirm] = useState(false);
-  const [showSingleConfirm, setShowSingleConfirm] = useState<{ id: string; name: string; amount: number } | null>(null);
-  const [viewDetail, setViewDetail] = useState<PayrollRecord | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
-
-  const allPayroll = financeSelectors.getPayroll();
-  const monthShort = selectedMonth.slice(0, 3);
-  // Scope page to selected month/year so Bank Advice / KPIs / table reflect that period
-  const employees = allPayroll.filter(e => e.month === monthShort && e.year === selectedYear);
-
-  // Group ALL payroll history by month/year for the Bank Advice History dialog
-  const historyGroups = (() => {
-    const map = new Map<string, { month: string; year: string; records: PayrollRecord[] }>();
-    for (const p of allPayroll) {
-      const key = `${p.year}-${p.month}`;
-      if (!map.has(key)) map.set(key, { month: p.month, year: p.year, records: [] });
-      map.get(key)!.records.push(p);
-    }
-    const monthOrder = MONTH_NAMES.map(m => m.slice(0, 3));
-    return Array.from(map.values()).sort((a, b) => {
-      if (a.year !== b.year) return Number(b.year) - Number(a.year);
-      return monthOrder.indexOf(b.month) - monthOrder.indexOf(a.month);
-    });
-  })();
-  const accounts = financeSelectors.getAccounts();
-  const payableAccounts = accounts.filter(a => a.type === "Asset" && (a.accountCategory === "Bank" || a.accountCategory === "Cash"));
-  const defaultBankId = payableAccounts.find(a => a.accountCategory === "Bank")?.id || payableAccounts[0]?.id || "ACC-002";
-  const [sourceAccountId, setSourceAccountId] = useState<string>(defaultBankId);
-  const sourceAccount = accounts.find(a => a.id === sourceAccountId);
-
-  const filtered = employees.filter(e => {
+  const filtered = mockEmployees.filter((e) => {
     if (statusFilter !== "all" && e.status !== statusFilter) return false;
-    if (searchTerm && !e.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) && !e.role.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    if (search && !e.name.toLowerCase().includes(search.toLowerCase()) && !e.dept.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const totalPayroll = employees.reduce((s, e) => s + e.netPay, 0);
-  const paidCount = employees.filter(e => e.status === "Paid").length;
-  const pendingCount = employees.filter(e => e.status === "Pending" || e.status === "Processing").length;
-  const pendingAmount = employees.filter(e => e.status !== "Paid").reduce((s, e) => s + e.netPay, 0);
-  const attendanceCount = employees.filter(e => e.attendanceMode === "actual").length;
-
-  const pendingFiltered = filtered.filter(e => e.status === "Pending" || e.status === "Processing");
-  const selectedPending = pendingFiltered.filter(e => selectedIds.has(e.id));
-  const selectedAmount = selectedPending.reduce((s, e) => s + e.netPay, 0);
-
-  const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
+  const totalPayroll = mockEmployees.reduce((s, e) => s + e.netPay, 0);
+  const paidCount = mockEmployees.filter((e) => e.status === "Paid").length;
+  const pendingCount = mockEmployees.filter((e) => e.status === "Pending").length;
+  const pendingAmount = mockEmployees.filter((e) => e.status === "Pending").reduce((s, e) => s + e.netPay, 0);
+  const pendingFiltered = filtered.filter((e) => e.status === "Pending");
+  const runCount = selectedIds.size > 0 ? selectedIds.size : pendingCount;
 
   const toggleAll = () => {
-    if (selectedIds.size === pendingFiltered.length) {
+    if (pendingFiltered.every((e) => selectedIds.has(e.id))) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(pendingFiltered.map(e => e.id)));
+      setSelectedIds(new Set(pendingFiltered.map((e) => e.id)));
     }
-  };
-
-  const handleSinglePay = () => {
-    if (!showSingleConfirm) return;
-    financeActions.payrollMarkPaid(showSingleConfirm.id, sourceAccountId, sourceAccount?.name);
-    toast.success(`${showSingleConfirm.name} salary paid — ${formatCurrency(showSingleConfirm.amount)} expense created`);
-    setShowSingleConfirm(null);
-    setSelectedIds(prev => { const n = new Set(prev); n.delete(showSingleConfirm.id); return n; });
-    setTick(t => t + 1);
-  };
-
-  const handleBulkPay = () => {
-    let count = 0;
-    for (const rec of selectedPending) {
-      financeActions.payrollMarkPaid(rec.id, sourceAccountId, sourceAccount?.name);
-      count++;
-    }
-    toast.success(`${count} salaries paid — ${formatCurrency(selectedAmount)} total expense created`);
-    setShowBulkConfirm(false);
-    setSelectedIds(new Set());
-    setTick(t => t + 1);
   };
 
   const handleRunAll = () => {
-    const count = financeActions.payrollBulkPay(sourceAccountId, sourceAccount?.name);
-    if (count === 0) {
-      toast.info("No pending payroll to process");
-    } else {
-      toast.success(`All ${count} salaries paid — ₹${pendingAmount.toLocaleString("en-IN")} total expense created & ledger updated`);
-    }
-    setShowRunAllConfirm(false);
+    toast.success(`Payroll disbursed for ${runCount} employee(s) — mock`);
+    setRunAllOpen(false);
     setSelectedIds(new Set());
-    setTick(t => t + 1);
   };
 
-  const handleSync = () => {
-    const monthShort = selectedMonth.slice(0, 3);
-    const count = financeActions.refreshPayrollFromHR(monthShort, selectedYear);
-    toast.success(`Synced ${count} employee(s) for ${selectedMonth} ${selectedYear}`);
-    setTick(t => t + 1);
-  };
-
-  const handleResetMonth = () => {
-    const removed = financeActions.resetPayrollMonth(selectedMonth, selectedYear);
-    if (removed === 0) {
-      toast.info(`No records for ${selectedMonth} ${selectedYear}`);
-    } else {
-      toast.success(`Cleared ${removed} record(s) for ${selectedMonth} ${selectedYear}. Click Sync HR to regenerate.`);
+  useEffect(() => {
+    if (viewEmployee?.bankName) {
+      setNeftForm(buildPayrollNeftForm(viewEmployee.name, viewEmployee.netPay, viewEmployee.dept, viewEmployee.bankName));
     }
-    setSelectedIds(new Set());
-    setTick(t => t + 1);
-  };
+  }, [viewEmployee]);
 
-  /** Generate a generic bank-advice CSV (NEFT bulk upload format).
-   *  Works as universal template — uploads to most Indian bank corporate portals
-   *  (SBI CINB, HDFC ENet, ICICI CIB) after minor column header tweak. */
-  const downloadBankAdvice = (records: PayrollRecord[], label: string) => {
-    const bankRecs = records.filter(r => (r.paymentMode || "bank").toLowerCase() !== "cash" && r.bankAccountNumber);
-    const cashRecs = records.filter(r => (r.paymentMode || "bank").toLowerCase() === "cash" || !r.bankAccountNumber);
-    if (bankRecs.length === 0) {
-      toast.warning("No bank-payable employees in selection. Cash payouts use the disbursement sheet.");
-      return;
-    }
-    const refDate = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    exportToCSV(
-      `bank-advice-${label}-${refDate}`,
-      ["Sl No", "Beneficiary Name", "Beneficiary A/c No", "IFSC Code", "Bank Name", "Amount (INR)", "Payment Mode", "Reference / Narration", "Email"],
-      bankRecs.map((r, i) => [
-        String(i + 1),
-        r.employeeName,
-        r.bankAccountNumber || "",
-        r.ifscCode || "",
-        r.bankName || "",
-        r.netPay.toFixed(2),
-        r.netPay >= 200000 ? "RTGS" : "NEFT",
-        `Salary ${r.month} ${r.year} - ${r.id}`,
-        "",
-      ]),
+  const runPendingEmployees = useMemo(
+    () => mockEmployees.filter((e) => e.status === "Pending" && (selectedIds.size === 0 || selectedIds.has(e.id))),
+    [selectedIds]
+  );
+  const runBankEmployees = useMemo(
+    () => runPendingEmployees.filter((e) => e.bankName),
+    [runPendingEmployees]
+  );
+  const runCashEmployees = useMemo(
+    () => runPendingEmployees.filter((e) => !e.bankName),
+    [runPendingEmployees]
+  );
+  const runTotalAmount = runPendingEmployees.reduce((s, e) => s + e.netPay, 0);
+  const runBankAmount = runBankEmployees.reduce((s, e) => s + e.netPay, 0);
+
+  useEffect(() => {
+    if (!runAllOpen) return;
+    setBulkNeftForms(
+      Object.fromEntries(
+        runBankEmployees.map((emp) => [
+          emp.id,
+          buildPayrollNeftForm(emp.name, emp.netPay, emp.dept, emp.bankName),
+        ])
+      )
     );
-    const total = bankRecs.reduce((s, r) => s + r.netPay, 0);
-    toast.success(`Bank advice ready — ${bankRecs.length} beneficiaries, ${formatCurrency(total)}. Upload to your bank portal.${cashRecs.length ? ` (${cashRecs.length} cash payout(s) excluded.)` : ""}`);
-  };
+  }, [runAllOpen, runBankEmployees]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Users className="h-6 w-6 text-primary" /> Payroll
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Auto-synced from HR — calculates with real attendance when available
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap items-end">
-          <div className="flex gap-1.5 items-center">
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>{MONTH_NAMES.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
-            </Select>
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-[80px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>{["2024", "2025", "2026", "2027"].map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
-            </Select>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <Card>
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between flex-wrap gap-4">
+            <div>
+              <h1 className="text-xl font-bold">Payroll</h1>
+              <p className="text-xs text-muted-foreground mt-0.5">Auto-synced from HR — Priest & Staff salaries</p>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="text-xs h-9 w-[130px]"><SelectValue /></SelectTrigger>
+                <SelectContent>{MONTHS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+              </Select>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <SelectTrigger className="text-xs h-9 w-[90px]"><SelectValue /></SelectTrigger>
+                <SelectContent>{["2024", "2025", "2026"].map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button size="sm" className="text-xs gap-1.5" disabled={pendingCount === 0} onClick={() => setRunAllOpen(true)}>
+                <PlayCircle className="h-3.5 w-3.5" /> Run All ({pendingCount})
+              </Button>
+            </div>
           </div>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={handleSync}>
-            <RefreshCw className="h-3.5 w-3.5" /> Sync HR
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:text-destructive" onClick={handleResetMonth}>
-            <RotateCcw className="h-3.5 w-3.5" /> Reset Month
-          </Button>
-          {pendingCount > 0 && (
-            <Button size="sm" className="gap-1.5" onClick={() => setShowRunAllConfirm(true)}>
-              <PlayCircle className="h-3.5 w-3.5" /> Run All ({pendingCount})
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {[
+          { label: "Total Payroll", value: formatCurrency(totalPayroll), sub: `${mockEmployees.length} employees`, accent: "border-l-gray-300" },
+          { label: "Paid", value: `${paidCount}/${mockEmployees.length}`, sub: "Disbursed", accent: "border-l-green-500", color: "text-green-700" },
+          { label: "Pending", value: String(pendingCount), sub: "Awaiting payment", accent: "border-l-amber-500", color: "text-amber-700" },
+          { label: "Pending Amount", value: formatCurrency(pendingAmount), sub: "To be disbursed", accent: "border-l-red-500", color: "text-red-700" },
+          { label: "With Attendance", value: `0/${mockEmployees.length}`, sub: "Prorated salary", accent: "border-l-blue-500", color: "text-blue-700" },
+        ].map((s) => (
+          <Card key={s.label} className={`border-l-4 ${s.accent}`}>
+            <CardContent className="p-4">
+              <div className="text-xs text-muted-foreground font-medium mb-1.5">{s.label}</div>
+              <div className={`text-2xl font-black leading-tight ${s.color || ""}`}>{s.value}</div>
+              <div className="text-xs text-muted-foreground mt-1">{s.sub}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <div className="flex items-center gap-2 flex-wrap px-5 py-4 border-b">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input placeholder="Search employee..." value={search} onChange={(e) => setSearch(e.target.value)} className="text-xs h-9 pl-8" />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="text-xs h-9 w-[130px]"><SelectValue placeholder="All Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="Paid">Paid</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => toast.success("Payroll exported (mock CSV)")}>
+              <Download className="h-3.5 w-3.5" /> Export
             </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            disabled={employees.length === 0}
-            onClick={() => {
-              const pending = employees.filter(e => e.status !== "Paid");
-              const records = pending.length > 0 ? pending : employees;
-              const label = pending.length > 0
-                ? `pending-${selectedMonth}-${selectedYear}`
-                : `paid-${selectedMonth}-${selectedYear}`;
-              downloadBankAdvice(records, label);
-            }}
-          >
-            <FileDown className="h-3.5 w-3.5" /> Bank Advice
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowHistory(true)}>
-            <History className="h-3.5 w-3.5" /> History
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-            exportToCSV("payroll",
-              ["ID", "Employee", "Role", "Department", "Month", "Year", "Basic", "Gross", "Deductions", "Net Pay", "Status", "Days Present", "Total Days"],
-              filtered.map(e => [e.id, e.employeeName, e.role, e.department, e.month, e.year, String(e.basicSalary), String(e.salary.grossPay), String(e.salary.totalDeductions), String(e.netPay), e.status, String(e.daysPresent), String(e.totalDays)])
-            );
-            toast.success(`Exported ${filtered.length} payroll records`);
-          }}>
-            <Download className="h-3.5 w-3.5" /> Export
-          </Button>
-        </div>
-      </div>
+          </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        <Card className="border-l-4 border-l-primary">
-          <CardContent className="p-4">
-            <span className="text-[11px] text-muted-foreground">Total Payroll</span>
-            <p className="text-lg font-bold">{formatCurrency(totalPayroll)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-green-500">
-          <CardContent className="p-4">
-            <span className="text-[11px] text-muted-foreground">Paid</span>
-            <p className="text-lg font-bold text-green-700">{paidCount} / {employees.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-amber-500">
-          <CardContent className="p-4">
-            <span className="text-[11px] text-muted-foreground">Pending</span>
-            <p className="text-lg font-bold text-amber-600">{pendingCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-red-400">
-          <CardContent className="p-4">
-            <span className="text-[11px] text-muted-foreground">Pending Amount</span>
-            <p className="text-lg font-bold text-red-600">{formatCurrency(pendingAmount)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-blue-400">
-          <CardContent className="p-4">
-            <span className="text-[11px] text-muted-foreground">With Attendance</span>
-            <p className="text-lg font-bold text-blue-600">{attendanceCount} / {employees.length}</p>
-          </CardContent>
-        </Card>
-      </div>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={pendingFiltered.length > 0 && pendingFiltered.every((e) => selectedIds.has(e.id))}
+                    onCheckedChange={toggleAll}
+                  />
+                </TableHead>
+                <TableHead className="text-xs">Employee</TableHead>
+                <TableHead className="text-xs">Department</TableHead>
+                <TableHead className="text-xs text-right">Basic</TableHead>
+                <TableHead className="text-xs text-right">Allowance</TableHead>
+                <TableHead className="text-xs text-right">Gross</TableHead>
+                <TableHead className="text-xs text-right">Deductions</TableHead>
+                <TableHead className="text-xs text-right">Net Pay</TableHead>
+                <TableHead className="text-xs">Bank</TableHead>
+                <TableHead className="text-xs text-center">Status</TableHead>
+                <TableHead className="text-xs text-center">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((e) => (
+                <TableRow key={e.id}>
+                  <TableCell>
+                    {e.status === "Pending" && (
+                      <Checkbox
+                        checked={selectedIds.has(e.id)}
+                        onCheckedChange={() => {
+                          setSelectedIds((prev) => {
+                            const n = new Set(prev);
+                            n.has(e.id) ? n.delete(e.id) : n.add(e.id);
+                            return n;
+                          });
+                        }}
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-xs font-medium">{e.name}</div>
+                    <div className="text-[10px] text-muted-foreground">{e.id}</div>
+                  </TableCell>
+                  <TableCell><Badge variant="outline" className="text-[10px]">{e.dept}</Badge></TableCell>
+                  <TableCell className="text-xs text-right">{formatCurrency(e.basicPay)}</TableCell>
+                  <TableCell className="text-xs text-right">{formatCurrency(e.allowance)}</TableCell>
+                  <TableCell className="text-xs text-right font-medium">{formatCurrency(e.gross)}</TableCell>
+                  <TableCell className="text-xs text-right text-red-600">{formatCurrency(e.deductions)}</TableCell>
+                  <TableCell className="text-xs text-right font-bold">{formatCurrency(e.netPay)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{e.bankName || "Cash"}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className={e.status === "Paid" ? "bg-green-50 text-green-700 border-green-200" : "bg-amber-50 text-amber-700 border-amber-200"}>
+                      {e.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setViewEmployee(e)}>
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 flex-wrap">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search employee..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9" />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="Paid">Paid</SelectItem>
-            <SelectItem value="Pending">Pending</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
-          exportToCSV("payroll",
-            ["ID", "Employee", "Role", "Department", "Month", "Year", "Basic", "Gross", "Deductions", "Net Pay", "Status", "Days Present", "Total Days"],
-            filtered.map(e => [e.id, e.employeeName, e.role, e.department, e.month, e.year, String(e.basicSalary), String(e.salary.grossPay), String(e.salary.totalDeductions), String(e.netPay), e.status, String(e.daysPresent), String(e.totalDays)])
-          );
-          toast.success(`Exported ${filtered.length} payroll records`);
-        }}>
-          <Download className="h-3.5 w-3.5" /> Export
-        </Button>
-      </div>
+      {/* Run All Confirm Modal */}
+      <Dialog open={runAllOpen} onOpenChange={setRunAllOpen}>
+        <DialogContent className={runBankEmployees.length > 0 ? "max-w-6xl max-h-[92vh] overflow-y-auto" : "max-w-lg"}>
+          <DialogHeader>
+            <DialogTitle>Run Payroll — {selectedMonth} {selectedYear}</DialogTitle>
+            <DialogDescription>
+              Disburse salary for {runCount} pending employee(s) · Total {formatCurrency(runTotalAmount)}
+              {runBankEmployees.length > 0 && ` · ${runBankEmployees.length} NEFT/RTGS (${formatCurrency(runBankAmount)})`}
+              {runCashEmployees.length > 0 && ` · ${runCashEmployees.length} cash`}
+            </DialogDescription>
+          </DialogHeader>
 
-      {/* Bulk selection bar */}
-      {selectedIds.size > 0 && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium">{selectedIds.size} selected</span>
-              <span className="text-sm text-muted-foreground">— {formatCurrency(selectedAmount)}</span>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>Clear</Button>
-              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => downloadBankAdvice(selectedPending, `selected-${selectedMonth}-${selectedYear}`)}>
-                <FileDown className="h-3.5 w-3.5" /> Bank Advice
-              </Button>
-              <Button size="sm" className="gap-1.5" onClick={() => setShowBulkConfirm(true)}>
-                <IndianRupee className="h-3.5 w-3.5" /> Pay Selected
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Table */}
-      <TooltipProvider>
-        <Card>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
+          {runPendingEmployees.length > 1 && (
+            <div className="rounded-lg border overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10">
-                      {pendingFiltered.length > 0 && (
-                        <Checkbox
-                          checked={selectedIds.size === pendingFiltered.length && pendingFiltered.length > 0}
-                          onCheckedChange={toggleAll}
-                        />
-                      )}
-                    </TableHead>
+                  <TableRow className="bg-muted/50">
                     <TableHead className="text-xs">Employee</TableHead>
-                    <TableHead className="text-xs">Department</TableHead>
-                    <TableHead className="text-xs text-center">Attendance</TableHead>
-                    <TableHead className="text-xs text-right">Gross</TableHead>
-                    <TableHead className="text-xs text-right">Deductions</TableHead>
+                    <TableHead className="text-xs">Bank</TableHead>
                     <TableHead className="text-xs text-right">Net Pay</TableHead>
-                    <TableHead className="text-xs text-center">Use Attendance</TableHead>
-                    <TableHead className="text-xs text-center">Status</TableHead>
-                    <TableHead className="text-xs text-center">Action</TableHead>
+                    <TableHead className="text-xs">Mode</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map(e => (
-                    <TableRow key={e.id} className={selectedIds.has(e.id) ? "bg-primary/5" : ""}>
+                  {runPendingEmployees.map((emp) => (
+                    <TableRow key={emp.id}>
+                      <TableCell className="text-xs font-medium">{emp.name}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{emp.bankName || "—"}</TableCell>
+                      <TableCell className="text-xs text-right font-medium">{formatCurrency(emp.netPay)}</TableCell>
                       <TableCell>
-                        {e.status !== "Paid" && (
-                          <Checkbox
-                            checked={selectedIds.has(e.id)}
-                            onCheckedChange={() => toggleSelect(e.id)}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="text-xs font-medium">{e.employeeName}</p>
-                          <p className="text-[10px] text-muted-foreground">{e.role}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell><Badge variant="secondary" className="text-[10px]">{e.department}</Badge></TableCell>
-                      <TableCell className="text-xs text-center">{e.daysPresent}/{e.totalDays}</TableCell>
-                      <TableCell className="text-xs text-right">{formatCurrency(e.salary?.grossPay || e.basicSalary)}</TableCell>
-                      <TableCell className="text-xs text-right text-destructive">-{formatCurrency(e.deductions)}</TableCell>
-                      <TableCell className="text-xs text-right font-bold">{formatCurrency(e.netPay)}</TableCell>
-                      <TableCell className="text-center">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex items-center justify-center gap-1.5">
-                              <Switch
-                                checked={e.attendanceMode === "actual"}
-                                disabled={e.status === "Paid"}
-                                onCheckedChange={() => {
-                                  financeActions.toggleAttendanceMode(e.id);
-                                  setTick(t => t + 1);
-                                  toast.info(`${e.employeeName}: switched to ${e.attendanceMode === "actual" ? "full month" : "attendance-based"} pay`);
-                                }}
-                                className="scale-75"
-                              />
-                              <span className="text-[10px] text-muted-foreground w-8">
-                                {e.attendanceMode === "actual" ? "On" : "Off"}
-                              </span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {e.attendanceMode === "actual"
-                              ? `Attendance ON — prorated ${e.daysPresent}/${e.totalDays} days. Toggle off for full month.`
-                              : "Attendance OFF — full month salary. Toggle on to prorate by attendance."}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline" className={`text-[10px] ${
-                          e.status === "Paid" ? "bg-green-50 text-green-700 border-green-200" :
-                          "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}>{e.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => setViewDetail(e)}>
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                          {(e.status === "Pending" || e.status === "Processing") && (
-                            <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowSingleConfirm({ id: e.id, name: e.employeeName, amount: e.netPay })}>
-                              <IndianRupee className="h-3 w-3" /> Pay
-                            </Button>
-                          )}
-                          {e.status === "Paid" && e.paidDate && (
-                            <span className="text-[10px] text-muted-foreground">{e.paidDate}</span>
-                          )}
-                        </div>
+                        <Badge variant="outline" className="text-[10px]">
+                          {emp.bankName ? "NEFT/RTGS" : "Cash"}
+                        </Badge>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
-          </CardContent>
-        </Card>
-      </TooltipProvider>
+          )}
 
-      {/* Salary Breakdown Detail Modal */}
-       <Dialog open={!!viewDetail} onOpenChange={() => setViewDetail(null)}>
-         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <IndianRupee className="h-5 w-5 text-primary" />
-              Salary Breakdown — {viewDetail?.employeeName}
-            </DialogTitle>
-            <DialogDescription>
-              {viewDetail?.month} {viewDetail?.year} • {viewDetail?.department} • {viewDetail?.role}
-            </DialogDescription>
-          </DialogHeader>
-          {viewDetail && (
-            <div className="space-y-4 py-2">
-              {/* Attendance */}
-              <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-2">
-                  {viewDetail.attendanceMode === "actual" ? (
-                    <UserCheck className="h-4 w-4 text-blue-600" />
-                  ) : (
-                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <div>
-                    <p className="text-xs font-medium">
-                      {viewDetail.attendanceMode === "actual" ? "Actual Attendance" : "Full Month (No Attendance Data)"}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {viewDetail.attendanceMode === "actual"
-                        ? "Salary prorated based on HR attendance records"
-                        : "Full salary — attendance tracking not available for this employee"}
-                    </p>
-                  </div>
-                </div>
-                <Badge variant="outline" className="text-xs font-mono">
-                  {viewDetail.daysPresent} / {viewDetail.totalDays} days
-                </Badge>
-              </div>
-
-              {/* Earnings */}
+          {runCashEmployees.length > 0 && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-900">
+              <Banknote className="h-4 w-4 shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Earnings</p>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-sm">
-                    <span>Basic Salary</span>
-                    <span>{formatCurrency(viewDetail.basicSalary)}</span>
-                  </div>
-                  {viewDetail.salary && (
-                    <>
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span className="pl-2">+ HRA (40%)</span>
-                        <span>{formatCurrency(viewDetail.salary.hra)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span className="pl-2">+ DA (20%)</span>
-                        <span>{formatCurrency(viewDetail.salary.da)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span className="pl-2">+ TA (Fixed)</span>
-                        <span>{formatCurrency(viewDetail.salary.ta)}</span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between text-sm font-medium">
-                        <span>Gross Pay</span>
-                        <span>{formatCurrency(viewDetail.salary.grossPay)}</span>
-                      </div>
-                      {viewDetail.attendanceMode === "actual" && (
-                        <div className="flex justify-between text-sm text-blue-600">
-                          <span>Prorated ({viewDetail.daysPresent}/{viewDetail.totalDays} days)</span>
-                          <span>{formatCurrency(Math.round((viewDetail.salary.grossPay / viewDetail.totalDays) * viewDetail.daysPresent))}</span>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
+                <p className="font-medium">Cash disbursement ({runCashEmployees.length})</p>
+                <p className="text-amber-800/90 mt-0.5">
+                  {runCashEmployees.map((e) => e.name).join(", ")} — no bank on file; pay in cash separately.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {runBankEmployees.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2 print:hidden">
+                <p className="text-sm font-semibold">
+                  NEFT / RTGS remittance ({runBankEmployees.length} employee{runBankEmployees.length > 1 ? "s" : ""})
+                </p>
+                {runBankEmployees.length > 1 && (
+                  <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => window.print()}>
+                    <Printer className="h-3.5 w-3.5 mr-1.5" /> Print all forms
+                  </Button>
+                )}
               </div>
 
-              {/* Deductions */}
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">Deductions</p>
-                <div className="space-y-1.5">
-                  {viewDetail.salary && (
-                    <>
-                      <div className="flex justify-between text-sm text-destructive">
-                        <span>PF (12% of Basic)</span>
-                        <span>-{formatCurrency(viewDetail.salary.pf)}</span>
-                      </div>
-                      {viewDetail.salary.esi > 0 && (
-                        <div className="flex justify-between text-sm text-destructive">
-                          <span>ESI (0.75%)</span>
-                          <span>-{formatCurrency(viewDetail.salary.esi)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between text-sm text-destructive">
-                        <span>Professional Tax</span>
-                        <span>-{formatCurrency(viewDetail.salary.pt)}</span>
-                      </div>
-                      <Separator />
-                      <div className="flex justify-between text-sm font-medium text-destructive">
-                        <span>Total Deductions</span>
-                        <span>-{formatCurrency(viewDetail.salary.totalDeductions)}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Net Pay */}
-              <div className="flex justify-between text-lg font-bold">
-                <span>Net Pay</span>
-                <span className="text-primary">{formatCurrency(viewDetail.netPay)}</span>
-              </div>
-
-              {/* Bank Details */}
-              {viewDetail.bankName && (
-                <div className="p-3 rounded-lg bg-muted/30 space-y-1">
-                  <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Payment Details</p>
-                  <div className="flex justify-between text-xs">
-                    <span>Bank</span><span className="font-medium">{viewDetail.bankName}</span>
-                  </div>
-                  {viewDetail.bankAccountNumber && (
-                    <div className="flex justify-between text-xs">
-                      <span>Account</span><span className="font-mono">{viewDetail.bankAccountNumber}</span>
-                    </div>
-                  )}
-                  {viewDetail.ifscCode && (
-                    <div className="flex justify-between text-xs">
-                      <span>IFSC</span><span className="font-mono">{viewDetail.ifscCode}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {viewDetail.status === "Paid" && viewDetail.transactionId && (
-                <div className="flex justify-between text-xs text-muted-foreground pt-1">
-                  <span>Transaction: <span className="font-mono">{viewDetail.transactionId}</span></span>
-                  {viewDetail.paidDate && <span>Paid on: {viewDetail.paidDate}</span>}
-                </div>
+              {runBankEmployees.length === 1 ? (
+                bulkNeftForms[runBankEmployees[0].id] && (
+                  <NeftRtgsFormPanel
+                    title={`NEFT / RTGS — ${runBankEmployees[0].name} (${formatCurrency(runBankEmployees[0].netPay)})`}
+                    data={bulkNeftForms[runBankEmployees[0].id]}
+                    onChange={(patch) =>
+                      setBulkNeftForms((prev) => ({
+                        ...prev,
+                        [runBankEmployees[0].id]: mergeNeftForm(prev[runBankEmployees[0].id], patch),
+                      }))
+                    }
+                  />
+                )
+              ) : (
+                <Accordion type="multiple" className="max-h-[50vh] overflow-y-auto rounded-lg border px-3">
+                  {runBankEmployees.map((emp) => (
+                    <AccordionItem key={emp.id} value={emp.id}>
+                      <AccordionTrigger className="py-3 text-xs hover:no-underline">
+                        <span className="flex flex-1 items-center justify-between gap-3 pr-2 text-left">
+                          <span className="font-medium">{emp.name}</span>
+                          <span className="text-muted-foreground shrink-0">
+                            {emp.bankName} · {formatCurrency(emp.netPay)}
+                          </span>
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        {bulkNeftForms[emp.id] && (
+                          <NeftRtgsFormPanel
+                            title={`NEFT / RTGS — ${emp.name}`}
+                            data={bulkNeftForms[emp.id]}
+                            onChange={(patch) =>
+                              setBulkNeftForms((prev) => ({
+                                ...prev,
+                                [emp.id]: mergeNeftForm(prev[emp.id], patch),
+                              }))
+                            }
+                          />
+                        )}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
               )}
             </div>
           )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setViewDetail(null)}>Close</Button>
-            {viewDetail && viewDetail.status !== "Paid" && (
-              <Button onClick={() => { setShowSingleConfirm({ id: viewDetail.id, name: viewDetail.employeeName, amount: viewDetail.netPay }); setViewDetail(null); }} className="gap-1.5">
-                <IndianRupee className="h-4 w-4" /> Pay Now
-              </Button>
-            )}
+            <Button variant="outline" onClick={() => setRunAllOpen(false)}>Cancel</Button>
+            <Button onClick={handleRunAll}>Confirm Disbursement</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Single Pay Confirmation */}
-      <Dialog open={!!showSingleConfirm} onOpenChange={() => setShowSingleConfirm(null)}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={!!viewEmployee} onOpenChange={(open) => !open && setViewEmployee(null)}>
+        <DialogContent className={viewEmployee?.bankName ? "max-w-6xl max-h-[92vh] overflow-y-auto" : "max-w-md"}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <IndianRupee className="h-5 w-5 text-primary" /> Confirm Salary Payment
-            </DialogTitle>
-            <DialogDescription>This will create an expense transaction and update the ledger.</DialogDescription>
+            <DialogTitle>{viewEmployee?.name}</DialogTitle>
+            <DialogDescription>{viewEmployee?.id} · {viewEmployee?.dept}</DialogDescription>
           </DialogHeader>
-          {showSingleConfirm && (
-            <div className="space-y-3 py-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Employee</span>
-                <span className="font-medium">{showSingleConfirm.name}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Net Pay</span>
-                <span className="font-bold text-primary">{formatCurrency(showSingleConfirm.amount)}</span>
-              </div>
-              <div className="space-y-1.5">
-                <span className="text-xs text-muted-foreground">Pay From Account</span>
-                <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {payableAccounts.map(a => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name} ({a.accountCategory}) — Bal {formatCurrency(a.currentBalance)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {showSingleConfirm && (() => {
-                  const r = employees.find(e => e.id === showSingleConfirm.id);
-                  const isCash = (r?.paymentMode || "bank").toLowerCase() === "cash";
-                  return (
-                    <p className="text-[11px] text-muted-foreground">
-                      Employee pay mode: <span className="font-medium">{isCash ? "Cash" : `Bank — ${r?.bankName || "—"} ${r?.bankAccountNumber || ""}`}</span>
-                    </p>
-                  );
-                })()}
+          {viewEmployee && (
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-muted-foreground">Basic Pay</span><span>{formatCurrency(viewEmployee.basicPay)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Allowance</span><span>{formatCurrency(viewEmployee.allowance)}</span></div>
+              <div className="flex justify-between font-medium"><span>Gross</span><span>{formatCurrency(viewEmployee.gross)}</span></div>
+              <div className="flex justify-between text-red-600"><span>Deductions</span><span>-{formatCurrency(viewEmployee.deductions)}</span></div>
+              <div className="flex justify-between font-bold pt-2 border-t"><span>Net Pay</span><span>{formatCurrency(viewEmployee.netPay)}</span></div>
+              <div className="flex justify-between pt-1"><span className="text-muted-foreground">Bank</span><span>{viewEmployee.bankName || "Cash"}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Status</span>
+                <Badge variant="outline" className={viewEmployee.status === "Paid" ? "bg-green-50 text-green-700 border-green-200" : "bg-amber-50 text-amber-700 border-amber-200"}>{viewEmployee.status}</Badge>
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSingleConfirm(null)}>Cancel</Button>
-            <Button onClick={handleSinglePay} className="gap-1.5">
-              <CheckCircle2 className="h-4 w-4" /> Confirm Payment
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk Pay Confirmation */}
-      <Dialog open={showBulkConfirm} onOpenChange={setShowBulkConfirm}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" /> Bulk Salary Payment
-            </DialogTitle>
-            <DialogDescription>This will process payments for all selected employees.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Employees</span>
-              <span className="font-medium">{selectedPending.length}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total Amount</span>
-              <span className="font-bold text-primary">{formatCurrency(selectedAmount)}</span>
-            </div>
-            <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-1">
-              {selectedPending.map(e => (
-                <div key={e.id} className="flex justify-between text-xs">
-                  <span>{e.employeeName}</span>
-                  <span className="font-medium">{formatCurrency(e.netPay)}</span>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-1.5">
-              <span className="text-xs text-muted-foreground">Pay From Account</span>
-              <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {payableAccounts.map(a => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name} ({a.accountCategory}) — Bal {formatCurrency(a.currentBalance)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowBulkConfirm(false)}>Cancel</Button>
-            <Button variant="outline" onClick={() => downloadBankAdvice(selectedPending, `selected-${selectedMonth}-${selectedYear}`)} className="gap-1.5">
-              <FileDown className="h-4 w-4" /> Download Bank File
-            </Button>
-            <Button onClick={handleBulkPay} className="gap-1.5">
-              <PlayCircle className="h-4 w-4" /> Pay All {selectedPending.length}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Run All Confirmation */}
-      <Dialog open={showRunAllConfirm} onOpenChange={setShowRunAllConfirm}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <PlayCircle className="h-5 w-5 text-primary" /> Run Full Payroll
-            </DialogTitle>
-            <DialogDescription>This will process salary payments for ALL pending employees and create expense transactions in the ledger.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Pending Employees</span>
-              <span className="font-medium">{pendingCount}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total Amount</span>
-              <span className="font-bold text-primary">{formatCurrency(pendingAmount)}</span>
-            </div>
-            <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-1">
-              {employees.filter(e => e.status === "Pending" || e.status === "Processing").map(e => (
-                <div key={e.id} className="flex justify-between text-xs">
-                  <div>
-                    <span>{e.employeeName}</span>
-                    <Badge variant="outline" className="ml-1.5 text-[9px] scale-90">
-                      {e.attendanceMode === "actual" ? `${e.daysPresent}/${e.totalDays}d` : "Full"}
-                    </Badge>
-                  </div>
-                  <span className="font-medium">{formatCurrency(e.netPay)}</span>
-                </div>
-              ))}
-            </div>
-            <div className="space-y-1.5">
-              <span className="text-xs text-muted-foreground">Pay From Account</span>
-              <Select value={sourceAccountId} onValueChange={setSourceAccountId}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {payableAccounts.map(a => (
-                    <SelectItem key={a.id} value={a.id}>
-                      {a.name} ({a.accountCategory}) — Bal {formatCurrency(a.currentBalance)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {(() => {
-                const pending = employees.filter(e => e.status === "Pending" || e.status === "Processing");
-                const bankCount = pending.filter(e => (e.paymentMode || "bank").toLowerCase() !== "cash").length;
-                const cashCount = pending.length - bankCount;
-                return (
-                  <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                    <Banknote className="h-3 w-3" /> {bankCount} bank transfer(s), {cashCount} cash payout(s). Cash items always settle from Cash on Hand.
-                  </p>
-                );
-              })()}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRunAllConfirm(false)}>Cancel</Button>
-            <Button variant="outline" className="gap-1.5" onClick={() => downloadBankAdvice(employees.filter(e => e.status !== "Paid"), `runall-${selectedMonth}-${selectedYear}`)}>
-              <FileDown className="h-4 w-4" /> Download Bank File
-            </Button>
-            <Button onClick={handleRunAll} className="gap-1.5">
-              <CheckCircle2 className="h-4 w-4" /> Confirm & Pay All
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bank Advice History — download for any past month */}
-      <Dialog open={showHistory} onOpenChange={setShowHistory}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" /> Bank Advice History
-            </DialogTitle>
-            <DialogDescription>Download the bank advice file for any past payroll month.</DialogDescription>
-          </DialogHeader>
-          {historyGroups.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-6 text-center">No payroll history yet. Sync HR for a month to begin.</p>
-          ) : (
-            <div className="space-y-2 py-2">
-              {historyGroups.map(g => {
-                const total = g.records.reduce((s, r) => s + r.netPay, 0);
-                const paid = g.records.filter(r => r.status === "Paid").length;
-                return (
-                  <div key={`${g.year}-${g.month}`} className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/40">
-                    <div>
-                      <p className="text-sm font-medium">{g.month} {g.year}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {g.records.length} employee(s) • {paid} paid • {formatCurrency(total)}
-                      </p>
-                    </div>
-                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => downloadBankAdvice(g.records, `${g.month}-${g.year}`)}>
-                      <FileDown className="h-3.5 w-3.5" /> Download
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
+          {viewEmployee?.bankName && viewEmployee.status === "Pending" && (
+            <NeftRtgsFormPanel
+              data={neftForm}
+              onChange={(patch) => setNeftForm((prev) => mergeNeftForm(prev, patch))}
+              title={`NEFT / RTGS — ${viewEmployee.name}`}
+            />
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowHistory(false)}>Close</Button>
+            <Button variant="outline" onClick={() => setViewEmployee(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 };
 

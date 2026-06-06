@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import heroImage from "@/assets/hero-temple.jpg";
+import { getPostLoginRoute, resetTempleOnboarding } from "@/lib/onboardingFlow";
+import { toast } from "sonner";
 
 type LoginRole = "super-admin" | "temple-admin";
 type TempleAuthMethod = "password" | "otp";
@@ -15,7 +17,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const roleParam = searchParams.get("role") as LoginRole | null;
-  const role: LoginRole = roleParam === "temple-admin" ? "temple-admin" : "super-admin";
+  const role: LoginRole = roleParam === "super-admin" ? "super-admin" : "temple-admin";
 
   const [showPassword, setShowPassword] = useState(false);
   const [authMethod, setAuthMethod] = useState<TempleAuthMethod>("password");
@@ -26,9 +28,7 @@ const Login = () => {
     if (role === "super-admin") {
       navigate("/temple-hub");
     } else {
-      // Show Welcome page until setup is complete
-      const setupDone = typeof window !== "undefined" && localStorage.getItem("templeSetupComplete") === "1";
-      navigate(setupDone ? "/temple-hub" : "/welcome");
+      navigate(getPostLoginRoute());
     }
   };
 
@@ -191,13 +191,23 @@ const Login = () => {
                   )}
                 </form>
 
-                <div className="mt-6 text-center">
+                <div className="mt-6 text-center space-y-2">
                   <p className="text-sm text-muted-foreground">
                     New temple?{" "}
                     <button onClick={() => navigate("/temple-register")} className="text-primary hover:text-accent font-medium transition-colors">
                       Register your temple
                     </button>
                   </p>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline"
+                    onClick={() => {
+                      resetTempleOnboarding();
+                      toast.success("Onboarding reset — sign in to see subscription prompt");
+                    }}
+                  >
+                    Demo: replay onboarding flow
+                  </button>
                 </div>
               </>
             ) : (
@@ -244,13 +254,23 @@ const Login = () => {
                   <Button type="submit" className="w-full h-10 font-medium">Sign In</Button>
                 </form>
 
-                <div className="mt-6 text-center">
+                <div className="mt-6 text-center space-y-2">
                   <p className="text-sm text-muted-foreground">
                     Don't have an account?{" "}
                     <button onClick={() => navigate("/temple-register")} className="text-primary hover:text-accent font-medium transition-colors">
-                      Register
+                      Register your temple
                     </button>
                   </p>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-primary underline-offset-2 hover:underline"
+                    onClick={() => {
+                      resetTempleOnboarding();
+                      toast.success("Onboarding reset — log in to see subscription prompt");
+                    }}
+                  >
+                    Demo: replay onboarding flow
+                  </button>
                 </div>
               </>
             )}

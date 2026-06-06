@@ -193,4 +193,30 @@
       transform: translateX(0);
     }
   }
+
+  /* NEFT/RTGS bank remittance — print layout */
+  @media print {
+    aside,
+    .print\\:hidden,
+    [data-sidebar],
+    button:not(.neft-rtgs-form button) {
+      display: none !important;
+    }
+
+    main {
+      margin-left: 0 !important;
+    }
+
+    .neft-rtgs-form input {
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      height: auto !important;
+      background: transparent !important;
+    }
+
+    .neft-rtgs-form .flex-col.lg\\:flex-row > div {
+      page-break-inside: avoid;
+    }
+  }
 }

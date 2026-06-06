@@ -1,265 +1,211 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
-import { FileText, Search, Plus, Eye, CheckCircle2, AlertCircle } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { toast } from "sonner";
-import {
-  procurementInvoices, goodsReceipts, createInvoice, verifyInvoice,
-  type ProcurementInvoice as InvType
-} from "@/stores/procurementStore";
-
-const statusColor: Record<string, string> = {
-  Pending: "bg-amber-50 text-amber-700 border-amber-200",
-  Verified: "bg-blue-50 text-blue-700 border-blue-200",
-  Paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
 
 const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN")}`;
 
+interface Invoice {
+  id: string;
+  poRef: string;
+  grn: string;
+  vendor: string;
+  invDate: string;
+  dueDate: string;
+  base: number;
+  total: number;
+  status: string;
+}
+
+const mockInvoices: Invoice[] = [
+  { id: "inv001", poRef: "a1b2c3", grn: "GRN-8821", vendor: "Sri Pooja Stores", invDate: "2026-06-05", dueDate: "2026-07-05", base: 10593, total: 12500, status: "pending" },
+  { id: "inv002", poRef: "g7h8i9", grn: "GRN-7702", vendor: "Philips Electricals", invDate: "2026-05-30", dueDate: "2026-06-30", base: 8305, total: 9800, status: "paid" },
+  { id: "inv003", poRef: "j1k2l3", grn: "GRN-6601", vendor: "Flower Vendor", invDate: "2026-05-22", dueDate: "2026-06-22", base: 5254, total: 6200, status: "partially paid" },
+  { id: "inv004", poRef: "d4e5f6", grn: "—", vendor: "Temple Catering Co.", invDate: "2026-06-03", dueDate: "2026-07-03", base: 38136, total: 45000, status: "pending" },
+];
+
+const statusStyle = (status: string) => {
+  const s = status.toLowerCase();
+  if (s === "paid") return "bg-green-50 text-green-700 border-green-200";
+  if (s.includes("partial")) return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-red-50 text-red-700 border-red-200";
+};
+
 const ProcurementInvoicePage = () => {
-  const [, setTick] = useState(0);
-  const refresh = () => setTick(t => t + 1);
-  const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [selected, setSelected] = useState<InvType | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterVendor, setFilterVendor] = useState("all");
+  const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [newInv, setNewInv] = useState({ vendor: "", poRef: "", amount: "", invDate: "" });
 
-  // Form
-  const [selectedGRNId, setSelectedGRNId] = useState("");
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [amount, setAmount] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [notes, setNotes] = useState("");
+  const filtered = mockInvoices.filter((b) => {
+    if (filterStatus !== "all" && b.status !== filterStatus) return false;
+    if (filterVendor !== "all" && b.vendor !== filterVendor) return false;
+    return true;
+  });
 
-  const eligibleGRNs = useMemo(() => {
-    const invoicedGRNIds = new Set(procurementInvoices.map(i => i.grnId));
-    return goodsReceipts.filter(g => !invoicedGRNIds.has(g.id) && g.status !== "Pending");
-  }, [showCreate, procurementInvoices.length]);
-
-  const handleSelectGRN = (grnId: string) => {
-    setSelectedGRNId(grnId);
-    const grn = goodsReceipts.find(g => g.id === grnId);
-    if (grn) {
-      const total = grn.items.reduce((s, item) => s + item.acceptedQty * item.unitPrice, 0);
-      setAmount(String(total));
+  const handleAddInvoice = () => {
+    if (!newInv.vendor || !newInv.amount) {
+      toast.error("Vendor and amount are required");
+      return;
     }
+    toast.success("Invoice added (mock)");
+    setAddOpen(false);
+    setNewInv({ vendor: "", poRef: "", amount: "", invDate: "" });
   };
-
-  const handleSave = () => {
-    if (!selectedGRNId) { toast.error("Select a GRN"); return; }
-    if (!invoiceNumber) { toast.error("Enter invoice number"); return; }
-    if (!amount || Number(amount) <= 0) { toast.error("Enter valid amount"); return; }
-
-    const grn = goodsReceipts.find(g => g.id === selectedGRNId);
-    if (!grn) return;
-
-    const inv = createInvoice({
-      invoiceNumber,
-      grnId: selectedGRNId,
-      poId: grn.poId,
-      requestId: grn.requestId,
-      freelancerId: grn.freelancerId,
-      freelancerName: grn.freelancerName,
-      amount: Number(amount),
-      invoiceDate: new Date().toISOString().slice(0, 10),
-      dueDate: dueDate || new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10),
-      notes,
-    });
-
-    if (!inv) { toast.error("Cannot create invoice. GRN not found."); return; }
-    toast.success(`Invoice ${inv.id} created`);
-    setShowCreate(false);
-    resetForm();
-    refresh();
-  };
-
-  const handleVerify = (invId: string) => {
-    if (verifyInvoice(invId)) {
-      toast.success("Invoice verified");
-      refresh();
-    }
-  };
-
-  const resetForm = () => {
-    setSelectedGRNId(""); setInvoiceNumber(""); setAmount(""); setDueDate(""); setNotes("");
-  };
-
-  const filtered = useMemo(() =>
-    procurementInvoices.filter(i =>
-      !search || i.id.toLowerCase().includes(search.toLowerCase()) ||
-      i.invoiceNumber.toLowerCase().includes(search.toLowerCase()) ||
-      i.freelancerName.toLowerCase().includes(search.toLowerCase())
-    ), [search, procurementInvoices.length]
-  );
-
-  const stats = useMemo(() => ({
-    total: procurementInvoices.length,
-    pending: procurementInvoices.filter(i => i.status === "Pending").length,
-    verified: procurementInvoices.filter(i => i.status === "Verified").length,
-    paid: procurementInvoices.filter(i => i.status === "Paid").length,
-    totalAmount: procurementInvoices.reduce((s, i) => s + i.amount, 0),
-  }), [procurementInvoices.length]);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Invoices</h1>
-          <p className="text-muted-foreground text-sm">Supplier invoices linked to goods receipts</p>
-        </div>
-        <Button onClick={() => setShowCreate(true)} size="sm"><Plus className="h-4 w-4 mr-1" /> New Invoice</Button>
-      </div>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <Card>
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-5">
+            <h1 className="text-lg font-semibold">Bills & Invoices Register</h1>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => toast.success("Invoices exported (mock PDF)")}>
+                <Download className="h-3.5 w-3.5" /> Export PDF
+              </Button>
+              <Button size="sm" className="text-xs gap-1.5" onClick={() => setAddOpen(true)}>
+                <Plus className="h-3.5 w-3.5" /> Add Invoice
+              </Button>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card><CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold">{stats.total}</div>
-          <div className="text-xs text-muted-foreground">Total</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold text-amber-600">{stats.pending}</div>
-          <div className="text-xs text-muted-foreground">Pending</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold text-blue-600">{stats.verified}</div>
-          <div className="text-xs text-muted-foreground">Verified</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold text-emerald-600">{formatCurrency(stats.totalAmount)}</div>
-          <div className="text-xs text-muted-foreground">Total Value</div>
-        </CardContent></Card>
-      </div>
+          <div className="flex gap-2 mb-5">
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="text-xs h-9 w-[160px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="partially paid">Partially Paid</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterVendor} onValueChange={setFilterVendor}>
+              <SelectTrigger className="text-xs h-9 w-[180px]"><SelectValue placeholder="All Vendors" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Vendors</SelectItem>
+                {[...new Set(mockInvoices.map((b) => b.vendor))].map((v) => (
+                  <SelectItem key={v} value={v}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search invoices..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-      </div>
-
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Invoice ID</TableHead>
-              <TableHead>Invoice #</TableHead>
-              <TableHead>Supplier</TableHead>
-              <TableHead>GRN</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map(inv => (
-              <TableRow key={inv.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelected(inv); setSheetOpen(true); }}>
-                <TableCell className="font-medium">{inv.id}</TableCell>
-                <TableCell>{inv.invoiceNumber}</TableCell>
-                <TableCell>{inv.freelancerName}</TableCell>
-                <TableCell>{inv.grnId}</TableCell>
-                <TableCell className="text-right font-medium">{formatCurrency(inv.amount)}</TableCell>
-                <TableCell>{inv.invoiceDate}</TableCell>
-                <TableCell><Badge variant="outline" className={statusColor[inv.status]}>{inv.status}</Badge></TableCell>
-                <TableCell className="text-right space-x-1">
-                  {inv.status === "Pending" && (
-                    <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); handleVerify(inv.id); }}>
-                      <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Verify
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); setSelected(inv); setSheetOpen(true); }}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </TableCell>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="text-xs">Invoice No</TableHead>
+                <TableHead className="text-xs">PO Ref</TableHead>
+                <TableHead className="text-xs text-center">GRN No</TableHead>
+                <TableHead className="text-xs">Vendor</TableHead>
+                <TableHead className="text-xs">Inv Date</TableHead>
+                <TableHead className="text-xs">Due Date</TableHead>
+                <TableHead className="text-xs text-right">Base (₹)</TableHead>
+                <TableHead className="text-xs text-right">Total (₹)</TableHead>
+                <TableHead className="text-xs text-center">Status</TableHead>
+                <TableHead className="text-xs text-center">Actions</TableHead>
               </TableRow>
-            ))}
-            {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No invoices found</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {filtered.map((bill) => (
+                <TableRow key={bill.id}>
+                  <TableCell className="text-xs font-mono text-primary font-medium">INV-{bill.id}</TableCell>
+                  <TableCell className="text-xs">PO-{bill.poRef}</TableCell>
+                  <TableCell className="text-xs text-center text-muted-foreground">{bill.grn}</TableCell>
+                  <TableCell className="text-xs font-medium">{bill.vendor}</TableCell>
+                  <TableCell className="text-xs">{bill.invDate}</TableCell>
+                  <TableCell className="text-xs">{bill.dueDate}</TableCell>
+                  <TableCell className="text-xs text-right">{bill.base.toLocaleString("en-IN")}</TableCell>
+                  <TableCell className="text-xs font-bold text-right">{formatCurrency(bill.total)}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className={`text-[10px] uppercase ${statusStyle(bill.status)}`}>{bill.status}</Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button variant="outline" size="sm" className="text-[10px] h-7" onClick={() => setViewInvoice(bill)}>View</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-      {/* Detail Sheet */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="sm:max-w-lg overflow-y-auto">
-          {selected && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" /> {selected.id}
-                </SheetTitle>
-              </SheetHeader>
-              <div className="mt-4 space-y-3 text-sm">
-                <div className="grid grid-cols-2 gap-3">
-                  <div><span className="text-muted-foreground">Invoice #:</span> <span className="font-medium">{selected.invoiceNumber}</span></div>
-                  <div><span className="text-muted-foreground">Supplier:</span> <span className="font-medium">{selected.freelancerName}</span></div>
-                  <div><span className="text-muted-foreground">Amount:</span> <span className="font-medium">{formatCurrency(selected.amount)}</span></div>
-                  <div><span className="text-muted-foreground">Status:</span> <Badge variant="outline" className={statusColor[selected.status]}>{selected.status}</Badge></div>
-                  <div><span className="text-muted-foreground">Date:</span> <span className="font-medium">{selected.invoiceDate}</span></div>
-                  <div><span className="text-muted-foreground">Due:</span> <span className="font-medium">{selected.dueDate}</span></div>
-                </div>
-                <div className="text-xs text-muted-foreground border-t pt-3 space-y-1">
-                  <div>🔗 Request: {selected.requestId} → PO: {selected.poId} → GRN: {selected.grnId} → Invoice: {selected.id}</div>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+          <div className="flex justify-between pt-5 mt-2 border-t text-xs text-muted-foreground">
+            <span>Showing {filtered.length} of {mockInvoices.length} records</span>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Create Dialog */}
-      <Dialog open={showCreate} onOpenChange={v => { if (!v) resetForm(); setShowCreate(v); }}>
+      {/* View Invoice Modal */}
+      <Dialog open={!!viewInvoice} onOpenChange={(open) => !open && setViewInvoice(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Create Invoice</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>INV-{viewInvoice?.id}</DialogTitle>
+          </DialogHeader>
+          {viewInvoice && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div><span className="text-muted-foreground text-xs">Vendor</span><p className="font-medium">{viewInvoice.vendor}</p></div>
+                <div><span className="text-muted-foreground text-xs">Status</span><p><Badge variant="outline" className={statusStyle(viewInvoice.status)}>{viewInvoice.status}</Badge></p></div>
+                <div><span className="text-muted-foreground text-xs">PO Ref</span><p>PO-{viewInvoice.poRef}</p></div>
+                <div><span className="text-muted-foreground text-xs">GRN No</span><p>{viewInvoice.grn}</p></div>
+                <div><span className="text-muted-foreground text-xs">Invoice Date</span><p>{viewInvoice.invDate}</p></div>
+                <div><span className="text-muted-foreground text-xs">Due Date</span><p>{viewInvoice.dueDate}</p></div>
+              </div>
+              <div className="pt-2 border-t space-y-1">
+                <div className="flex justify-between"><span className="text-muted-foreground">Base Amount</span><span>{formatCurrency(viewInvoice.base)}</span></div>
+                <div className="flex justify-between font-bold"><span>Total (incl. GST)</span><span className="text-red-700">{formatCurrency(viewInvoice.total)}</span></div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewInvoice(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Invoice Modal */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Invoice</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Goods Receipt *</Label>
-              <Select value={selectedGRNId} onValueChange={handleSelectGRN}>
-                <SelectTrigger><SelectValue placeholder="Select GRN..." /></SelectTrigger>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Vendor *</Label>
+              <Select value={newInv.vendor} onValueChange={(v) => setNewInv((p) => ({ ...p, vendor: v }))}>
+                <SelectTrigger className="text-xs h-9"><SelectValue placeholder="Select vendor" /></SelectTrigger>
                 <SelectContent>
-                  {eligibleGRNs.length === 0 && <SelectItem value="none" disabled>No eligible GRNs</SelectItem>}
-                  {eligibleGRNs.map(grn => (
-                    <SelectItem key={grn.id} value={grn.id}>
-                      {grn.id} — {grn.freelancerName} (PO: {grn.poId})
-                    </SelectItem>
+                  {[...new Set(mockInvoices.map((b) => b.vendor))].map((v) => (
+                    <SelectItem key={v} value={v}>{v}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {eligibleGRNs.length === 0 && (
-                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> No GRNs available. Create a GRN first.
-                </p>
-              )}
             </div>
-            <div>
-              <Label>Invoice Number *</Label>
-              <Input value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="e.g., SUP-INV-2026-002" />
+            <div className="space-y-1.5">
+              <Label className="text-xs">PO Reference</Label>
+              <Input placeholder="PO-a1b2c3" value={newInv.poRef} onChange={(e) => setNewInv((p) => ({ ...p, poRef: e.target.value }))} className="text-xs h-9" />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Amount *</Label>
-                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} />
+              <div className="space-y-1.5">
+                <Label className="text-xs">Invoice Date</Label>
+                <Input type="date" value={newInv.invDate} onChange={(e) => setNewInv((p) => ({ ...p, invDate: e.target.value }))} className="text-xs h-9" />
               </div>
-              <div>
-                <Label>Due Date</Label>
-                <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+              <div className="space-y-1.5">
+                <Label className="text-xs">Total Amount (₹) *</Label>
+                <Input type="number" placeholder="12500" value={newInv.amount} onChange={(e) => setNewInv((p) => ({ ...p, amount: e.target.value }))} className="text-xs h-9" />
               </div>
-            </div>
-            <div>
-              <Label>Notes</Label>
-              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Optional remarks..." />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowCreate(false); resetForm(); }}>Cancel</Button>
-            <Button onClick={handleSave}>Create Invoice</Button>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddInvoice}>Save Invoice</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

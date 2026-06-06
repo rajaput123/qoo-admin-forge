@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Download, Printer, Plus, Eye, CheckCircle, ArrowDown, ArrowUp, ArrowLeftRight, ChevronsLeft } from "lucide-react";
+import { Download, ArrowDown, ArrowUp, ArrowLeftRight, ChevronsLeft, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { NeftRtgsFormPanel } from "@/components/finance/NeftRtgsFormPanel";
+import { emptyNeftRtgsForm, type NeftRtgsFormData } from "@/data/neftRtgsTemplateData";
+import { isNeftRtgsMode, buildPaymentVoucherNeftForm, mergeNeftForm } from "@/lib/neftRtgsUtils";
 
 interface Voucher {
   id: string;
@@ -23,6 +27,8 @@ interface Voucher {
   amount: number;
   status: "Approved" | "Pending";
 }
+
+const PAGE_SIZE = 5;
 
 const initialVouchers: Voucher[] = [
   {
@@ -72,8 +78,19 @@ const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN")}`;
 const JournalVoucherPage = () => {
   const [vouchers, setVouchers] = useState<Voucher[]>(initialVouchers);
   const [filterType, setFilterType] = useState<string>("all");
+  const [page, setPage] = useState(1);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("action") === "new") {
+      setShowCreateDialog(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("action");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Form states
   const [formType, setFormType] = useState<"Receipt" | "Payment" | "Contra" | "Refund">("Receipt");
@@ -91,6 +108,22 @@ const JournalVoucherPage = () => {
   const [formNarration, setFormNarration] = useState("");
   const [formApprovedBy, setFormApprovedBy] = useState("");
   const [formPurpose, setFormPurpose] = useState("");
+  const [neftForm, setNeftForm] = useState<NeftRtgsFormData>(emptyNeftRtgsForm);
+
+  const showNeftForm = formType === "Payment" && isNeftRtgsMode(formPaymentMode);
+
+  useEffect(() => {
+    if (showNeftForm) {
+      setNeftForm(
+        buildPaymentVoucherNeftForm(
+          formDonorName || formAccount || "Payee",
+          formAmount,
+          formNarration,
+          formAccount
+        )
+      );
+    }
+  }, [showNeftForm, formDonorName, formAccount, formAmount, formNarration, formPaymentMode]);
 
   const resetForm = () => {
     setFormType("Receipt");
@@ -108,6 +141,7 @@ const JournalVoucherPage = () => {
     setFormNarration("");
     setFormApprovedBy("");
     setFormPurpose("");
+    setNeftForm(emptyNeftRtgsForm());
   };
 
   const filtered = vouchers.filter((v) => {
@@ -117,6 +151,9 @@ const JournalVoucherPage = () => {
     if (filterType === "refund" && v.type !== "Refund") return false;
     return true;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const totalIncome = filtered
     .filter((v) => v.type === "Receipt")
@@ -179,52 +216,26 @@ const JournalVoucherPage = () => {
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      {/* Upper header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Journal Voucher
-          </h1>
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Live
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => setShowCreateDialog(true)} className="gap-2 bg-primary hover:bg-primary/95 text-primary-foreground">
-            <Plus className="h-4 w-4" /> New Voucher
-          </Button>
-          <Button variant="outline" className="gap-2" onClick={() => window.print()}>
-            <Printer className="h-4 w-4" /> Print
-          </Button>
-        </div>
-      </div>
-
-      {/* Header and Entry Title Section */}
+      {/* Page toolbar — title/actions live in FinanceLayout topbar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border/60 pb-4">
         <div>
-          <h2 className="text-lg font-bold text-foreground">
-            Journal Voucher Entry
-          </h2>
+          <h2 className="text-lg font-bold text-foreground">Journal Voucher Entry</h2>
           <p className="text-xs text-muted-foreground mt-0.5">Manage and record financial transactions</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={handleExportCSV}>
-            <Download className="h-3.5 w-3.5" /> CSV
+            <Download className="h-3.5 w-3.5" /> Export CSV
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.print()}>
-            <Download className="h-3.5 w-3.5" /> PDF
-          </Button>
-          <Button size="sm" className="gap-1.5 text-xs bg-primary hover:bg-primary/95 text-primary-foreground" onClick={() => setShowCreateDialog(true)}>
-            <Plus className="h-3.5 w-3.5" /> New Voucher
+            <Download className="h-3.5 w-3.5" /> Export PDF
           </Button>
         </div>
       </div>
 
-      {/* Top filter + summary row */}
+      {/* Type filter */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="w-44">
-          <Select value={filterType} onValueChange={setFilterType}>
+          <Select value={filterType} onValueChange={(v) => { setFilterType(v); setPage(1); }}>
             <SelectTrigger className="h-9">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
@@ -320,7 +331,7 @@ const JournalVoucherPage = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((v) => (
+                  paginated.map((v) => (
                     <TableRow key={v.id} className="hover:bg-muted/30 transition-colors">
                       <TableCell>
                         <button
@@ -388,6 +399,18 @@ const JournalVoucherPage = () => {
                 )}
               </TableBody>
             </Table>
+          </div>
+          <div className="flex items-center justify-between pt-4 mt-2 border-t text-xs text-muted-foreground">
+            <span>Showing {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} records</span>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon" className="h-7 w-7" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="px-2">Page {page} of {totalPages}</span>
+              <Button variant="outline" size="icon" className="h-7 w-7" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -483,7 +506,7 @@ const JournalVoucherPage = () => {
           setShowCreateDialog(true);
         }
       }}>
-        <DialogContent className="max-w-2xl bg-white border">
+        <DialogContent className={showNeftForm ? "max-w-6xl max-h-[92vh] overflow-y-auto bg-white border" : "max-w-2xl bg-white border"}>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-foreground">
               New Journal Voucher
@@ -687,6 +710,8 @@ const JournalVoucherPage = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Cash">Cash</SelectItem>
+                      <SelectItem value="NEFT">NEFT</SelectItem>
+                      <SelectItem value="RTGS">RTGS</SelectItem>
                       <SelectItem value="UPI / Bank Transfer">UPI / Bank Transfer</SelectItem>
                       <SelectItem value="Cheque">Cheque</SelectItem>
                       <SelectItem value="Card">Card</SelectItem>
@@ -721,6 +746,14 @@ const JournalVoucherPage = () => {
                   </Select>
                 </div>
               </div>
+
+              {showNeftForm && (
+                <NeftRtgsFormPanel
+                  data={neftForm}
+                  onChange={(patch) => setNeftForm((prev) => mergeNeftForm(prev, patch))}
+                  title="Bank remittance — payment voucher"
+                />
+              )}
 
               {/* Row 6: Narration */}
               <div className="space-y-1.5">

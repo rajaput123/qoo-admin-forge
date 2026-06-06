@@ -1,173 +1,210 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Printer, TrendingUp, PieChart, FileBarChart } from "lucide-react";
-import { financeSelectors } from "@/modules/finance/financeStore";
+import { Download, Printer } from "lucide-react";
+import { toast } from "sonner";
+
+const formatCurrency = (val: number) => val.toLocaleString("en-IN");
+
+const mockIncomeExpenditure = {
+  income: {
+    total: 318032,
+    lines: [
+      { label: "Hundi Collections", amount: 10123 },
+      { label: "Online / UPI Donations", amount: 300001 },
+      { label: "Seva & Bookings", amount: 4120 },
+      { label: "Other Income (vouchers)", amount: 3788 },
+    ],
+  },
+  expenditure: {
+    total: 301415,
+    lines: [
+      { label: "Payroll & Salaries", amount: 116700 },
+      { label: "Pooja Materials", amount: 45200 },
+      { label: "Utilities & Maintenance", amount: 38300 },
+      { label: "Annadanam & Catering", amount: 45000 },
+      { label: "Admin & Misc", amount: 56215 },
+    ],
+  },
+  net_surplus: 16617,
+};
+
+const mockReceiptsPayments = {
+  opening: { cash_in_hand: 245000, bank_accounts: [{ name: "SBI Current", bank_name: "SBI", amount: 8800000 }], total_opening_cash_bank: 9045000 },
+  receipts_during_period: {
+    lines: [
+      { label: "Donations & Hundi", amount: 185000 },
+      { label: "Seva & Bookings", amount: 42000 },
+      { label: "Online / UPI Receipts", amount: 342500 },
+    ],
+  },
+  payments_during_period: {
+    lines: [
+      { label: "Vendor Payments", amount: 87500 },
+      { label: "Payroll & Salaries", amount: 185000 },
+      { label: "Utilities & Maintenance", amount: 28300 },
+    ],
+  },
+  closing: { cash_in_hand: 298700, bank_accounts: [{ name: "SBI Current", bank_name: "SBI", amount: 8854200 }], total_closing_cash_bank: 9152900 },
+  totals: { receipts_side: 9332500, payments_side: 300800, net_movement: 9031700 },
+};
+
+const SectionHeader = ({ children }: { children: React.ReactNode }) => (
+  <div className="text-xs font-semibold px-3 py-2 bg-muted border-l-4 border-primary rounded-r-lg mb-2">{children}</div>
+);
 
 const FinancialReports = () => {
-  const accounts = financeSelectors.getAccounts();
-  const [reportPeriod] = useState("FY 2025-26");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
-  const getSum = (type: string) => accounts.filter(a => a.type === type).reduce((s, a) => s + a.currentBalance, 0);
-
-  const totalIncome = getSum("Income");
-  const totalExpense = getSum("Expense");
-  const netSurplus = totalIncome - totalExpense;
-  const totalAssets = getSum("Asset");
-  const totalLiabilities = getSum("Liability");
-  const totalEquity = getSum("Equity");
+  const { income, expenditure, net_surplus } = mockIncomeExpenditure;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="flex items-center justify-between">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Financial Reports</h1>
-          <p className="text-muted-foreground">Standardized financial statements and analysis</p>
+          <p className="text-sm text-muted-foreground">Income & Expenditure and Receipts & Payments</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2"><Printer className="h-4 w-4" /> Print</Button>
-          <Button variant="outline" className="gap-2"><Download className="h-4 w-4" /> Export PDF</Button>
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => window.print()}>
+            <Printer className="h-3.5 w-3.5" /> Print
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => toast.success("Report exported (mock PDF)")}>
+            <Download className="h-3.5 w-3.5" /> Export PDF
+          </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="pnl" className="space-y-4">
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Start Date</Label>
+              <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="text-xs h-9 w-[160px]" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">End Date</Label>
+              <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="text-xs h-9 w-[160px]" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs defaultValue="income">
         <TabsList>
-          <TabsTrigger value="pnl" className="gap-2"><TrendingUp className="h-4 w-4" /> Income & Expense</TabsTrigger>
-          <TabsTrigger value="bs" className="gap-2"><PieChart className="h-4 w-4" /> Balance Sheet</TabsTrigger>
-          <TabsTrigger value="funds" className="gap-2"><FileBarChart className="h-4 w-4" /> Fund Flow</TabsTrigger>
+          <TabsTrigger value="income" className="text-xs">Income & Expenditure</TabsTrigger>
+          <TabsTrigger value="receipts" className="text-xs">Receipts & Payments</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pnl" className="space-y-4">
+        <TabsContent value="income" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Statement of Income & Expenditure</CardTitle>
-              <CardDescription>For the period {reportPeriod}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border p-4">
-                <Table>
-                  <TableBody>
-                    <TableRow className="bg-muted/50 font-bold"><TableCell colSpan={2}>INCOME</TableCell></TableRow>
-                    {accounts.filter(a => a.type === "Income" && a.currentBalance > 0).map(a => (
-                      <TableRow key={a.id}>
-                        <TableCell>{a.name}</TableCell>
-                        <TableCell className="text-right font-mono">₹{a.currentBalance.toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow className="font-bold border-t-2"><TableCell>Total Income</TableCell><TableCell className="text-right">₹{totalIncome.toLocaleString()}</TableCell></TableRow>
-
-                    <TableRow className="h-4 border-none"><TableCell colSpan={2}></TableCell></TableRow>
-
-                    <TableRow className="bg-muted/50 font-bold"><TableCell colSpan={2}>EXPENSES</TableCell></TableRow>
-                    {accounts.filter(a => a.type === "Expense" && a.currentBalance > 0).map(a => (
-                      <TableRow key={a.id}>
-                        <TableCell>{a.name}</TableCell>
-                        <TableCell className="text-right font-mono">₹{a.currentBalance.toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
-                    <TableRow className="font-bold border-t-2"><TableCell>Total Expenses</TableCell><TableCell className="text-right">₹{totalExpense.toLocaleString()}</TableCell></TableRow>
-
-                    <TableRow className="h-8 border-none"><TableCell colSpan={2}></TableCell></TableRow>
-
-                    <TableRow className="bg-green-50 font-bold text-lg text-green-700">
-                      <TableCell>NET SURPLUS / (DEFICIT)</TableCell>
-                      <TableCell className="text-right">₹{netSurplus.toLocaleString()}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="bs" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Statement of Financial Position</CardTitle>
-              <CardDescription>As of {new Date().toLocaleDateString()}</CardDescription>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-4">
-                  <h3 className="font-bold text-lg border-b pb-2">ASSETS</h3>
-                  <Table>
-                    <TableBody>
-                      {accounts.filter(a => a.type === "Asset" && a.currentBalance > 0).map(a => (
-                        <TableRow key={a.id}>
-                          <TableCell>{a.name}</TableCell>
-                          <TableCell className="text-right font-mono">₹{a.currentBalance.toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
-                      <TableRow className="font-bold bg-muted/20">
-                        <TableCell>TOTAL ASSETS</TableCell>
-                        <TableCell className="text-right">₹{totalAssets.toLocaleString()}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+                <div>
+                  <SectionHeader>Expenditure</SectionHeader>
+                  <div className="space-y-1 mb-6">
+                    {expenditure.lines.map((row) => (
+                      <div key={row.label} className="flex justify-between py-2 text-xs px-4 text-muted-foreground border-b last:border-0">
+                        <span>{row.label}</span>
+                        <span className="font-mono">₹{formatCurrency(row.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between py-3 px-4 font-bold bg-muted border-t text-xs mb-1">
+                    <span>Total Expenditure</span>
+                    <span className="font-mono">₹{formatCurrency(expenditure.total)}</span>
+                  </div>
+                  <div className={`flex justify-between py-3 px-4 font-bold border-y text-xs mb-8 ${net_surplus >= 0 ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}>
+                    <span>{net_surplus >= 0 ? "Surplus" : "Deficit"}</span>
+                    <span className="font-mono">₹{formatCurrency(Math.abs(net_surplus))}</span>
+                  </div>
                 </div>
-                <div className="space-y-4">
-                  <h3 className="font-bold text-lg border-b pb-2">LIABILITIES & EQUITY</h3>
-                  <Table>
-                    <TableBody>
-                      <TableRow className="bg-muted/50 font-bold"><TableCell colSpan={2}>LIABILITIES</TableCell></TableRow>
-                      {accounts.filter(a => a.type === "Liability" && a.currentBalance > 0).map(a => (
-                        <TableRow key={a.id}>
-                          <TableCell>{a.name}</TableCell>
-                          <TableCell className="text-right font-mono">₹{a.currentBalance.toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
-                      <TableRow className="font-bold"><TableCell>Total Liabilities</TableCell><TableCell className="text-right">₹{totalLiabilities.toLocaleString()}</TableCell></TableRow>
-                      <TableRow className="h-4 border-none"><TableCell colSpan={2}></TableCell></TableRow>
-                      <TableRow className="bg-muted/50 font-bold"><TableCell colSpan={2}>EQUITY & FUNDS</TableCell></TableRow>
-                      {accounts.filter(a => a.type === "Equity" && a.currentBalance > 0).map(a => (
-                        <TableRow key={a.id}>
-                          <TableCell>{a.name}</TableCell>
-                          <TableCell className="text-right font-mono">₹{a.currentBalance.toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
-                      <TableRow>
-                        <TableCell>Retained Earnings (Current Year)</TableCell>
-                        <TableCell className="text-right font-mono">₹{netSurplus.toLocaleString()}</TableCell>
-                      </TableRow>
-                      <TableRow className="font-bold bg-muted/20 border-t-2">
-                        <TableCell>TOTAL LIABILITIES & EQUITY</TableCell>
-                        <TableCell className="text-right">₹{(totalLiabilities + totalEquity + netSurplus).toLocaleString()}</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
+
+                <div>
+                  <SectionHeader>Income</SectionHeader>
+                  <div className="space-y-1 mb-6">
+                    {income.lines.map((row) => (
+                      <div key={row.label} className="flex justify-between py-2 text-xs px-4 text-muted-foreground border-b last:border-0">
+                        <span>{row.label}</span>
+                        <span className="font-mono">₹{formatCurrency(row.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between py-3 px-4 font-bold bg-muted border-t text-xs">
+                    <span>Total Income</span>
+                    <span className="font-mono">₹{formatCurrency(income.total)}</span>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="funds">
+        <TabsContent value="receipts" className="mt-4">
           <Card>
-            <CardHeader><CardTitle>Fund Flow Statement</CardTitle></CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fund</TableHead>
-                    <TableHead className="text-right">Income</TableHead>
-                    <TableHead className="text-right">Expense</TableHead>
-                    <TableHead className="text-right">Balance</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {financeSelectors.getFundSummaries().map(f => (
-                    <TableRow key={f.id}>
-                      <TableCell className="font-medium">{f.name}</TableCell>
-                      <TableCell className="text-right text-green-600 font-mono">₹{f.income.toLocaleString()}</TableCell>
-                      <TableCell className="text-right text-red-600 font-mono">₹{f.expense.toLocaleString()}</TableCell>
-                      <TableCell className="text-right font-bold font-mono">₹{f.balance.toLocaleString()}</TableCell>
-                    </TableRow>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <SectionHeader>Receipts</SectionHeader>
+                  <div className="text-xs font-bold mb-1 px-2">Opening Balance</div>
+                  <div className="divide-y mb-6">
+                    <div className="flex justify-between py-2 text-xs px-4 text-muted-foreground">
+                      <span>Cash in Hand</span>
+                      <span className="font-mono">₹{formatCurrency(mockReceiptsPayments.opening.cash_in_hand)}</span>
+                    </div>
+                    {mockReceiptsPayments.opening.bank_accounts.map((b, i) => (
+                      <div key={i} className="flex justify-between py-2 text-xs px-4 text-muted-foreground">
+                        <span>{b.name} ({b.bank_name})</span>
+                        <span className="font-mono">₹{formatCurrency(b.amount)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between py-2.5 text-xs px-4 font-bold bg-muted">
+                      <span>Total Opening</span>
+                      <span className="font-mono">₹{formatCurrency(mockReceiptsPayments.opening.total_opening_cash_bank)}</span>
+                    </div>
+                  </div>
+                  <div className="text-xs font-bold mb-1 px-2">During the Period</div>
+                  {mockReceiptsPayments.receipts_during_period.lines.map((row) => (
+                    <div key={row.label} className="flex justify-between py-2 text-xs px-4 text-muted-foreground border-b">
+                      <span>{row.label}</span>
+                      <span className="font-mono">₹{formatCurrency(row.amount)}</span>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+
+                <div>
+                  <SectionHeader>Payments</SectionHeader>
+                  <div className="text-xs font-bold mb-1 px-2">During the Period</div>
+                  {mockReceiptsPayments.payments_during_period.lines.map((row) => (
+                    <div key={row.label} className="flex justify-between py-2 text-xs px-4 text-muted-foreground border-b">
+                      <span>{row.label}</span>
+                      <span className="font-mono">₹{formatCurrency(row.amount)}</span>
+                    </div>
+                  ))}
+                  <div className="mt-8">
+                    <div className="text-xs font-bold mb-1 px-2">Closing Balance</div>
+                    <div className="flex justify-between py-2 text-xs px-4 text-muted-foreground">
+                      <span>Cash in Hand</span>
+                      <span className="font-mono">₹{formatCurrency(mockReceiptsPayments.closing.cash_in_hand)}</span>
+                    </div>
+                    {mockReceiptsPayments.closing.bank_accounts.map((b, i) => (
+                      <div key={i} className="flex justify-between py-2 text-xs px-4 text-muted-foreground">
+                        <span>{b.name}</span>
+                        <span className="font-mono">₹{formatCurrency(b.amount)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between py-2.5 text-xs px-4 font-bold bg-muted mt-2">
+                      <span>Total Closing</span>
+                      <span className="font-mono">₹{formatCurrency(mockReceiptsPayments.closing.total_closing_cash_bank)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

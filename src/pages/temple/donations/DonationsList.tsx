@@ -7,9 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Search, Plus, Download, FileDown, User, Phone, Mail, MapPin, CreditCard, Hash, Banknote, Receipt, X } from "lucide-react";
-import { useDonations, useDonors } from "@/modules/donations/hooks";
+import { Search, Plus, Download, FileDown, User, Phone, Mail, MapPin, CreditCard, Hash, Banknote, Receipt, X, Award } from "lucide-react";
+import { useDonations, useDonors, useReceipts80G } from "@/modules/donations/hooks";
 import { downloadReceiptPdf } from "@/lib/pdfDocs";
+import { download80GReceiptPdf } from "@/lib/eightyGReceipt";
 import { downloadCsv } from "@/lib/csvExport";
 import { useToast } from "@/hooks/use-toast";
 import AddDonationDialog from "./AddDonationDialog";
@@ -28,6 +29,7 @@ const DonationsList = () => {
   const [addOpen, setAddOpen] = useState(false);
   const donations = useDonations();
   const donors = useDonors();
+  const receipts80G = useReceipts80G();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<DonationType>("All");
   const [searchQuery, setSearchQuery] = useState("");
@@ -70,6 +72,9 @@ const DonationsList = () => {
 
   const getDonorInfo = (donorId: string) => donors.find(d => d.donorId === donorId);
 
+  const get80GReceipt = (donationId: string) =>
+    receipts80G.find((r) => r.donationId === donationId && r.status === "Generated");
+
   const handleDownloadReceipt = (donation: (typeof donations)[number]) => {
     try {
       const donor = getDonorInfo(donation.donorId);
@@ -84,6 +89,21 @@ const DonationsList = () => {
       toast({ title: "Receipt downloaded", description: `${donation.receiptNo}.pdf saved` });
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to download receipt", variant: "destructive" });
+    }
+  };
+
+  const handleDownload80G = (donation: (typeof donations)[number]) => {
+    try {
+      const receipt = get80GReceipt(donation.donationId);
+      if (!receipt) {
+        toast({ title: "80G not available", description: "Certificate not generated for this donation", variant: "destructive" });
+        return;
+      }
+      const donor = getDonorInfo(donation.donorId);
+      download80GReceiptPdf(receipt, donor?.city && donor.city !== "-" ? donor.city : undefined);
+      toast({ title: "80G receipt downloaded", description: `${receipt.receipt80GId}.pdf — for IT portal` });
+    } catch (error: unknown) {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to download 80G", variant: "destructive" });
     }
   };
 
@@ -168,22 +188,25 @@ const DonationsList = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
+                      <TableHead>Donation ID</TableHead>
                       <TableHead>Donor Name</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead>Fund</TableHead>
                       <TableHead>Donation Type</TableHead>
-                      <TableHead>Receipt Number</TableHead>
+                      <TableHead>Donation Receipt</TableHead>
+                      <TableHead>80G Receipt</TableHead>
                       <TableHead>PAN No</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredDonations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">No donations found</TableCell>
+                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No donations found</TableCell>
                       </TableRow>
                     ) : filteredDonations.map((donation) => {
                       const donationType = getDonationType(donation);
                       const isSelected = sel?.donationId === donation.donationId;
+                      const receipt80G = get80GReceipt(donation.donationId);
                       return (
                         <TableRow
                           key={donation.donationId}
@@ -193,21 +216,30 @@ const DonationsList = () => {
                           <TableCell>
                             {donation.date ? new Date(donation.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
                           </TableCell>
+                          <TableCell className="font-mono text-xs">{donation.donationId || "—"}</TableCell>
                           <TableCell className="font-medium">{donation.donorName || "—"}</TableCell>
                           <TableCell className="text-right font-semibold">{formatCurrency(donation.amount)}</TableCell>
                           <TableCell>{donation.purpose || "—"}</TableCell>
                           <TableCell>
                             <Badge className={typeColors[donationType] || "bg-gray-100 text-gray-700"}>{donationType}</Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            <div className="flex items-center gap-2">
+                          <TableCell className="font-mono text-xs">
+                            <Button variant="link" size="sm"
+                              className="h-auto p-0 text-xs text-primary hover:underline"
+                              onClick={(e) => { e.stopPropagation(); handleDownloadReceipt(donation); }}>
+                              <Receipt className="h-3 w-3 mr-1" />{donation.receiptNo}
+                            </Button>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {receipt80G ? (
                               <Button variant="link" size="sm"
-                                className="h-auto p-0 font-mono text-sm text-primary hover:underline"
-                                onClick={(e) => { e.stopPropagation(); handleDownloadReceipt(donation); }}>
-                                <FileDown className="h-3 w-3 mr-1" />{donation.receiptNo}
+                                className="h-auto p-0 text-xs text-green-700 hover:underline"
+                                onClick={(e) => { e.stopPropagation(); handleDownload80G(donation); }}>
+                                <Award className="h-3 w-3 mr-1" />{receipt80G.receipt80GId}
                               </Button>
-                              {donation.is80G && <Badge variant="outline" className="text-xs bg-green-50 text-green-700">80G</Badge>}
-                            </div>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell className="font-mono text-xs">
                             {(() => {
@@ -286,7 +318,6 @@ const DonationsList = () => {
             <div className="grid grid-cols-2 gap-x-3 shrink-0">
               {[
                 { icon: Hash, label: "Donation ID", value: sel.donationId },
-                { icon: Receipt, label: "Receipt No", value: sel.receiptNo },
                 { icon: Banknote, label: "Purpose", value: sel.purpose },
                 { icon: CreditCard, label: "Payment", value: sel.mode || sel.channel },
                 ...(sel.referenceNo ? [{ icon: Hash, label: "Ref No", value: sel.referenceNo }] : []),
@@ -327,11 +358,8 @@ const DonationsList = () => {
               ) : null)}
             </div>
 
-            {/* Spacer + action */}
+            {/* Spacer */}
             <div className="flex-1" />
-            <Button className="w-full mt-4 shrink-0" onClick={() => handleDownloadReceipt(sel)}>
-              <FileDown className="h-4 w-4 mr-2" />Download Receipt
-            </Button>
           </CardContent>
         </div>
       )}

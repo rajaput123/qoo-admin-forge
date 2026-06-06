@@ -1,271 +1,251 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
-import { Wallet, Search, Plus, Eye, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import {
-  procurementInvoices, procurementPayments, procurementTransactions, procurementLedger,
-  createPayment, type ProcurementPayment as PayType
-} from "@/stores/procurementStore";
+import { NeftRtgsFormPanel } from "@/components/finance/NeftRtgsFormPanel";
+import { emptyNeftRtgsForm, type NeftRtgsFormData } from "@/data/neftRtgsTemplateData";
+import { isNeftRtgsMode, buildVendorNeftForm, mergeNeftForm } from "@/lib/neftRtgsUtils";
 
-const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN")}`;
+const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
+
+const mockStats = {
+  paidThisMonth: { amount: 98000, count: 3 },
+  pendingPayment: { amount: 57500, count: 2 },
+  overdue: { amount: 45000, count: 1 },
+  tdsDeducted: 4200,
+};
+
+const mockPayments = [
+  { id: "vp001", date: "2026-06-05", vendor: "Philips Electricals", invoiceNo: "INV-inv002", mode: "NEFT", bank: "HDFC Bank", utr: "NEFT88291034", paid: 9800, tds: 980, status: "Paid" },
+  { id: "vp002", date: "2026-06-02", vendor: "Flower Vendor", invoiceNo: "INV-inv003", mode: "BANK", bank: "SBI Current", utr: "UTR77283910", paid: 6200, tds: 620, status: "Paid" },
+  { id: "vp003", date: "2026-05-28", vendor: "Security Services Ltd", invoiceNo: "INV-sec001", mode: "CHEQUE", bank: "—", utr: "CHQ-445821", paid: 22000, tds: 2200, status: "Paid" },
+];
+
+interface AgeingItem {
+  invoiceNo: string;
+  vendor: string;
+  invoiceDate: string;
+  dueDate: string;
+  invoiceAmt: number;
+  paid: number;
+  outstanding: number;
+  ageing: string;
+  priority: string;
+}
+
+const mockAgeing: AgeingItem[] = [
+  { invoiceNo: "INV-inv001", vendor: "Sri Pooja Stores", invoiceDate: "2026-06-05", dueDate: "2026-07-05", invoiceAmt: 12500, paid: 0, outstanding: 12500, ageing: "0 days", priority: "Routine" },
+  { invoiceNo: "INV-inv004", vendor: "Temple Catering Co.", invoiceDate: "2026-06-03", dueDate: "2026-07-03", invoiceAmt: 45000, paid: 0, outstanding: 45000, ageing: "3 days", priority: "Urgent" },
+];
 
 const ProcurementPaymentPage = () => {
-  const [, setTick] = useState(0);
-  const refresh = () => setTick(t => t + 1);
-  const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [selected, setSelected] = useState<PayType | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [recordOpen, setRecordOpen] = useState(false);
+  const [payNowItem, setPayNowItem] = useState<AgeingItem | null>(null);
+  const [form, setForm] = useState({ vendor: "", invoiceNo: "", amount: "", mode: "NEFT", utr: "" });
+  const [neftForm, setNeftForm] = useState<NeftRtgsFormData>(emptyNeftRtgsForm);
+  const showNeftForm = isNeftRtgsMode(form.mode);
 
-  // Form
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"Cash" | "Bank" | "UPI">("Bank");
-  const [amount, setAmount] = useState("");
-  const [referenceNumber, setReferenceNumber] = useState("");
+  useEffect(() => {
+    if (showNeftForm) {
+      setNeftForm(buildVendorNeftForm(form.vendor, form.amount, form.invoiceNo));
+    }
+  }, [showNeftForm, form.vendor, form.amount, form.invoiceNo]);
 
-  const payableInvoices = useMemo(() =>
-    procurementInvoices.filter(i => i.status === "Verified"), [showCreate, procurementInvoices.length]
-  );
-
-  const handleSelectInvoice = (invId: string) => {
-    setSelectedInvoiceId(invId);
-    const inv = procurementInvoices.find(i => i.id === invId);
-    if (inv) setAmount(String(inv.amount));
+  const openRecord = (prefill?: AgeingItem) => {
+    if (prefill) {
+      setForm({ vendor: prefill.vendor, invoiceNo: prefill.invoiceNo, amount: String(prefill.outstanding), mode: "NEFT", utr: "" });
+      setPayNowItem(prefill);
+    } else {
+      setForm({ vendor: "", invoiceNo: "", amount: "", mode: "NEFT", utr: "" });
+      setPayNowItem(null);
+    }
+    setNeftForm(emptyNeftRtgsForm());
+    setRecordOpen(true);
   };
 
-  const handleSave = () => {
-    if (!selectedInvoiceId) { toast.error("Select an invoice"); return; }
-    if (!amount || Number(amount) <= 0) { toast.error("Enter valid amount"); return; }
-
-    const inv = procurementInvoices.find(i => i.id === selectedInvoiceId);
-    if (!inv) return;
-
-    const result = createPayment({
-      invoiceId: selectedInvoiceId,
-      poId: inv.poId,
-      requestId: inv.requestId,
-      freelancerId: inv.freelancerId,
-      freelancerName: inv.freelancerName,
-      amount: Number(amount),
-      paymentMethod,
-      paymentDate: new Date().toISOString().slice(0, 10),
-      referenceNumber,
-      status: Number(amount) >= inv.amount ? "Full" : "Partial",
-    });
-
-    if (!result) { toast.error("Cannot create payment. Invoice may already be paid."); return; }
-
-    toast.success(
-      <div className="space-y-1">
-        <div>✅ Payment {result.payment.id} recorded</div>
-        <div className="text-xs text-muted-foreground">Transaction {result.transaction.id} & Ledger {result.ledger.id} auto-created</div>
-      </div>
-    );
-    setShowCreate(false);
-    resetForm();
-    refresh();
+  const handleRecordPayment = () => {
+    if (!form.vendor || !form.amount) {
+      toast.error("Vendor and amount are required");
+      return;
+    }
+    if (showNeftForm && !neftForm.beneficiaryAccountNo) {
+      toast.error("Complete beneficiary account details in the NEFT form");
+      return;
+    }
+    toast.success(`Payment of ${formatCurrency(Number(form.amount))} recorded (mock)`);
+    setRecordOpen(false);
+    setPayNowItem(null);
+    setForm({ vendor: "", invoiceNo: "", amount: "", mode: "NEFT", utr: "" });
+    setNeftForm(emptyNeftRtgsForm());
   };
-
-  const resetForm = () => {
-    setSelectedInvoiceId(""); setPaymentMethod("Bank"); setAmount(""); setReferenceNumber("");
-  };
-
-  const filtered = useMemo(() =>
-    procurementPayments.filter(p =>
-      !search || p.id.toLowerCase().includes(search.toLowerCase()) ||
-      p.freelancerName.toLowerCase().includes(search.toLowerCase()) ||
-      p.invoiceId.toLowerCase().includes(search.toLowerCase())
-    ), [search, procurementPayments.length]
-  );
-
-  const stats = useMemo(() => ({
-    total: procurementPayments.length,
-    totalAmount: procurementPayments.reduce((s, p) => s + p.amount, 0),
-    transactions: procurementTransactions.length,
-    ledgerEntries: procurementLedger.length,
-  }), [procurementPayments.length]);
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Payments</h1>
-          <p className="text-muted-foreground text-sm">Record payments against verified invoices → auto-creates Transaction & Ledger</p>
-        </div>
-        <Button onClick={() => setShowCreate(true)} size="sm"><Plus className="h-4 w-4 mr-1" /> Record Payment</Button>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Paid This Month", value: mockStats.paidThisMonth.amount, sub: `${mockStats.paidThisMonth.count} transactions`, color: "text-green-700", bg: "bg-green-50 border-green-200" },
+          { label: "Pending Payment", value: mockStats.pendingPayment.amount, sub: `${mockStats.pendingPayment.count} invoices`, color: "text-amber-700", bg: "bg-amber-50 border-amber-200" },
+          { label: "Overdue", value: mockStats.overdue.amount, sub: `${mockStats.overdue.count} overdue — Urgent`, color: "text-red-700", bg: "bg-red-50 border-red-200" },
+          { label: "TDS Deducted", value: mockStats.tdsDeducted, sub: "This month", color: "text-blue-700", bg: "bg-blue-50 border-blue-200" },
+        ].map((s) => (
+          <Card key={s.label} className={`${s.bg} border`}>
+            <CardContent className="p-4">
+              <div className={`text-xs font-bold uppercase tracking-wider mb-2 ${s.color} opacity-80`}>{s.label}</div>
+              <div className={`text-2xl font-bold ${s.color}`}>{formatCurrency(s.value)}</div>
+              <div className={`text-xs mt-1 opacity-70 ${s.color}`}>{s.sub}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card><CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold">{stats.total}</div>
-          <div className="text-xs text-muted-foreground">Payments</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold text-emerald-600">{formatCurrency(stats.totalAmount)}</div>
-          <div className="text-xs text-muted-foreground">Total Paid</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold text-blue-600">{stats.transactions}</div>
-          <div className="text-xs text-muted-foreground">Transactions</div>
-        </CardContent></Card>
-        <Card><CardContent className="p-4 text-center">
-          <div className="text-2xl font-bold text-purple-600">{stats.ledgerEntries}</div>
-          <div className="text-xs text-muted-foreground">Ledger Entries</div>
-        </CardContent></Card>
-      </div>
+      <Card>
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between mb-5">
+            <h1 className="text-lg font-semibold">Recent Payments Registry</h1>
+            <Button size="sm" className="text-xs gap-1.5" onClick={() => openRecord()}>
+              <Plus className="h-3.5 w-3.5" /> Record Payment
+            </Button>
+          </div>
 
-      {/* Flow indicator */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
-        <span className="font-medium">Auto-flow:</span>
-        <span>Payment</span> <ArrowRight className="h-3 w-3" />
-        <span>Transaction</span> <ArrowRight className="h-3 w-3" />
-        <span>Ledger Entry</span>
-      </div>
-
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search payments..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
-      </div>
-
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Payment ID</TableHead>
-              <TableHead>Invoice</TableHead>
-              <TableHead>Supplier</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead>Method</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map(pay => (
-              <TableRow key={pay.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelected(pay); setSheetOpen(true); }}>
-                <TableCell className="font-medium">{pay.id}</TableCell>
-                <TableCell>{pay.invoiceId}</TableCell>
-                <TableCell>{pay.freelancerName}</TableCell>
-                <TableCell className="text-right font-medium">{formatCurrency(pay.amount)}</TableCell>
-                <TableCell><Badge variant="outline">{pay.paymentMethod}</Badge></TableCell>
-                <TableCell>{pay.paymentDate}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={pay.status === "Full" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}>
-                    {pay.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); setSelected(pay); setSheetOpen(true); }}>
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </TableCell>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="text-xs">Payment Ref</TableHead>
+                <TableHead className="text-xs">Date</TableHead>
+                <TableHead className="text-xs">Vendor</TableHead>
+                <TableHead className="text-xs">Invoice No</TableHead>
+                <TableHead className="text-xs">Mode</TableHead>
+                <TableHead className="text-xs">Bank / UTR</TableHead>
+                <TableHead className="text-xs text-right">Paid (₹)</TableHead>
+                <TableHead className="text-xs text-right">TDS (₹)</TableHead>
+                <TableHead className="text-xs text-center">Status</TableHead>
               </TableRow>
-            ))}
-            {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No payments found</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {mockPayments.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="text-xs font-mono text-muted-foreground">V-{p.id.slice(2)}</TableCell>
+                  <TableCell className="text-xs">{p.date}</TableCell>
+                  <TableCell className="text-xs font-medium">{p.vendor}</TableCell>
+                  <TableCell className="text-xs font-mono">{p.invoiceNo}</TableCell>
+                  <TableCell><Badge variant="secondary" className="text-[10px] uppercase">{p.mode}</Badge></TableCell>
+                  <TableCell className="text-xs font-mono text-muted-foreground">
+                    <div className="opacity-60">{p.bank}</div>
+                    <div className="font-bold">{p.utr}</div>
+                  </TableCell>
+                  <TableCell className="text-xs font-bold text-green-700 text-right">{formatCurrency(p.paid)}</TableCell>
+                  <TableCell className="text-xs text-right">{formatCurrency(p.tds)}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] uppercase">{p.status}</Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      {/* Detail Sheet */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent className="sm:max-w-lg overflow-y-auto">
-          {selected && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="flex items-center gap-2">
-                  <Wallet className="h-5 w-5" /> {selected.id}
-                </SheetTitle>
-              </SheetHeader>
-              <div className="mt-4 space-y-4 text-sm">
-                <div className="grid grid-cols-2 gap-3">
-                  <div><span className="text-muted-foreground">Invoice:</span> <span className="font-medium">{selected.invoiceId}</span></div>
-                  <div><span className="text-muted-foreground">PO:</span> <span className="font-medium">{selected.poId}</span></div>
-                  <div><span className="text-muted-foreground">Supplier:</span> <span className="font-medium">{selected.freelancerName}</span></div>
-                  <div><span className="text-muted-foreground">Amount:</span> <span className="font-medium">{formatCurrency(selected.amount)}</span></div>
-                  <div><span className="text-muted-foreground">Method:</span> <span className="font-medium">{selected.paymentMethod}</span></div>
-                  <div><span className="text-muted-foreground">Reference:</span> <span className="font-medium">{selected.referenceNumber || "—"}</span></div>
-                </div>
-                <div className="text-xs text-muted-foreground border-t pt-3 space-y-1">
-                  <div className="font-medium">Full Traceability Chain:</div>
-                  <div>📋 Request: {selected.requestId}</div>
-                  <div>📦 PO: {selected.poId}</div>
-                  <div>📄 Invoice: {selected.invoiceId}</div>
-                  <div>💰 Payment: {selected.id}</div>
-                  <div>📊 Auto → Transaction & Ledger created</div>
-                </div>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      <Card>
+        <CardContent className="p-5">
+          <h2 className="text-lg font-semibold mb-5">Payment Ageing Report — As on {new Date().toISOString().split("T")[0]}</h2>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead className="text-xs">Invoice No</TableHead>
+                <TableHead className="text-xs">Vendor</TableHead>
+                <TableHead className="text-xs">Invoice Date</TableHead>
+                <TableHead className="text-xs">Due Date</TableHead>
+                <TableHead className="text-xs text-right">Invoice Amt</TableHead>
+                <TableHead className="text-xs text-right">Paid</TableHead>
+                <TableHead className="text-xs text-right">Outstanding</TableHead>
+                <TableHead className="text-xs text-center">Ageing</TableHead>
+                <TableHead className="text-xs text-center">Priority</TableHead>
+                <TableHead className="text-xs text-center">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {mockAgeing.map((item) => (
+                <TableRow key={item.invoiceNo}>
+                  <TableCell className="text-xs font-mono">{item.invoiceNo}</TableCell>
+                  <TableCell className="text-xs font-medium">{item.vendor}</TableCell>
+                  <TableCell className="text-xs">{item.invoiceDate}</TableCell>
+                  <TableCell className={`text-xs font-medium ${item.priority === "Urgent" ? "text-red-700" : ""}`}>{item.dueDate}</TableCell>
+                  <TableCell className="text-xs font-bold text-right">{formatCurrency(item.invoiceAmt)}</TableCell>
+                  <TableCell className="text-xs text-right">{formatCurrency(item.paid)}</TableCell>
+                  <TableCell className={`text-xs font-bold text-right ${item.outstanding > 40000 ? "text-red-700" : "text-amber-700"}`}>{formatCurrency(item.outstanding)}</TableCell>
+                  <TableCell className="text-center"><Badge variant="outline" className="text-[10px]">{item.ageing}</Badge></TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className={item.priority === "Urgent" ? "bg-red-50 text-red-700 border-red-200" : "bg-muted text-muted-foreground"}>{item.priority}</Badge>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Button size="sm" className="text-[10px] h-7" onClick={() => openRecord(item)}>Pay Now</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      {/* Create Dialog */}
-      <Dialog open={showCreate} onOpenChange={v => { if (!v) resetForm(); setShowCreate(v); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Record Payment</DialogTitle></DialogHeader>
+      <Dialog open={recordOpen} onOpenChange={(open) => { setRecordOpen(open); if (!open) setPayNowItem(null); }}>
+        <DialogContent className={showNeftForm ? "max-w-6xl max-h-[92vh] overflow-y-auto" : "max-w-md"}>
+          <DialogHeader>
+            <DialogTitle>{payNowItem ? `Pay ${payNowItem.invoiceNo}` : "Record Vendor Payment"}</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Invoice *</Label>
-              <Select value={selectedInvoiceId} onValueChange={handleSelectInvoice}>
-                <SelectTrigger><SelectValue placeholder="Select verified invoice..." /></SelectTrigger>
-                <SelectContent>
-                  {payableInvoices.length === 0 && <SelectItem value="none" disabled>No verified invoices</SelectItem>}
-                  {payableInvoices.map(inv => (
-                    <SelectItem key={inv.id} value={inv.id}>
-                      {inv.id} — {inv.freelancerName} ({formatCurrency(inv.amount)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {payableInvoices.length === 0 && (
-                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" /> No verified invoices. Verify an invoice first.
-                </p>
-              )}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Amount *</Label>
-                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Vendor *</Label>
+                <Input value={form.vendor} onChange={(e) => setForm((p) => ({ ...p, vendor: e.target.value }))} className="text-xs h-9" />
               </div>
-              <div>
-                <Label>Payment Method *</Label>
-                <Select value={paymentMethod} onValueChange={v => setPaymentMethod(v as any)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Invoice No</Label>
+                <Input value={form.invoiceNo} onChange={(e) => setForm((p) => ({ ...p, invoiceNo: e.target.value }))} className="text-xs h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Amount (₹) *</Label>
+                <Input type="number" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} className="text-xs h-9" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Payment Mode</Label>
+                <Select value={form.mode} onValueChange={(v) => setForm((p) => ({ ...p, mode: v }))}>
+                  <SelectTrigger className="text-xs h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="Bank">Bank Transfer</SelectItem>
-                    <SelectItem value="UPI">UPI</SelectItem>
+                    <SelectItem value="NEFT">NEFT</SelectItem>
+                    <SelectItem value="RTGS">RTGS</SelectItem>
+                    <SelectItem value="BANK">Bank Transfer</SelectItem>
+                    <SelectItem value="CHEQUE">Cheque</SelectItem>
+                    <SelectItem value="CASH">Cash</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-            <div>
-              <Label>Reference Number</Label>
-              <Input value={referenceNumber} onChange={e => setReferenceNumber(e.target.value)} placeholder="UTR / Cheque No / Transaction ID" />
-            </div>
+            {!showNeftForm && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">UTR / Cheque No</Label>
+                <Input placeholder="Reference number" value={form.utr} onChange={(e) => setForm((p) => ({ ...p, utr: e.target.value }))} className="text-xs h-9 font-mono" />
+              </div>
+            )}
 
-            <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
-              <div className="font-medium flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> Auto-generated on payment:</div>
-              <div>• Transaction record (Expense type)</div>
-              <div>• Ledger entry (Debit: Expense, Credit: Cash/Bank)</div>
-            </div>
+            {showNeftForm && (
+              <NeftRtgsFormPanel
+                data={neftForm}
+                onChange={(patch) => setNeftForm((prev) => mergeNeftForm(prev, patch))}
+                title="Bank remittance — vendor payment"
+              />
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowCreate(false); resetForm(); }}>Cancel</Button>
-            <Button onClick={handleSave}>Record Payment</Button>
+            <Button variant="outline" onClick={() => setRecordOpen(false)}>Cancel</Button>
+            <Button onClick={handleRecordPayment}>Confirm Payment</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

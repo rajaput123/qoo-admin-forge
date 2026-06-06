@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, ArrowRight, Check, Phone, Building2, MapPin,
+  ArrowLeft, ArrowRight, Check, Phone, Building2, MapPin, Mail,
   FileText, Camera, Globe, UploadCloud, CheckCircle2,
-  X, Shield, Pencil
+  X, Shield, Pencil, Loader2, Instagram, Youtube, Facebook
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,9 @@ import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { saveTempleConfig } from "@/lib/templeConfig";
+import { lookupPincode } from "@/lib/pincodeLookup";
+import { resetTempleOnboarding } from "@/lib/onboardingFlow";
 
 /* ─── Types ─── */
 type EntityType = "temple" | "trust" | "";
@@ -43,6 +46,10 @@ interface FormData {
   contactDesignation: string;
   email: string;
   aadhaarNumber: string;
+  contactPan: string;
+  alternatePhone: string;
+  landline: string;
+  whatsapp: string;
   fullAddress: string;
   pincode: string;
   mapLink: string;
@@ -54,6 +61,14 @@ interface FormData {
   trustCertificate: string | null;
   trustDeed: string | null;
   idProof: string | null;
+  registration80G: string;
+  pan80G: string;
+  validityFrom80G: string;
+  validityTo80G: string;
+  has80G: "yes" | "no" | "";
+  instagram: string;
+  youtube: string;
+  facebook: string;
   infoTrue: boolean;
   termsAccepted: boolean;
 }
@@ -72,18 +87,22 @@ const initialData: FormData = {
   managementType: "", trustName: "", trustRegNumber: "",
   registeredTrustName: "", registeredTrustRegNumber: "", registeredTrustRegDate: "",
   contactPerson: "", contactDesignation: "", email: "", aadhaarNumber: "",
+  contactPan: "", alternatePhone: "", landline: "", whatsapp: "",
   fullAddress: "", pincode: "", mapLink: "",
   exteriorPhoto: null, sanctumPhoto: null, proofType: "", proofValue: "", proofFile: null,
   trustCertificate: null, trustDeed: null, idProof: null,
+  registration80G: "", pan80G: "", validityFrom80G: "", validityTo80G: "", has80G: "",
+  instagram: "", youtube: "", facebook: "",
   infoTrue: false, termsAccepted: false,
 };
 
 const tabs = [
   { id: 1, label: "Mobile", icon: Phone },
   { id: 2, label: "Entity Info", icon: Building2 },
-  { id: 3, label: "Contact", icon: MapPin },
-  { id: 4, label: "Documents", icon: Camera },
-  { id: 5, label: "Review", icon: CheckCircle2 },
+  { id: 3, label: "80G Details", icon: Shield },
+  { id: 4, label: "Contact", icon: MapPin },
+  { id: 5, label: "Documents", icon: Camera },
+  { id: 6, label: "Review", icon: CheckCircle2 },
 ];
 
 const stateOptions = [
@@ -121,13 +140,40 @@ const TempleRegister = () => {
       contactDesignation: data.contactDesignation,
       email: data.email,
       aadhaarNumber: data.aadhaarNumber,
+      contactPan: data.contactPan.toUpperCase(),
+      alternatePhone: data.alternatePhone,
+      landline: data.landline,
+      whatsapp: data.whatsapp,
       mobile: data.mobile,
       fullAddress: data.fullAddress,
       pincode: data.pincode,
       mapLink: data.mapLink,
       entityType: data.entityType,
+      registration80G: data.has80G === "yes" ? data.registration80G : "",
+      pan80G: data.has80G === "yes" ? data.pan80G.toUpperCase() : "",
+      validityFrom80G: data.has80G === "yes" ? data.validityFrom80G : "",
+      validityTo80G: data.has80G === "yes" ? data.validityTo80G : "",
+      has80G: data.has80G,
+      instagram: data.instagram,
+      youtube: data.youtube,
+      facebook: data.facebook,
     };
     localStorage.setItem('registrationData', JSON.stringify(registrationData));
+    resetTempleOnboarding();
+    const entityName = data.entityType === "temple" ? data.templeName : data.registeredTrustName;
+    saveTempleConfig({
+      name: entityName || undefined,
+      address: data.fullAddress
+        ? `${data.fullAddress}${data.city ? `, ${data.city}` : ""}${data.state ? ` – ${data.state}` : ""}`
+        : undefined,
+      pan: data.has80G === "yes" ? data.pan80G.toUpperCase() : undefined,
+      registration80G: data.has80G === "yes" ? data.registration80G : undefined,
+      validityFrom: data.has80G === "yes" ? data.validityFrom80G : undefined,
+      validityTo: data.has80G === "yes" ? data.validityTo80G : undefined,
+      email: data.email,
+      phone: data.mobile ? `+91 ${data.mobile}` : undefined,
+      eightyGEnabled: data.has80G === "yes",
+    });
     setTimeout(() => {
       setSaving(false);
       setSubmitted(true);
@@ -265,9 +311,10 @@ const TempleRegister = () => {
           >
             {step === 1 && <Tab1Mobile data={data} update={update} />}
             {step === 2 && <Tab2EntityInfo data={data} update={update} />}
-            {step === 3 && <Tab3Contact data={data} update={update} />}
-            {step === 4 && <Tab4PhotosProof data={data} update={update} />}
-            {step === 5 && <Tab5Review data={data} update={update} setStep={setStep} />}
+            {step === 3 && <Tab4EightyG data={data} update={update} />}
+            {step === 4 && <Tab3Contact data={data} update={update} />}
+            {step === 5 && <Tab4PhotosProof data={data} update={update} />}
+            {step === 6 && <Tab5Review data={data} update={update} setStep={setStep} />}
           </motion.div>
         </AnimatePresence>
 
@@ -282,9 +329,9 @@ const TempleRegister = () => {
             <ArrowLeft className="h-4 w-4" /> Back
           </Button>
 
-          <span className="text-xs text-muted-foreground font-medium">{step} / 5</span>
+          <span className="text-xs text-muted-foreground font-medium">{step} / 6</span>
 
-          {step === 5 ? (
+          {step === 6 ? (
             <Button
               onClick={handleSubmit}
               disabled={saving || !data.infoTrue || !data.termsAccepted}
@@ -295,7 +342,6 @@ const TempleRegister = () => {
           ) : (
             <Button
               onClick={() => setStep(s => s + 1)}
-              disabled={step === 1 && !data.otpVerified}
               className="gap-1.5 h-10 px-6"
             >
               Continue <ArrowRight className="h-4 w-4" />
@@ -403,6 +449,171 @@ const Tab1Mobile = ({ data, update }: { data: FormData; update: (p: Partial<Form
 
 /* ═══════════════════════════ TAB 2 — Entity Information ═══════════════════════════ */
 
+const EntityLocationFields = ({
+  data,
+  update,
+}: {
+  data: FormData;
+  update: (p: Partial<FormData>) => void;
+}) => {
+  const [pincodeLoading, setPincodeLoading] = useState(false);
+  const [pincodeError, setPincodeError] = useState("");
+  const lastLookup = useRef("");
+
+  useEffect(() => {
+    const pin = data.pincode.replace(/\D/g, "");
+    if (pin.length !== 6 || pin === lastLookup.current) return;
+
+    const timer = setTimeout(async () => {
+      lastLookup.current = pin;
+      setPincodeLoading(true);
+      setPincodeError("");
+      const result = await lookupPincode(pin);
+      setPincodeLoading(false);
+      if (result) {
+        update({
+          city: result.city,
+          state: result.state,
+          country: result.country,
+        });
+      } else if (pin.length === 6) {
+        setPincodeError("Pincode not found — enter city and state manually");
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-lookup when pincode changes
+  }, [data.pincode]);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Location</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FieldGroup label="Pincode *">
+          <div className="relative">
+            <Input
+              value={data.pincode}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+                if (v !== data.pincode.replace(/\D/g, "")) lastLookup.current = "";
+                update({ pincode: v });
+                setPincodeError("");
+              }}
+              placeholder="e.g., 517501"
+              className="h-10 pr-10"
+              maxLength={6}
+            />
+            {pincodeLoading && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          {pincodeError && <p className="text-xs text-destructive mt-1">{pincodeError}</p>}
+          {data.pincode.length === 6 && !pincodeLoading && data.city && !pincodeError && (
+            <p className="text-xs text-primary mt-1">Location auto-filled from pincode</p>
+          )}
+        </FieldGroup>
+        <FieldGroup label="City / Town *">
+          <Input
+            value={data.city}
+            onChange={(e) => update({ city: e.target.value })}
+            placeholder="Auto-filled from pincode"
+            className="h-10"
+          />
+        </FieldGroup>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FieldGroup label="Country *">
+          <Select value={data.country} onValueChange={(v) => update({ country: v })}>
+            <SelectTrigger className="h-10"><SelectValue placeholder="Select Country" /></SelectTrigger>
+            <SelectContent>
+              {countryOptions.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FieldGroup>
+        <FieldGroup label="State *">
+          <Select value={data.state} onValueChange={(v) => update({ state: v })}>
+            <SelectTrigger className="h-10"><SelectValue placeholder="Select State" /></SelectTrigger>
+            <SelectContent>
+              {stateOptions.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FieldGroup>
+      </div>
+
+      <FieldGroup label="Address *">
+        <Textarea
+          value={data.fullAddress}
+          onChange={(e) => update({ fullAddress: e.target.value })}
+          placeholder="Street, area, locality with landmarks"
+          rows={2}
+        />
+      </FieldGroup>
+
+      <FieldGroup label="Google Map Link (optional)">
+        <Input
+          value={data.mapLink}
+          onChange={(e) => update({ mapLink: e.target.value })}
+          placeholder="https://maps.google.com/..."
+          className="h-10"
+        />
+      </FieldGroup>
+    </div>
+  );
+};
+
+const EntitySocialFields = ({
+  data,
+  update,
+}: {
+  data: FormData;
+  update: (p: Partial<FormData>) => void;
+}) => (
+  <div className="space-y-4">
+    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Social Media (optional)</p>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <FieldGroup label="Instagram">
+        <div className="relative">
+          <Instagram className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={data.instagram}
+            onChange={(e) => update({ instagram: e.target.value })}
+            placeholder="https://instagram.com/yourtemple"
+            className="h-10 pl-10"
+          />
+        </div>
+      </FieldGroup>
+      <FieldGroup label="YouTube">
+        <div className="relative">
+          <Youtube className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={data.youtube}
+            onChange={(e) => update({ youtube: e.target.value })}
+            placeholder="https://youtube.com/@yourtemple"
+            className="h-10 pl-10"
+          />
+        </div>
+      </FieldGroup>
+      <FieldGroup label="Facebook">
+        <div className="relative">
+          <Facebook className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={data.facebook}
+            onChange={(e) => update({ facebook: e.target.value })}
+            placeholder="https://facebook.com/yourtemple"
+            className="h-10 pl-10"
+          />
+        </div>
+      </FieldGroup>
+    </div>
+  </div>
+);
+
 const Tab2EntityInfo = ({ data, update }: { data: FormData; update: (p: Partial<FormData>) => void }) => (
   <section className="space-y-6">
     <SectionHeader title="Entity Information" subtitle="Tell us what you're registering" />
@@ -431,25 +642,14 @@ const Tab2EntityInfo = ({ data, update }: { data: FormData; update: (p: Partial<
     {/* Temple Fields */}
     {data.entityType === "temple" && (
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 pt-2">
-        <FieldGroup label="Temple Name *">
-          <Input value={data.templeName} onChange={e => update({ templeName: e.target.value })} placeholder="e.g., Sri Venkateswara Temple" className="h-10" />
-        </FieldGroup>
-        <div className="grid grid-cols-2 gap-4">
-          <FieldGroup label="City *">
-            <Input value={data.city} onChange={e => update({ city: e.target.value })} placeholder="e.g., Tirupati" className="h-10" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FieldGroup label="Temple Name *">
+            <Input value={data.templeName} onChange={e => update({ templeName: e.target.value })} placeholder="e.g., Sri Venkateswara Temple" className="h-10" />
           </FieldGroup>
-          <FieldGroup label="State *">
-            <Select value={data.state} onValueChange={v => update({ state: v })}>
-              <SelectTrigger className="h-10"><SelectValue placeholder="Select State" /></SelectTrigger>
-              <SelectContent>
-                {stateOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          <FieldGroup label="Primary Deity (optional)">
+            <Input value={data.primaryDeity} onChange={e => update({ primaryDeity: e.target.value })} placeholder="e.g., Lord Venkateswara" className="h-10" />
           </FieldGroup>
         </div>
-        <FieldGroup label="Primary Deity (optional)">
-          <Input value={data.primaryDeity} onChange={e => update({ primaryDeity: e.target.value })} placeholder="e.g., Lord Venkateswara" className="h-10" />
-        </FieldGroup>
         <FieldGroup label="Who manages this temple? *">
           <Select value={data.managementType} onValueChange={(v: ManagementType) => update({ managementType: v })}>
             <SelectTrigger className="h-10"><SelectValue placeholder="Select management type" /></SelectTrigger>
@@ -494,6 +694,15 @@ const Tab2EntityInfo = ({ data, update }: { data: FormData; update: (p: Partial<
         </div>
       </motion.div>
     )}
+
+    {data.entityType && (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pt-2">
+        <Separator />
+        <EntityLocationFields data={data} update={update} />
+        <Separator />
+        <EntitySocialFields data={data} update={update} />
+      </motion.div>
+    )}
   </section>
 );
 
@@ -501,76 +710,206 @@ const Tab2EntityInfo = ({ data, update }: { data: FormData; update: (p: Partial<
 
 const Tab3Contact = ({ data, update }: { data: FormData; update: (p: Partial<FormData>) => void }) => (
   <section className="space-y-6">
-    <SectionHeader title="Admin & Location" subtitle="Authorized person details and temple address" />
+    <SectionHeader title="Admin Contact" subtitle="Authorized person and communication details" />
 
-    {/* Admin Details */}
-    <div className="grid grid-cols-2 gap-4">
-      <FieldGroup label="Contact Person Name *">
-        <Input value={data.contactPerson} onChange={e => update({ contactPerson: e.target.value })} placeholder="Full name" className="h-10" />
-      </FieldGroup>
-      <FieldGroup label="Designation *">
-        <Select value={data.contactDesignation} onValueChange={v => update({ contactDesignation: v })}>
-          <SelectTrigger className="h-10"><SelectValue placeholder="Select Designation" /></SelectTrigger>
-          <SelectContent>
-            {designationOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </FieldGroup>
+    <div className="rounded-lg border bg-muted/40 px-4 py-3 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 text-sm">
+        <Phone className="h-4 w-4 text-muted-foreground" />
+        <span className="text-muted-foreground">Login mobile</span>
+        <span className="font-medium">{data.mobile ? `+91 ${data.mobile}` : "—"}</span>
+      </div>
+      {data.otpVerified && (
+        <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">Verified</Badge>
+      )}
     </div>
-    <div className="grid grid-cols-2 gap-4">
-      <FieldGroup label="Email *">
-        <Input type="email" value={data.email} onChange={e => update({ email: e.target.value })} placeholder="admin@temple.org" className="h-10" />
-      </FieldGroup>
-      <FieldGroup label="Aadhaar Number *">
-        <Input
-          value={data.aadhaarNumber}
-          onChange={e => { const v = e.target.value.replace(/\D/g, ''); update({ aadhaarNumber: v }); }}
-          placeholder="XXXX XXXX XXXX"
-          className="h-10 tracking-wider"
-          maxLength={12}
-        />
-      </FieldGroup>
+
+    <div className="space-y-4">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Authorized Person</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FieldGroup label="Contact Person Name *">
+          <Input value={data.contactPerson} onChange={e => update({ contactPerson: e.target.value })} placeholder="Full name" className="h-10" />
+        </FieldGroup>
+        <FieldGroup label="Designation *">
+          <Select value={data.contactDesignation} onValueChange={v => update({ contactDesignation: v })}>
+            <SelectTrigger className="h-10"><SelectValue placeholder="Select Designation" /></SelectTrigger>
+            <SelectContent>
+              {designationOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </FieldGroup>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FieldGroup label="Email *">
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input type="email" value={data.email} onChange={e => update({ email: e.target.value })} placeholder="admin@temple.org" className="h-10 pl-10" />
+          </div>
+        </FieldGroup>
+        <FieldGroup label="Aadhaar Number *">
+          <Input
+            value={data.aadhaarNumber}
+            onChange={e => { const v = e.target.value.replace(/\D/g, ''); update({ aadhaarNumber: v }); }}
+            placeholder="XXXX XXXX XXXX"
+            className="h-10 tracking-wider"
+            maxLength={12}
+          />
+        </FieldGroup>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FieldGroup label="PAN">
+          <Input
+            value={data.contactPan}
+            onChange={e => update({ contactPan: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") })}
+            placeholder="e.g., ABCDE1234F"
+            className="h-10 uppercase font-mono"
+            maxLength={10}
+          />
+        </FieldGroup>
+        <FieldGroup label="Alternate Mobile">
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={data.alternatePhone}
+              onChange={e => update({ alternatePhone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+              placeholder="98765 43210"
+              className="h-10 pl-10"
+              maxLength={10}
+            />
+          </div>
+        </FieldGroup>
+      </div>
     </div>
 
     <Separator />
 
-    {/* Location */}
-    <div className="grid grid-cols-2 gap-4">
-      <FieldGroup label="Country *">
-        <Select value={data.country} onValueChange={v => update({ country: v })}>
-          <SelectTrigger className="h-10"><SelectValue placeholder="Select Country" /></SelectTrigger>
-          <SelectContent>
-            {countryOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </FieldGroup>
-      <FieldGroup label="State *">
-        <Select value={data.state} onValueChange={v => update({ state: v })}>
-          <SelectTrigger className="h-10"><SelectValue placeholder="Select State" /></SelectTrigger>
-          <SelectContent>
-            {stateOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </FieldGroup>
+    <div className="space-y-4">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Other Contact Numbers</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <FieldGroup label="Landline / Office Phone">
+          <Input
+            value={data.landline}
+            onChange={e => update({ landline: e.target.value })}
+            placeholder="e.g., 0877-1234567"
+            className="h-10"
+          />
+        </FieldGroup>
+        <FieldGroup label="WhatsApp Number">
+          <Input
+            value={data.whatsapp}
+            onChange={e => update({ whatsapp: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+            placeholder="98765 43210"
+            className="h-10"
+            maxLength={10}
+          />
+        </FieldGroup>
+      </div>
     </div>
-    <div className="grid grid-cols-2 gap-4">
-      <FieldGroup label="City / Town *">
-        <Input value={data.city} onChange={e => update({ city: e.target.value })} placeholder="e.g., Tirupati" className="h-10" />
-      </FieldGroup>
-      <FieldGroup label="Pincode *">
-        <Input value={data.pincode} onChange={e => update({ pincode: e.target.value })} placeholder="e.g., 517501" className="h-10" />
-      </FieldGroup>
-    </div>
-    <FieldGroup label="Full Address *">
-      <Textarea value={data.fullAddress} onChange={e => update({ fullAddress: e.target.value })} placeholder="Street, area, locality with landmarks" rows={2} />
-    </FieldGroup>
-    <FieldGroup label="Google Map Link (optional)">
-      <Input value={data.mapLink} onChange={e => update({ mapLink: e.target.value })} placeholder="https://maps.google.com/..." className="h-10" />
-    </FieldGroup>
   </section>
 );
 
-/* ═══════════════════════════ TAB 4 — Photos & Proof ═══════════════════════════ */
+/* ═══════════════════════════ TAB 4 — 80G Details ═══════════════════════════ */
+
+const Tab4EightyG = ({ data, update }: { data: FormData; update: (p: Partial<FormData>) => void }) => (
+  <section className="space-y-6">
+    <SectionHeader
+      title="80G Registration Details"
+      subtitle="Tell us if your temple or trust is registered under section 80G"
+    />
+
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">Do you have 80G registration? *</Label>
+      <RadioGroup
+        value={data.has80G}
+        onValueChange={(v: "yes" | "no") => {
+          if (v === "no") {
+            update({
+              has80G: "no",
+              registration80G: "",
+              pan80G: "",
+              validityFrom80G: "",
+              validityTo80G: "",
+            });
+          } else {
+            update({ has80G: "yes" });
+          }
+        }}
+        className="grid grid-cols-2 gap-3"
+      >
+        <label className={`flex items-center gap-3 p-3.5 border rounded-lg cursor-pointer transition-all ${data.has80G === "yes" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border hover:border-muted-foreground/30"}`}>
+          <RadioGroupItem value="yes" />
+          <Shield className={`h-4 w-4 shrink-0 ${data.has80G === "yes" ? "text-primary" : "text-muted-foreground"}`} />
+          <p className="text-sm font-medium">Yes, we have 80G</p>
+        </label>
+        <label className={`flex items-center gap-3 p-3.5 border rounded-lg cursor-pointer transition-all ${data.has80G === "no" ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border hover:border-muted-foreground/30"}`}>
+          <RadioGroupItem value="no" />
+          <X className={`h-4 w-4 shrink-0 ${data.has80G === "no" ? "text-primary" : "text-muted-foreground"}`} />
+          <p className="text-sm font-medium">No, not yet</p>
+        </label>
+      </RadioGroup>
+    </div>
+
+    {data.has80G === "no" && (
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground"
+      >
+        You can skip 80G details for now and configure them later in Settings → Finance after your account is approved.
+      </motion.div>
+    )}
+
+    {data.has80G === "yes" && (
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-muted-foreground">
+          These details appear on donation receipts and 80G certificates. You can update them later in Settings → Finance.
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FieldGroup label="80G Registration Number">
+            <Input
+              placeholder="e.g., AAATS1234A/80G/2023-24"
+              className="h-10"
+              value={data.registration80G}
+              onChange={e => update({ registration80G: e.target.value })}
+            />
+          </FieldGroup>
+
+          <FieldGroup label="PAN">
+            <Input
+              placeholder="e.g., ABCDE1234F"
+              className="h-10 uppercase font-mono"
+              maxLength={10}
+              value={data.pan80G}
+              onChange={e => update({ pan80G: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "") })}
+            />
+          </FieldGroup>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FieldGroup label="Validity From">
+            <Input
+              type="date"
+              className="h-10"
+              value={data.validityFrom80G}
+              onChange={e => update({ validityFrom80G: e.target.value })}
+            />
+          </FieldGroup>
+          <FieldGroup label="Validity To">
+            <Input
+              type="date"
+              className="h-10"
+              value={data.validityTo80G}
+              min={data.validityFrom80G || undefined}
+              onChange={e => update({ validityTo80G: e.target.value })}
+            />
+          </FieldGroup>
+        </div>
+      </motion.div>
+    )}
+  </section>
+);
+
+/* ═══════════════════════════ TAB 5 — Photos & Proof ═══════════════════════════ */
 
 const Tab4PhotosProof = ({ data, update }: { data: FormData; update: (p: Partial<FormData>) => void }) => {
   if (data.entityType === "trust") {
@@ -649,7 +988,7 @@ const Tab4PhotosProof = ({ data, update }: { data: FormData; update: (p: Partial
   );
 };
 
-/* ═══════════════════════════ TAB 5 — Review & Submit ═══════════════════════════ */
+/* ═══════════════════════════ TAB 6 — Review & Submit ═══════════════════════════ */
 
 const Tab5Review = ({ data, update, setStep }: { data: FormData; update: (p: Partial<FormData>) => void; setStep: (s: number) => void }) => {
   const isTemple = data.entityType === "temple";
@@ -669,8 +1008,6 @@ const Tab5Review = ({ data, update, setStep }: { data: FormData; update: (p: Par
         {isTemple ? (
           <>
             <ReviewRow label="Temple Name" value={data.templeName} />
-            <ReviewRow label="City" value={data.city} />
-            <ReviewRow label="State" value={data.state} />
             <ReviewRow label="Primary Deity" value={data.primaryDeity || "—"} />
             <ReviewRow label="Management" value={data.managementType || "—"} />
             {data.managementType === "registered-trust" && (
@@ -687,21 +1024,55 @@ const Tab5Review = ({ data, update, setStep }: { data: FormData; update: (p: Par
             <ReviewRow label="Reg. Date" value={data.registeredTrustRegDate} />
           </>
         )}
-      </ReviewSection>
-
-      <ReviewSection title="Admin & Location" onEdit={() => setStep(3)}>
-        <ReviewRow label="Contact" value={data.contactPerson} />
-        <ReviewRow label="Designation" value={data.contactDesignation} />
-        <ReviewRow label="Email" value={data.email} />
-        <ReviewRow label="Aadhaar" value={data.aadhaarNumber ? `XXXX XXXX ${data.aadhaarNumber.slice(-4)}` : "—"} />
+        <ReviewRow label="Pincode" value={data.pincode || "—"} />
         <ReviewRow label="Country" value={data.country} />
         <ReviewRow label="State" value={data.state} />
         <ReviewRow label="City" value={data.city} />
         <ReviewRow label="Address" value={data.fullAddress} />
-        <ReviewRow label="Pincode" value={data.pincode} />
+        {data.mapLink && <ReviewRow label="Map Link" value={data.mapLink} />}
+        {(data.instagram || data.youtube || data.facebook) && (
+          <>
+            {data.instagram && <ReviewRow label="Instagram" value={data.instagram} />}
+            {data.youtube && <ReviewRow label="YouTube" value={data.youtube} />}
+            {data.facebook && <ReviewRow label="Facebook" value={data.facebook} />}
+          </>
+        )}
       </ReviewSection>
 
-      <ReviewSection title="Documents" onEdit={() => setStep(4)}>
+      <ReviewSection title="80G Registration" onEdit={() => setStep(3)}>
+        <ReviewRow
+          label="Has 80G"
+          value={data.has80G === "yes" ? "Yes" : data.has80G === "no" ? "No" : "—"}
+        />
+        {data.has80G === "yes" && (
+          <>
+            <ReviewRow label="80G Reg. Number" value={data.registration80G || "—"} />
+            <ReviewRow label="PAN" value={data.pan80G || "—"} />
+            <ReviewRow
+              label="Validity Period"
+              value={
+                data.validityFrom80G && data.validityTo80G
+                  ? `${data.validityFrom80G} to ${data.validityTo80G}`
+                  : "—"
+              }
+            />
+          </>
+        )}
+      </ReviewSection>
+
+      <ReviewSection title="Admin Contact" onEdit={() => setStep(4)}>
+        <ReviewRow label="Login Mobile" value={data.mobile ? `+91 ${data.mobile}` : "—"} />
+        <ReviewRow label="Contact" value={data.contactPerson} />
+        <ReviewRow label="Designation" value={data.contactDesignation} />
+        <ReviewRow label="Email" value={data.email} />
+        <ReviewRow label="Aadhaar" value={data.aadhaarNumber ? `XXXX XXXX ${data.aadhaarNumber.slice(-4)}` : "—"} />
+        <ReviewRow label="PAN" value={data.contactPan || "—"} />
+        {data.alternatePhone && <ReviewRow label="Alternate Mobile" value={`+91 ${data.alternatePhone}`} />}
+        {data.landline && <ReviewRow label="Landline" value={data.landline} />}
+        {data.whatsapp && <ReviewRow label="WhatsApp" value={`+91 ${data.whatsapp}`} />}
+      </ReviewSection>
+
+      <ReviewSection title="Documents" onEdit={() => setStep(5)}>
         {isTemple ? (
           <>
             <ReviewRow label="Exterior Photo" value={data.exteriorPhoto ? "✓ Uploaded" : "—"} />

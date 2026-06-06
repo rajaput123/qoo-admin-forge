@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  ShieldCheck, AlertTriangle, CheckCircle2, XCircle, FileSearch,
+  AlertTriangle, CheckCircle2, XCircle, FileSearch,
   Clock, History, RefreshCw, Download, IndianRupee, CalendarIcon, X
 } from "lucide-react";
 import { toast } from "sonner";
@@ -19,6 +19,7 @@ import { getDonationsState } from "@/modules/donations/donationsStore";
 import { voucherRequests } from "@/stores/voucherStore";
 import { exportToCSV } from "@/utils/exportCSV";
 import { cn } from "@/lib/utils";
+import { FinanceTableRadioGroup, FinanceTableRadioHead, FinanceTableRadioCell } from "@/components/finance/FinanceTableRadio";
 
 // ─── Settlement Data Types ───
 interface SettlementRecord {
@@ -131,6 +132,7 @@ const ReconciliationPage = () => {
   const [customFrom, setCustomFrom] = useState<Date | undefined>();
   const [customTo, setCustomTo] = useState<Date | undefined>();
   const [bankFilter, setBankFilter] = useState("all");
+  const [selectedId, setSelectedId] = useState("");
 
   const allData = useMemo(() => buildSettlementData(), []);
   const auditLogs = useMemo(() => buildAuditLogs(), []);
@@ -231,12 +233,7 @@ const ReconciliationPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-primary" /> Reconciliation Dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Payment settlements, transaction matching & audit trail</p>
-        </div>
+        <p className="text-sm text-muted-foreground">Payment settlements, transaction matching & audit trail</p>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Date Filter */}
           <Select value={datePreset} onValueChange={(v: DatePreset) => { setDatePreset(v); if (v !== "custom") { setCustomFrom(undefined); setCustomTo(undefined); } }}>
@@ -374,9 +371,11 @@ const ReconciliationPage = () => {
           <Card>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
+                <FinanceTableRadioGroup value={selectedId} onValueChange={setSelectedId}>
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <FinanceTableRadioHead />
                       <TableHead className="text-xs">Date</TableHead>
                       <TableHead className="text-xs">Type</TableHead>
                       <TableHead className="text-xs">Name</TableHead>
@@ -390,12 +389,13 @@ const ReconciliationPage = () => {
                   <TableBody>
                     {filteredData.length === 0 ? (
                       <TableRow>
-                         <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                         <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                           No settlement records found
                         </TableCell>
                       </TableRow>
                     ) : filteredData.map(r => (
-                      <TableRow key={r.id} className={r.settlementStatus === "Yet to Settle" ? "bg-amber-50/30" : ""}>
+                      <TableRow key={r.id} className={cn(r.settlementStatus === "Yet to Settle" ? "bg-amber-50/30" : "", "hover:bg-muted/50 cursor-pointer")} onClick={() => setSelectedId(r.id)}>
+                        <FinanceTableRadioCell value={r.id} />
                         <TableCell className="text-xs">{r.date}</TableCell>
                         <TableCell className="text-xs">
                           <Badge variant="outline" className={cn("text-[10px]",
@@ -429,6 +429,7 @@ const ReconciliationPage = () => {
                     ))}
                   </TableBody>
                 </Table>
+                </FinanceTableRadioGroup>
               </div>
             </CardContent>
           </Card>
