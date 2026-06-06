@@ -28,3 +28,5 @@ export function download80GReceiptPdf(receipt: Donation80GReceipt, donorAddress?
 export function build80GReceiptPdfBlob(receipt: Donation80GReceipt, donorAddress?: string) {
   return buildForm10BEPdf(receipt80GToPdfInput(receipt, donorAddress)).output("blob");
 }
+
+export { download80GBlankTemplatePdf, build80GBlankTemplatePdf } from "@/lib/pdfDocs";

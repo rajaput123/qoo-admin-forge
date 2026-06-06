@@ -200,7 +200,19 @@ export function buildForm10BEPdf(input: Form10BEInput): jsPDF {
   yk = drawField(doc, "Amount", `Rs. ${input.amount.toLocaleString("en-IN")} /-`, yk, { bold: true });
   yk = drawField(doc, "Financial Year", input.fy, yk);
 
-  addSignatures(doc, doc.internal.pageSize.getHeight() - 30);
+  const sigY = doc.internal.pageSize.getHeight() - 30;
+  const w = doc.internal.pageSize.getWidth();
+  doc.setFont("times", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text(
+    "Disclaimer: Temple-issued acknowledgment only — not a substitute for Form 10BE from the Income Tax Department.",
+    w / 2,
+    sigY - 6,
+    { align: "center" }
+  );
+  addSignatures(doc, sigY);
+
   return doc;
 }
 
@@ -208,4 +220,97 @@ export function downloadForm10BEPdf(input: Form10BEInput, fileName?: string) {
   const doc = buildForm10BEPdf(input);
   const safe = input.donorName.replace(/[^a-z0-9]+/gi, "_");
   doc.save(fileName || `80G_Certificate_${safe}_FY${input.fy}.pdf`);
+}
+
+/** Blank 80G certificate layout — labels only, no donor/donation data (for preview or manual fill) */
+export function build80GBlankTemplatePdf(): jsPDF {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const w = doc.internal.pageSize.getWidth();
+  const h = doc.internal.pageSize.getHeight();
+
+  doc.setDrawColor(124, 45, 18);
+  doc.setLineWidth(0.8);
+  doc.rect(12, 10, w - 24, h - 20);
+
+  doc.setFont("times", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(124, 45, 18);
+  doc.text("NAME OF TEMPLE / TRUST / INSTITUTION", w / 2, 22, { align: "center" });
+
+  doc.setFont("times", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Address: _________________________________________________________________", w / 2, 29, { align: "center" });
+  doc.text("PAN: _______________     |     80G Registration No: _________________________", w / 2, 35, { align: "center" });
+  doc.text("80G Validity: From _______________  To _______________", w / 2, 41, { align: "center" });
+
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.2);
+  doc.line(20, 45, w - 20, 45);
+
+  doc.setFont("times", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(124, 45, 18);
+  doc.text("80G DONATION CERTIFICATE", w / 2, 53, { align: "center" });
+
+  doc.setFont("times", "italic");
+  doc.setFontSize(9);
+  doc.setTextColor(100, 100, 100);
+  doc.text(
+    "(Sample format — Temple-issued acknowledgment under Section 80G(5). Official Form 10BE is issued by the Income Tax Department.)",
+    w / 2,
+    59,
+    { align: "center" }
+  );
+
+  let y = 68;
+  doc.setFont("times", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(124, 45, 18);
+  doc.text("80G Certificate No: _______________________", 22, y);
+  doc.text("Donation Receipt No: _______________________", w - 22, y, { align: "right" });
+  y += 12;
+
+  doc.setFont("times", "normal");
+  doc.setFontSize(11);
+  doc.setTextColor(40, 40, 40);
+  const bodyTemplate =
+    "I/We, ________________________________ (Name of Trust/Temple), having PAN ________________, " +
+    "registered under section 80G vide reference number ________________________________, hereby certify that " +
+    "________________________ (Name of Donor), PAN ________________, residing at " +
+    "________________________________________________________________________, made a donation of " +
+    "Rs. __________________ (Rupees __________________________________________________________) " +
+    "on __________________ (Date) by __________________ (Mode of payment). " +
+    "Nature of donation: __________________. Financial Year: __________. " +
+    "This certificate is issued under section 80G(5)(viii) read with Rule 18AB of the Income Tax Rules, 1962.";
+  const wrappedBody = doc.splitTextToSize(bodyTemplate, w - 44);
+  doc.text(wrappedBody, 22, y, { lineHeightFactor: 1.55 });
+
+  const sigY = Math.max(y + wrappedBody.length * 5.5 + 28, h - 32);
+  doc.setFont("times", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text(
+    "Disclaimer: Temple-issued acknowledgment only — not a substitute for Form 10BE from the Income Tax Department.",
+    w / 2,
+    sigY - 6,
+    { align: "center" }
+  );
+  doc.setDrawColor(120, 120, 120);
+  doc.line(25, sigY, 80, sigY);
+  doc.line(w - 80, sigY, w - 25, sigY);
+  doc.setFont("times", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(60, 60, 60);
+  doc.text("Date and Stamp", 52, sigY + 5, { align: "center" });
+  doc.text("Authorised Signatory", w - 52, sigY + 5, { align: "center" });
+  doc.setFontSize(9);
+  doc.setTextColor(120, 120, 120);
+  doc.text("(Name & designation)", w - 52, sigY + 10, { align: "center" });
+
+  return doc;
+}
+
+export function download80GBlankTemplatePdf(fileName = "80G_Blank_Template.pdf") {
+  build80GBlankTemplatePdf().save(fileName);
 }

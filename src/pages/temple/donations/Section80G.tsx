@@ -12,10 +12,11 @@ import {
   Award,
   Download,
   Receipt,
+  FileText,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useDonations, useDonors, useReceipts80G } from "@/modules/donations/hooks";
-import { build80GReceiptPdfBlob, download80GReceiptPdf } from "@/lib/eightyGReceipt";
+import { build80GReceiptPdfBlob, download80GReceiptPdf, download80GBlankTemplatePdf } from "@/lib/eightyGReceipt";
 import { downloadReceiptPdf } from "@/lib/pdfDocs";
 import { useToast } from "@/hooks/use-toast";
 
@@ -69,6 +70,7 @@ const Section80G = () => {
         return (
           r.receipt80GId.toLowerCase().includes(q) ||
           r.receiptNo.toLowerCase().includes(q) ||
+          r.donorId.toLowerCase().includes(q) ||
           r.donorName.toLowerCase().includes(q) ||
           r.pan.toLowerCase().includes(q)
         );
@@ -144,13 +146,25 @@ const Section80G = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold">80G Certificates</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Auto-generated when an eligible donation is saved · Download receipts for donor IT return filing.
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 shrink-0"
+          onClick={() => {
+            download80GBlankTemplatePdf();
+            toast({ title: "Blank template downloaded", description: "80G format PDF with empty fields — fill manually or use as reference." });
+          }}
+        >
+          <FileText className="h-4 w-4" />
+          Download blank 80G template
+        </Button>
       </div>
 
       {/* Horizontal Step Flow — same pattern as Form 10BD */}
@@ -243,50 +257,62 @@ const Section80G = () => {
           <div className="flex flex-wrap items-center gap-2 mb-4">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input placeholder="Search donor, receipt, PAN..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-9" />
+              <Input placeholder="Search donor, donor ID or PAN..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-9" />
             </div>
           </div>
 
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead className="text-xs">80G No.</TableHead>
-                <TableHead className="text-xs">Receipt No.</TableHead>
                 <TableHead className="text-xs">Donor</TableHead>
+                <TableHead className="text-xs">Donor ID</TableHead>
                 <TableHead className="text-xs">PAN</TableHead>
                 <TableHead className="text-xs text-right">Amount</TableHead>
                 <TableHead className="text-xs">Date</TableHead>
-                <TableHead className="text-xs">FY</TableHead>
-                <TableHead className="text-xs text-center">Donation Receipt</TableHead>
-                <TableHead className="text-xs text-center">80G Certificate</TableHead>
+                <TableHead className="text-xs">Payment</TableHead>
+                <TableHead className="text-xs">Type</TableHead>
+                <TableHead className="text-xs text-center">Download</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-sm text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-8">
                     No 80G receipts yet. Save a donation with 80G enabled and PAN — the certificate is created automatically.
                   </TableCell>
                 </TableRow>
               ) : (
                 filtered.map((r) => (
                   <TableRow key={r.receipt80GId}>
-                    <TableCell className="font-mono text-xs">{r.receipt80GId}</TableCell>
-                    <TableCell className="font-mono text-xs">{r.receiptNo}</TableCell>
                     <TableCell className="text-sm font-medium">{r.donorName}</TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">{r.donorId}</TableCell>
                     <TableCell className="font-mono text-xs">{r.pan}</TableCell>
                     <TableCell className="text-right font-medium text-sm">{formatCurrency(r.amount)}</TableCell>
                     <TableCell className="text-xs">{r.date}</TableCell>
-                    <TableCell className="text-xs">{r.fy}</TableCell>
+                    <TableCell className="text-xs">{r.mode}</TableCell>
+                    <TableCell className="text-xs">{r.donationType}</TableCell>
                     <TableCell className="text-center">
-                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => handleDownloadDonationReceipt(r.donationId, r.receiptNo)}>
-                        <Receipt className="h-3 w-3 mr-1" />PDF
-                      </Button>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-green-700" onClick={() => handleDownload(r.receipt80GId)}>
-                        <Award className="h-3 w-3 mr-1" />PDF
-                      </Button>
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-7 text-xs px-2"
+                          onClick={() => handleDownloadDonationReceipt(r.donationId, r.receiptNo)}
+                        >
+                          <Receipt className="h-3 w-3 mr-1" />
+                          Receipt
+                        </Button>
+                        <span className="text-muted-foreground/50">|</span>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="h-7 text-xs px-2 text-green-700"
+                          onClick={() => handleDownload(r.receipt80GId)}
+                        >
+                          <Award className="h-3 w-3 mr-1" />
+                          80G
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

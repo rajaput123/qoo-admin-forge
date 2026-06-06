@@ -31,8 +31,10 @@ import {
   Eye,
   AlertTriangle,
   Info,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
+import { download80GBlankTemplatePdf } from "@/lib/eightyGReceipt";
 import {
   getTempleConfig,
   saveTempleConfig,
@@ -618,7 +620,7 @@ const FinanceSettings = () => {
         <TabsContent value="80g" className="mt-4 space-y-4">
       <Card className={`max-w-2xl ${eightyGStepDone && eightyGEnabled ? "border-green-200/80" : ""}`}>
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start justify-between gap-2 flex-wrap w-full">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
                 <Shield className="h-4 w-4 text-primary" />
@@ -626,11 +628,25 @@ const FinanceSettings = () => {
               </CardTitle>
               <CardDescription>Tax certificates from registration — separate from bank accounts</CardDescription>
             </div>
-            {eightyGEnabled && eightyGReady && (
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 shrink-0">
-                {eightyGStatus}
-              </Badge>
-            )}
+            <div className="flex items-center gap-2 shrink-0">
+              {eightyGEnabled && eightyGReady && (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  {eightyGStatus}
+                </Badge>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  download80GBlankTemplatePdf();
+                  toast.success("Blank 80G template downloaded");
+                }}
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Blank template
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
