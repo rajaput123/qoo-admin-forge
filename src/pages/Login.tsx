@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import heroImage from "@/assets/hero-temple.jpg";
-import { getPostLoginRoute } from "@/lib/onboardingFlow";
+import { getPostLoginRoute, preparePostLoginOnboarding } from "@/lib/onboardingFlow";
 
 type LoginRole = "super-admin" | "temple-admin";
 
@@ -21,11 +21,8 @@ const Login = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (role === "super-admin") {
-      navigate("/temple-hub");
-    } else {
-      navigate(getPostLoginRoute());
-    }
+    preparePostLoginOnboarding();
+    navigate(getPostLoginRoute());
   };
 
   const isTemple = role === "temple-admin";

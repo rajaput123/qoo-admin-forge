@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Building2,
@@ -71,7 +71,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { shouldShowFinanceSetupPrompt } from "@/lib/onboardingFlow";
+import { shouldShowFinanceSetupPrompt, shouldShowSubscriptionPrompt, dismissSubscriptionPrompt, dismissFinanceSetupPrompt } from "@/lib/onboardingFlow";
 
 // Account status types
 type AccountStatus = "active" | "trial" | "expired" | "suspended" | "compliance_pending";
@@ -206,6 +206,7 @@ const itemVariants = {
 
 const TempleHub = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [lang] = useLang();
   const [showBanner, setShowBanner] = useState(true);
   const [helpVideoOpen, setHelpVideoOpen] = useState(false);
@@ -216,13 +217,35 @@ const TempleHub = () => {
   // Upgrade modal state
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
   const [selectedLockedModule, setSelectedLockedModule] = useState<typeof allModules[0] | null>(null);
-  const [financeSetupOpen, setFinanceSetupOpen] = useState(false);
+  const [onboardingTick, setOnboardingTick] = useState(0);
+  const [subscriptionOpen, setSubscriptionOpen] = useState(false);
+  const [financeOpen, setFinanceOpen] = useState(false);
+
+  const syncOnboardingDialogs = useCallback(() => {
+    if (location.pathname !== "/temple-hub") {
+      setSubscriptionOpen(false);
+      setFinanceOpen(false);
+      return;
+    }
+    const showSub = shouldShowSubscriptionPrompt();
+    const showFinance = shouldShowFinanceSetupPrompt();
+    setSubscriptionOpen(showSub);
+    setFinanceOpen(!showSub && showFinance);
+  }, [location.pathname]);
 
   useEffect(() => {
-    if (shouldShowFinanceSetupPrompt()) {
-      setFinanceSetupOpen(true);
-    }
-  }, []);
+    syncOnboardingDialogs();
+  }, [syncOnboardingDialogs, onboardingTick]);
+
+  const handleSubscriptionDismiss = () => {
+    dismissSubscriptionPrompt();
+    setOnboardingTick((t) => t + 1);
+  };
+
+  const handleFinanceSetupDismiss = () => {
+    dismissFinanceSetupPrompt();
+    setOnboardingTick((t) => t + 1);
+  };
 
   // Guided tour steps highlight key modules for first-time admins
   const tourSteps: TourStep[] = [
@@ -821,34 +844,62 @@ const TempleHub = () => {
         onClose={() => localStorage.setItem("templeSetupComplete", "1")}
       />
 
-      {/* Finance setup prompt after subscription */}
-      <Dialog open={financeSetupOpen} onOpenChange={setFinanceSetupOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* Subscription prompt — stays until View Plans or Continue (not closable otherwise) */}
+      <Dialog open={subscriptionOpen} onOpenChange={() => {}}>
+        <DialogContent
+          className="sm:max-w-md [&>button]:hidden"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-elite-orange" />
+              Welcome — registration complete
+            </DialogTitle>
+            <DialogDescription className="text-left pt-1 leading-relaxed">
+              You have registered successfully. To access all modules and full platform features,
+              please check our subscription plans.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-2">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={handleSubscriptionDismiss}>
+              Continue to dashboard
+            </Button>
+            <Button
+              className="w-full sm:w-auto gap-2"
+              onClick={() => navigate("/temple/settings/subscription")}
+            >
+              View Plans
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Finance setup — stays until Go to Settings or Later (not closable otherwise) */}
+      <Dialog open={financeOpen} onOpenChange={() => {}}>
+        <DialogContent
+          className="sm:max-w-md [&>button]:hidden"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <IndianRupee className="h-5 w-5 text-primary" />
-              Complete your setup
+              Complete your finance setup
             </DialogTitle>
-            <DialogDescription>
-              Please complete your finance configuration in Settings — link your associated bank account and enable or disable 80G for donations.
+            <DialogDescription className="text-left pt-1 leading-relaxed">
+              Please complete your finance configuration in Settings — link your associated bank account
+              and enable or disable 80G for donations.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                localStorage.setItem("financeSetupPromptDismissed", "1");
-                setFinanceSetupOpen(false);
-              }}
-            >
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-2">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={handleFinanceSetupDismiss}>
               Later
             </Button>
             <Button
-              className="gap-2"
-              onClick={() => {
-                setFinanceSetupOpen(false);
-                navigate("/temple/settings/finance");
-              }}
+              className="w-full sm:w-auto gap-2"
+              onClick={() => navigate("/temple/settings/finance")}
             >
               Go to Finance Settings
               <ArrowRight className="h-4 w-4" />

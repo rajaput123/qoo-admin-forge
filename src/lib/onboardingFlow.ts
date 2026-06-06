@@ -5,13 +5,14 @@ import {
 } from "./templeConfig";
 
 export const SUBSCRIPTION_PROMPT_DISMISSED = "subscriptionPromptDismissed";
+export const FINANCE_SETUP_PROMPT_DISMISSED = "financeSetupPromptDismissed";
 
 /** Clear onboarding flags so the post-login demo flow runs again. */
 export function resetTempleOnboarding(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(ONBOARDING_KEYS.subscriptionComplete);
   localStorage.removeItem(ONBOARDING_KEYS.financeSetupComplete);
-  localStorage.removeItem("financeSetupPromptDismissed");
+  localStorage.removeItem(FINANCE_SETUP_PROMPT_DISMISSED);
   localStorage.removeItem(SUBSCRIPTION_PROMPT_DISMISSED);
 }
 
@@ -26,13 +27,28 @@ export function shouldShowSubscriptionPrompt(): boolean {
   );
 }
 
-export function getPostLoginRoute(): "/onboarding/subscription" | "/temple-hub" {
-  return shouldShowSubscriptionPrompt() ? "/onboarding/subscription" : "/temple-hub";
+export function getPostLoginRoute(): "/temple-hub" {
+  return "/temple-hub";
+}
+
+/** Call on login — re-show prompts for any step not yet completed */
+export function preparePostLoginOnboarding(): void {
+  if (typeof window === "undefined") return;
+  if (!isSubscriptionComplete()) {
+    localStorage.removeItem(SUBSCRIPTION_PROMPT_DISMISSED);
+  }
+  if (!isFinanceSetupComplete()) {
+    localStorage.removeItem(FINANCE_SETUP_PROMPT_DISMISSED);
+  }
+}
+
+export function dismissFinanceSetupPrompt(): void {
+  localStorage.setItem(FINANCE_SETUP_PROMPT_DISMISSED, "1");
 }
 
 export function shouldShowFinanceSetupPrompt(): boolean {
   return (
     !isFinanceSetupComplete() &&
-    localStorage.getItem("financeSetupPromptDismissed") !== "1"
+    localStorage.getItem(FINANCE_SETUP_PROMPT_DISMISSED) !== "1"
   );
 }
