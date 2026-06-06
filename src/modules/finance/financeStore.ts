@@ -17,7 +17,6 @@ import {
   calculateNetPay, getAttendanceForPayroll, getEligibleEmployees,
   getMonthIndex, MONTH_NAMES
 } from "./payrollCalculator";
-
 const LS_KEY = "qoo.finance.v2";
 
 // ─── Helpers ───

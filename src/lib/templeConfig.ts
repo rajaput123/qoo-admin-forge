@@ -57,7 +57,7 @@ export function getTempleConfig(): TempleConfig {
           validityTo: data.validityTo80G || DEFAULT_TEMPLE_CONFIG.validityTo,
           email: data.email || DEFAULT_TEMPLE_CONFIG.email,
           phone: data.mobile ? `+91 ${data.mobile}` : DEFAULT_TEMPLE_CONFIG.phone,
-          eightyGEnabled: Boolean(data.registration80G),
+          eightyGEnabled: data.has80G === "yes" || Boolean(data.registration80G),
         };
       }
     }
@@ -83,6 +83,40 @@ export function format80GValidity(from: string, to: string): string {
     return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
   };
   return `${fmt(from)} to ${fmt(to)}`;
+}
+
+/** True when 80G is enabled and today falls within the validity window */
+export function is80GCertificateValid(config?: TempleConfig): boolean {
+  const cfg = config ?? getTempleConfig();
+  if (!cfg.eightyGEnabled || !cfg.validityFrom || !cfg.validityTo) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return today >= cfg.validityFrom && today <= cfg.validityTo;
+}
+
+export function get80GStatusLabel(config?: TempleConfig): "Disabled" | "Not configured" | "Active" | "Expired" {
+  const cfg = config ?? getTempleConfig();
+  if (!cfg.eightyGEnabled) return "Disabled";
+  if (!cfg.registration80G || cfg.pan.length !== 10) return "Not configured";
+  return is80GCertificateValid(cfg) ? "Active" : "Expired";
+}
+
+/** What the temple chose during registration (`yes` / `no`), or null if not registered via app */
+export function getRegistration80GChoice(): "yes" | "no" | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem("registrationData");
+    if (!raw) return null;
+    const data = JSON.parse(raw) as { has80G?: string };
+    if (data.has80G === "yes" || data.has80G === "no") return data.has80G;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+/** True when 80G details were captured at registration and user has not opened edit mode */
+export function has80GFromRegistration(): boolean {
+  return getRegistration80GChoice() === "yes" && Boolean(getTempleConfig().registration80G);
 }
 
 export const ONBOARDING_KEYS = {

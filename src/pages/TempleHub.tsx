@@ -889,8 +889,8 @@ const TempleHub = () => {
               Complete your finance setup
             </DialogTitle>
             <DialogDescription className="text-left pt-1 leading-relaxed">
-              Please complete your finance configuration in Settings — link your associated bank account
-              and enable or disable 80G for donations.
+              Add your temple bank account in 2 minutes — just bank name and account number.
+              80G is already handled from your registration.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-2">
