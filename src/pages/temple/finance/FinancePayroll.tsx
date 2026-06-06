@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { PlayCircle, Download, Search, Eye, Printer, Banknote } from "lucide-react";
+import { PlayCircle, Download, Search, Eye, Banknote } from "lucide-react";
 import { toast } from "sonner";
-import { NeftRtgsFormPanel } from "@/components/finance/NeftRtgsFormPanel";
-import { emptyNeftRtgsForm, type NeftRtgsFormData } from "@/data/neftRtgsTemplateData";
-import { buildPayrollNeftForm, mergeNeftForm } from "@/lib/neftRtgsUtils";
+import { PayrollBulkRemittanceForm } from "@/components/finance/PayrollBulkRemittanceForm";
+import { VoucherPrintDialog } from "@/components/finance/VoucherPrintDialog";
+import { buildPayrollBulkRemittance, type PayrollBulkRemittanceData } from "@/data/payrollBulkRemittanceData";
+import { exportPayrollBulkToExcel } from "@/lib/payrollBulkExport";
 
 const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN")}`;
 
@@ -27,15 +27,17 @@ interface Employee {
   deductions: number;
   netPay: number;
   bankName: string;
+  accountNo: string;
+  ifscCode: string;
   status: string;
 }
 
 const mockEmployees: Employee[] = [
-  { id: "EMP-001", name: "Ramesh Kumar", dept: "Priest", basicPay: 25000, allowance: 5000, gross: 30000, deductions: 2000, netPay: 28000, bankName: "SBI", status: "Paid" },
-  { id: "EMP-002", name: "Lakshmi Devi", dept: "Administration", basicPay: 22000, allowance: 3000, gross: 25000, deductions: 1500, netPay: 23500, bankName: "HDFC", status: "Paid" },
-  { id: "EMP-003", name: "Venkat Sharma", dept: "Security", basicPay: 18000, allowance: 2000, gross: 20000, deductions: 1000, netPay: 19000, bankName: "SBI", status: "Pending" },
-  { id: "EMP-004", name: "Priya Patel", dept: "Accounts", basicPay: 28000, allowance: 4000, gross: 32000, deductions: 2500, netPay: 29500, bankName: "HDFC", status: "Pending" },
-  { id: "EMP-005", name: "Suresh Reddy", dept: "Maintenance", basicPay: 16000, allowance: 1500, gross: 17500, deductions: 800, netPay: 16700, bankName: "", status: "Pending" },
+  { id: "EMP-001", name: "Ramesh Kumar", dept: "Priest", basicPay: 25000, allowance: 5000, gross: 30000, deductions: 2000, netPay: 28000, bankName: "SBI", accountNo: "30123456789", ifscCode: "SBIN0001234", status: "Paid" },
+  { id: "EMP-002", name: "Lakshmi Devi", dept: "Administration", basicPay: 22000, allowance: 3000, gross: 25000, deductions: 1500, netPay: 23500, bankName: "HDFC", accountNo: "60112233445", ifscCode: "HDFC0005678", status: "Paid" },
+  { id: "EMP-003", name: "Venkat Sharma", dept: "Security", basicPay: 18000, allowance: 2000, gross: 20000, deductions: 1000, netPay: 19000, bankName: "SBI", accountNo: "40112233445", ifscCode: "SBIN0001234", status: "Pending" },
+  { id: "EMP-004", name: "Priya Patel", dept: "Accounts", basicPay: 28000, allowance: 4000, gross: 32000, deductions: 2500, netPay: 29500, bankName: "HDFC", accountNo: "50112233445", ifscCode: "HDFC0005678", status: "Pending" },
+  { id: "EMP-005", name: "Suresh Reddy", dept: "Maintenance", basicPay: 16000, allowance: 1500, gross: 17500, deductions: 800, netPay: 16700, bankName: "", accountNo: "", ifscCode: "", status: "Pending" },
 ];
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -48,8 +50,8 @@ const FinancePayroll = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [runAllOpen, setRunAllOpen] = useState(false);
   const [viewEmployee, setViewEmployee] = useState<Employee | null>(null);
-  const [neftForm, setNeftForm] = useState<NeftRtgsFormData>(emptyNeftRtgsForm);
-  const [bulkNeftForms, setBulkNeftForms] = useState<Record<string, NeftRtgsFormData>>({});
+  const [bulkPreviewOpen, setBulkPreviewOpen] = useState(false);
+  const [bulkPreviewData, setBulkPreviewData] = useState<PayrollBulkRemittanceData | null>(null);
 
   const filtered = mockEmployees.filter((e) => {
     if (statusFilter !== "all" && e.status !== statusFilter) return false;
@@ -78,12 +80,6 @@ const FinancePayroll = () => {
     setSelectedIds(new Set());
   };
 
-  useEffect(() => {
-    if (viewEmployee?.bankName) {
-      setNeftForm(buildPayrollNeftForm(viewEmployee.name, viewEmployee.netPay, viewEmployee.dept, viewEmployee.bankName));
-    }
-  }, [viewEmployee]);
-
   const runPendingEmployees = useMemo(
     () => mockEmployees.filter((e) => e.status === "Pending" && (selectedIds.size === 0 || selectedIds.has(e.id))),
     [selectedIds]
@@ -99,17 +95,33 @@ const FinancePayroll = () => {
   const runTotalAmount = runPendingEmployees.reduce((s, e) => s + e.netPay, 0);
   const runBankAmount = runBankEmployees.reduce((s, e) => s + e.netPay, 0);
 
-  useEffect(() => {
-    if (!runAllOpen) return;
-    setBulkNeftForms(
-      Object.fromEntries(
-        runBankEmployees.map((emp) => [
-          emp.id,
-          buildPayrollNeftForm(emp.name, emp.netPay, emp.dept, emp.bankName),
-        ])
-      )
-    );
-  }, [runAllOpen, runBankEmployees]);
+  const buildBulkRemittanceSnapshot = () =>
+    buildPayrollBulkRemittance({
+      month: selectedMonth,
+      year: selectedYear,
+      employees: runBankEmployees.map((e) => ({
+        id: e.id,
+        name: e.name,
+        accountNo: e.accountNo,
+        ifscCode: e.ifscCode,
+        netPay: e.netPay,
+      })),
+    });
+
+  const handleOpenBulkPreview = () => {
+    if (runBankEmployees.length === 0) return;
+    setBulkPreviewData(buildBulkRemittanceSnapshot());
+    setBulkPreviewOpen(true);
+  };
+
+  const handleExportBulkExcel = () => {
+    if (runBankEmployees.length === 0) {
+      toast.error("No bank employees to export");
+      return;
+    }
+    exportPayrollBulkToExcel(buildBulkRemittanceSnapshot());
+    toast.success("Payroll bulk remittance exported to Excel (CSV)");
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
@@ -243,7 +255,7 @@ const FinancePayroll = () => {
 
       {/* Run All Confirm Modal */}
       <Dialog open={runAllOpen} onOpenChange={setRunAllOpen}>
-        <DialogContent className={runBankEmployees.length > 0 ? "max-w-6xl max-h-[92vh] overflow-y-auto" : "max-w-lg"}>
+        <DialogContent className="max-w-lg bg-white border">
           <DialogHeader>
             <DialogTitle>Run Payroll — {selectedMonth} {selectedYear}</DialogTitle>
             <DialogDescription>
@@ -295,61 +307,31 @@ const FinancePayroll = () => {
           )}
 
           {runBankEmployees.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2 print:hidden">
-                <p className="text-sm font-semibold">
-                  NEFT / RTGS remittance ({runBankEmployees.length} employee{runBankEmployees.length > 1 ? "s" : ""})
-                </p>
-                {runBankEmployees.length > 1 && (
-                  <Button type="button" variant="outline" size="sm" className="text-xs" onClick={() => window.print()}>
-                    <Printer className="h-3.5 w-3.5 mr-1.5" /> Print all forms
-                  </Button>
-                )}
+            <div className="rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-3 space-y-2 text-xs text-blue-950">
+              <p className="font-semibold">
+                Bank remittance — {runBankEmployees.length} employee{runBankEmployees.length > 1 ? "s" : ""} ·{" "}
+                {formatCurrency(runBankAmount)}
+              </p>
+              <p className="text-blue-900/80">
+                Temple debit account, date, and employee account details in one bulk form for the bank visit.
+              </p>
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={handleOpenBulkPreview}
+                  className="text-[11px] text-[#7a3411] hover:text-[#63290d] hover:underline underline-offset-2 font-medium"
+                >
+                  Preview bulk remittance form →
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportBulkExcel}
+                  className="inline-flex items-center gap-1 text-[11px] text-[#7a3411] hover:text-[#63290d] hover:underline underline-offset-2 font-medium"
+                >
+                  <Download className="h-3 w-3" />
+                  Export Excel
+                </button>
               </div>
-
-              {runBankEmployees.length === 1 ? (
-                bulkNeftForms[runBankEmployees[0].id] && (
-                  <NeftRtgsFormPanel
-                    title={`NEFT / RTGS — ${runBankEmployees[0].name} (${formatCurrency(runBankEmployees[0].netPay)})`}
-                    data={bulkNeftForms[runBankEmployees[0].id]}
-                    onChange={(patch) =>
-                      setBulkNeftForms((prev) => ({
-                        ...prev,
-                        [runBankEmployees[0].id]: mergeNeftForm(prev[runBankEmployees[0].id], patch),
-                      }))
-                    }
-                  />
-                )
-              ) : (
-                <Accordion type="multiple" className="max-h-[50vh] overflow-y-auto rounded-lg border px-3">
-                  {runBankEmployees.map((emp) => (
-                    <AccordionItem key={emp.id} value={emp.id}>
-                      <AccordionTrigger className="py-3 text-xs hover:no-underline">
-                        <span className="flex flex-1 items-center justify-between gap-3 pr-2 text-left">
-                          <span className="font-medium">{emp.name}</span>
-                          <span className="text-muted-foreground shrink-0">
-                            {emp.bankName} · {formatCurrency(emp.netPay)}
-                          </span>
-                        </span>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        {bulkNeftForms[emp.id] && (
-                          <NeftRtgsFormPanel
-                            title={`NEFT / RTGS — ${emp.name}`}
-                            data={bulkNeftForms[emp.id]}
-                            onChange={(patch) =>
-                              setBulkNeftForms((prev) => ({
-                                ...prev,
-                                [emp.id]: mergeNeftForm(prev[emp.id], patch),
-                              }))
-                            }
-                          />
-                        )}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              )}
             </div>
           )}
 
@@ -360,8 +342,16 @@ const FinancePayroll = () => {
         </DialogContent>
       </Dialog>
 
+      <VoucherPrintDialog
+        open={bulkPreviewOpen}
+        onOpenChange={setBulkPreviewOpen}
+        title={`Payroll Bulk Remittance — ${selectedMonth} ${selectedYear}`}
+      >
+        {bulkPreviewData && <PayrollBulkRemittanceForm data={bulkPreviewData} />}
+      </VoucherPrintDialog>
+
       <Dialog open={!!viewEmployee} onOpenChange={(open) => !open && setViewEmployee(null)}>
-        <DialogContent className={viewEmployee?.bankName ? "max-w-6xl max-h-[92vh] overflow-y-auto" : "max-w-md"}>
+        <DialogContent className="max-w-md bg-white border">
           <DialogHeader>
             <DialogTitle>{viewEmployee?.name}</DialogTitle>
             <DialogDescription>{viewEmployee?.id} · {viewEmployee?.dept}</DialogDescription>
@@ -380,11 +370,32 @@ const FinancePayroll = () => {
             </div>
           )}
           {viewEmployee?.bankName && viewEmployee.status === "Pending" && (
-            <NeftRtgsFormPanel
-              data={neftForm}
-              onChange={(patch) => setNeftForm((prev) => mergeNeftForm(prev, patch))}
-              title={`NEFT / RTGS — ${viewEmployee.name}`}
-            />
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setBulkPreviewData(
+                    buildPayrollBulkRemittance({
+                      month: selectedMonth,
+                      year: selectedYear,
+                      employees: [
+                        {
+                          id: viewEmployee.id,
+                          name: viewEmployee.name,
+                          accountNo: viewEmployee.accountNo,
+                          ifscCode: viewEmployee.ifscCode,
+                          netPay: viewEmployee.netPay,
+                        },
+                      ],
+                    })
+                  );
+                  setBulkPreviewOpen(true);
+                }}
+                className="text-[11px] text-[#7a3411] hover:underline underline-offset-2 font-medium"
+              >
+                Preview remittance form →
+              </button>
+            </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setViewEmployee(null)}>Close</Button>

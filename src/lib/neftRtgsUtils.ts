@@ -5,9 +5,25 @@ import {
   type NeftRtgsFormData,
 } from "@/data/neftRtgsTemplateData";
 
+export function isCashOrUpiMode(mode: string): boolean {
+  const m = mode.toUpperCase().trim();
+  return m === "CASH" || m === "UPI" || m.includes("UPI");
+}
+
 export function isNeftRtgsMode(mode: string): boolean {
+  if (isCashOrUpiMode(mode)) return false;
   const m = mode.toUpperCase().replace(/\s+/g, "");
-  return m === "NEFT" || m === "RTGS" || m.includes("NEFT") || m.includes("RTGS");
+  return (
+    m === "NEFT" ||
+    m === "RTGS" ||
+    m.includes("NEFT") ||
+    m.includes("RTGS") ||
+    m === "CHEQUE" ||
+    m === "CARD" ||
+    m === "BANK" ||
+    m.includes("CHEQUE") ||
+    m.includes("BANKTRANSFER")
+  );
 }
 
 export function mergeNeftForm(

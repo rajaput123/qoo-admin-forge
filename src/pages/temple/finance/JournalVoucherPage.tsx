@@ -13,8 +13,9 @@ import { Download, ArrowDown, ArrowUp, ArrowLeftRight, ChevronsLeft, ChevronLeft
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-import { NeftRtgsFormPanel } from "@/components/finance/NeftRtgsFormPanel";
-import { emptyNeftRtgsForm, type NeftRtgsFormData } from "@/data/neftRtgsTemplateData";
+import { NeftRtgsRemittanceForm } from "@/components/finance/NeftRtgsRemittanceForm";
+import { VoucherPrintDialog } from "@/components/finance/VoucherPrintDialog";
+import { defaultNeftRtgsTemplate, type NeftRtgsFormData } from "@/data/neftRtgsTemplateData";
 import { isNeftRtgsMode, buildPaymentVoucherNeftForm, mergeNeftForm } from "@/lib/neftRtgsUtils";
 
 interface Voucher {
@@ -108,22 +109,22 @@ const JournalVoucherPage = () => {
   const [formNarration, setFormNarration] = useState("");
   const [formApprovedBy, setFormApprovedBy] = useState("");
   const [formPurpose, setFormPurpose] = useState("");
-  const [neftForm, setNeftForm] = useState<NeftRtgsFormData>(emptyNeftRtgsForm);
+  const [voucherPreviewOpen, setVoucherPreviewOpen] = useState(false);
+  const [previewNeftForm, setPreviewNeftForm] = useState<NeftRtgsFormData | null>(null);
 
-  const showNeftForm = formType === "Payment" && isNeftRtgsMode(formPaymentMode);
+  const showNeftForm = isNeftRtgsMode(formPaymentMode);
 
-  useEffect(() => {
-    if (showNeftForm) {
-      setNeftForm(
-        buildPaymentVoucherNeftForm(
-          formDonorName || formAccount || "Payee",
-          formAmount,
-          formNarration,
-          formAccount
-        )
-      );
-    }
-  }, [showNeftForm, formDonorName, formAccount, formAmount, formNarration, formPaymentMode]);
+  const handleOpenNeftPreview = () => {
+    setPreviewNeftForm(
+      buildPaymentVoucherNeftForm(
+        formDonorName || formAccount || "Payee",
+        formAmount,
+        formNarration,
+        formAccount
+      )
+    );
+    setVoucherPreviewOpen(true);
+  };
 
   const resetForm = () => {
     setFormType("Receipt");
@@ -141,7 +142,8 @@ const JournalVoucherPage = () => {
     setFormNarration("");
     setFormApprovedBy("");
     setFormPurpose("");
-    setNeftForm(emptyNeftRtgsForm());
+    setPreviewNeftForm(null);
+    setVoucherPreviewOpen(false);
   };
 
   const filtered = vouchers.filter((v) => {
@@ -506,7 +508,7 @@ const JournalVoucherPage = () => {
           setShowCreateDialog(true);
         }
       }}>
-        <DialogContent className={showNeftForm ? "max-w-6xl max-h-[92vh] overflow-y-auto bg-white border" : "max-w-2xl bg-white border"}>
+        <DialogContent className="max-w-2xl bg-white border">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-foreground">
               New Journal Voucher
@@ -717,6 +719,15 @@ const JournalVoucherPage = () => {
                       <SelectItem value="Card">Card</SelectItem>
                     </SelectContent>
                   </Select>
+                  {showNeftForm && (
+                    <button
+                      type="button"
+                      onClick={handleOpenNeftPreview}
+                      className="text-[11px] text-[#7a3411] hover:text-[#63290d] hover:underline underline-offset-2 font-medium"
+                    >
+                      Preview bank remittance form →
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -746,14 +757,6 @@ const JournalVoucherPage = () => {
                   </Select>
                 </div>
               </div>
-
-              {showNeftForm && (
-                <NeftRtgsFormPanel
-                  data={neftForm}
-                  onChange={(patch) => setNeftForm((prev) => mergeNeftForm(prev, patch))}
-                  title="Bank remittance — payment voucher"
-                />
-              )}
 
               {/* Row 6: Narration */}
               <div className="space-y-1.5">
@@ -797,8 +800,8 @@ const JournalVoucherPage = () => {
                 </div>
               </div>
 
-              {/* Voucher Preview Section */}
-              <div className="bg-amber-50/50 border border-dashed border-amber-200 p-4 rounded-lg space-y-2">
+              {/* Voucher Preview Section — ledger Dr/Cr (screen only) */}
+              <div className="bg-amber-50/50 border border-dashed border-amber-200 p-4 rounded-lg space-y-2 print:hidden">
                 <h3 className="text-[10px] font-bold uppercase tracking-wider text-amber-800/80">Voucher Preview</h3>
                 <div className="text-xs space-y-1 font-mono">
                   <div className="flex justify-between">
@@ -845,6 +848,20 @@ const JournalVoucherPage = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      <VoucherPrintDialog
+        open={voucherPreviewOpen}
+        onOpenChange={setVoucherPreviewOpen}
+        title={`${formPaymentMode} — Bank Remittance Preview`}
+      >
+        {previewNeftForm && (
+          <NeftRtgsRemittanceForm
+            template={defaultNeftRtgsTemplate}
+            data={previewNeftForm}
+            onChange={(patch) => setPreviewNeftForm((prev) => (prev ? mergeNeftForm(prev, patch) : prev))}
+          />
+        )}
+      </VoucherPrintDialog>
     </motion.div>
   );
 };

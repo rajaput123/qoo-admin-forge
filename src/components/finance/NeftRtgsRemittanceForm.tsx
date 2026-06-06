@@ -37,12 +37,15 @@ function FormFieldRow({
         {readOnly ? (
           <span className="text-xs px-1 py-1 block min-h-[28px]">{value || "—"}</span>
         ) : (
-          <Input
-            value={value}
-            onChange={(e) => onChange?.(e.target.value)}
-            placeholder={placeholder}
-            className="border-0 h-7 text-xs shadow-none focus-visible:ring-0 rounded-none bg-transparent px-1.5 print:border-0"
-          />
+          <>
+            <Input
+              value={value}
+              onChange={(e) => onChange?.(e.target.value)}
+              placeholder={placeholder}
+              className="border-0 h-7 text-xs shadow-none focus-visible:ring-0 rounded-none bg-transparent px-1.5 print:hidden"
+            />
+            <span className="hidden print:block text-xs px-1.5 py-1 min-h-[28px]">{value || "—"}</span>
+          </>
         )}
       </td>
     </tr>
@@ -212,8 +215,8 @@ function CopyBlock({
 
 export function NeftRtgsRemittanceForm({ template, data, onChange, className }: NeftRtgsRemittanceFormProps) {
   return (
-    <div className={cn("neft-rtgs-form", className)}>
-      <div className="flex flex-col lg:flex-row gap-0 lg:divide-x lg:divide-foreground/80">
+    <div className={cn("neft-rtgs-form voucher-print-sheet", className)}>
+      <div className="voucher-print-copies-row flex flex-col lg:flex-row gap-0 lg:divide-x lg:divide-foreground/80">
         <CopyBlock copyLabel="Customer Copy" template={template} data={data} onChange={onChange} variant="customer" />
         <CopyBlock copyLabel="Banker's Copy" template={template} data={data} onChange={onChange} variant="banker" />
       </div>

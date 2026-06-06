@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { NeftRtgsFormPanel } from "@/components/finance/NeftRtgsFormPanel";
-import { emptyNeftRtgsForm, type NeftRtgsFormData } from "@/data/neftRtgsTemplateData";
+import { NeftRtgsRemittanceForm } from "@/components/finance/NeftRtgsRemittanceForm";
+import { VoucherPrintDialog } from "@/components/finance/VoucherPrintDialog";
+import { defaultNeftRtgsTemplate, type NeftRtgsFormData } from "@/data/neftRtgsTemplateData";
 import { isNeftRtgsMode, buildVendorNeftForm, mergeNeftForm } from "@/lib/neftRtgsUtils";
 
 const formatCurrency = (val: number) => `₹${val.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`;
@@ -50,14 +51,10 @@ const ProcurementPaymentPage = () => {
   const [recordOpen, setRecordOpen] = useState(false);
   const [payNowItem, setPayNowItem] = useState<AgeingItem | null>(null);
   const [form, setForm] = useState({ vendor: "", invoiceNo: "", amount: "", mode: "NEFT", utr: "" });
-  const [neftForm, setNeftForm] = useState<NeftRtgsFormData>(emptyNeftRtgsForm);
-  const showNeftForm = isNeftRtgsMode(form.mode);
+  const [voucherPreviewOpen, setVoucherPreviewOpen] = useState(false);
+  const [previewNeftForm, setPreviewNeftForm] = useState<NeftRtgsFormData | null>(null);
 
-  useEffect(() => {
-    if (showNeftForm) {
-      setNeftForm(buildVendorNeftForm(form.vendor, form.amount, form.invoiceNo));
-    }
-  }, [showNeftForm, form.vendor, form.amount, form.invoiceNo]);
+  const showNeftForm = isNeftRtgsMode(form.mode);
 
   const openRecord = (prefill?: AgeingItem) => {
     if (prefill) {
@@ -67,24 +64,30 @@ const ProcurementPaymentPage = () => {
       setForm({ vendor: "", invoiceNo: "", amount: "", mode: "NEFT", utr: "" });
       setPayNowItem(null);
     }
-    setNeftForm(emptyNeftRtgsForm());
+    setPreviewNeftForm(null);
+    setVoucherPreviewOpen(false);
     setRecordOpen(true);
   };
 
-  const handleRecordPayment = () => {
-    if (!form.vendor || !form.amount) {
-      toast.error("Vendor and amount are required");
-      return;
-    }
-    if (showNeftForm && !neftForm.beneficiaryAccountNo) {
-      toast.error("Complete beneficiary account details in the NEFT form");
-      return;
-    }
-    toast.success(`Payment of ${formatCurrency(Number(form.amount))} recorded (mock)`);
+  const closeRecord = () => {
     setRecordOpen(false);
     setPayNowItem(null);
+    setPreviewNeftForm(null);
+    setVoucherPreviewOpen(false);
     setForm({ vendor: "", invoiceNo: "", amount: "", mode: "NEFT", utr: "" });
-    setNeftForm(emptyNeftRtgsForm());
+  };
+
+  const handleOpenNeftPreview = () => {
+    if (!form.vendor.trim()) {
+      toast.error("Vendor is required");
+      return;
+    }
+    if (!form.amount || Number(form.amount) <= 0) {
+      toast.error("Amount is required");
+      return;
+    }
+    setPreviewNeftForm(buildVendorNeftForm(form.vendor, form.amount, form.invoiceNo));
+    setVoucherPreviewOpen(true);
   };
 
   return (
@@ -195,8 +198,8 @@ const ProcurementPaymentPage = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={recordOpen} onOpenChange={(open) => { setRecordOpen(open); if (!open) setPayNowItem(null); }}>
-        <DialogContent className={showNeftForm ? "max-w-6xl max-h-[92vh] overflow-y-auto" : "max-w-md"}>
+      <Dialog open={recordOpen} onOpenChange={(open) => { if (!open) closeRecord(); else setRecordOpen(true); }}>
+        <DialogContent className="max-w-md bg-white border">
           <DialogHeader>
             <DialogTitle>{payNowItem ? `Pay ${payNowItem.invoiceNo}` : "Record Vendor Payment"}</DialogTitle>
           </DialogHeader>
@@ -226,6 +229,15 @@ const ProcurementPaymentPage = () => {
                     <SelectItem value="CASH">Cash</SelectItem>
                   </SelectContent>
                 </Select>
+                {showNeftForm && (
+                  <button
+                    type="button"
+                    onClick={handleOpenNeftPreview}
+                    className="text-[11px] text-[#7a3411] hover:text-[#63290d] hover:underline underline-offset-2 font-medium"
+                  >
+                    Preview bank remittance form →
+                  </button>
+                )}
               </div>
             </div>
             {!showNeftForm && (
@@ -234,21 +246,26 @@ const ProcurementPaymentPage = () => {
                 <Input placeholder="Reference number" value={form.utr} onChange={(e) => setForm((p) => ({ ...p, utr: e.target.value }))} className="text-xs h-9 font-mono" />
               </div>
             )}
-
-            {showNeftForm && (
-              <NeftRtgsFormPanel
-                data={neftForm}
-                onChange={(patch) => setNeftForm((prev) => mergeNeftForm(prev, patch))}
-                title="Bank remittance — vendor payment"
-              />
-            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRecordOpen(false)}>Cancel</Button>
-            <Button onClick={handleRecordPayment}>Confirm Payment</Button>
+            <Button variant="outline" onClick={closeRecord}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <VoucherPrintDialog
+        open={voucherPreviewOpen}
+        onOpenChange={setVoucherPreviewOpen}
+        title={`${form.mode} — Vendor Payment Remittance Preview`}
+      >
+        {previewNeftForm && (
+          <NeftRtgsRemittanceForm
+            template={defaultNeftRtgsTemplate}
+            data={previewNeftForm}
+            onChange={(patch) => setPreviewNeftForm((prev) => (prev ? mergeNeftForm(prev, patch) : prev))}
+          />
+        )}
+      </VoucherPrintDialog>
     </motion.div>
   );
 };
