@@ -28,6 +28,13 @@ const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 const NTH_OPTIONS = ["1st", "2nd", "3rd", "4th", "Last"] as const;
 const WEEKDAY_FULL = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
 
+interface PrasadamItem {
+  name: string;
+  quantity: number;
+  price: number;
+  showOnline: boolean;
+}
+
 interface Offering {
   id: string;
   name: string;
@@ -54,18 +61,22 @@ interface Offering {
   nakshatra: boolean;
   walkinTracking: boolean;
   vipEnabled: boolean;
+  availableOnline: boolean;
+  availableCounter: boolean;
+  prasadamIncluded?: boolean;
+  prasadamItems?: PrasadamItem[];
   images: string[];
   createdAt: string;
 }
 
 const mockOfferings: Offering[] = [
-  { id: "1", name: "Suprabhatam", type: "Ritual", category: "Daily Seva", structure: "Main Temple", defaultTime: "5:30 AM", basePrice: 500, price: 500, capacity: 50, status: "Active", description: "Morning awakening ceremony for the deity", endTime: "6:00 AM", frequency: "Daily", dateRange: "All Year", maxPerDevotee: 2, groupBooking: false, free: false, refundable: true, priestRequired: true, sankalpam: true, gothram: true, nakshatra: false, walkinTracking: false, vipEnabled: false, images: ["https://images.unsplash.com/photo-1600693577615-9f3a0f7a16ba?w=400", "https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=400"], createdAt: "2024-01-15" },
-  { id: "2", name: "Archana", type: "Ritual", category: "Daily Seva", structure: "Padmavathi Shrine", defaultTime: "7:00 AM", basePrice: 100, price: 200, capacity: 30, status: "Active", description: "Chanting of 108 names", endTime: "7:30 AM", frequency: "Daily", dateRange: "All Year", endDate: "2026-06-30", maxPerDevotee: 5, groupBooking: true, free: false, refundable: false, priestRequired: true, sankalpam: true, gothram: true, nakshatra: true, walkinTracking: false, vipEnabled: false, images: ["https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400"], createdAt: "2024-01-10" },
-  { id: "3", name: "Abhishekam", type: "Ritual", category: "Special Seva", structure: "Main Temple", defaultTime: "9:00 AM", basePrice: 2000, price: 2000, capacity: 25, status: "Active", description: "Sacred bathing ceremony with milk, honey, and holy water", endTime: "10:00 AM", frequency: "Daily", dateRange: "All Year", endDate: "2026-12-31", maxPerDevotee: 1, groupBooking: false, free: false, refundable: true, priestRequired: true, sankalpam: true, gothram: true, nakshatra: true, walkinTracking: false, vipEnabled: false, images: ["https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=400"], createdAt: "2024-01-12" },
-  { id: "4", name: "Morning Darshan", type: "Darshan", category: "Regular", structure: "Main Temple", defaultTime: "6:00 AM", basePrice: 0, price: 0, capacity: 500, status: "Active", description: "General morning darshan", endTime: "10:00 AM", frequency: "Daily", dateRange: "All Year", maxPerDevotee: 10, groupBooking: true, free: true, refundable: false, priestRequired: false, sankalpam: false, gothram: false, nakshatra: false, walkinTracking: true, vipEnabled: true, images: ["https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400"], createdAt: "2024-01-08" },
-  { id: "5", name: "VIP Darshan", type: "Darshan", category: "VIP", structure: "Main Temple", defaultTime: "8:00 AM", basePrice: 300, price: 150, capacity: 100, status: "Active", description: "Priority darshan with shorter wait", endTime: "10:00 AM", frequency: "Daily", dateRange: "All Year", endDate: "2026-04-15", maxPerDevotee: 4, groupBooking: true, free: false, refundable: true, priestRequired: false, sankalpam: false, gothram: false, nakshatra: false, walkinTracking: false, vipEnabled: true, images: [], createdAt: "2024-01-09" },
-  { id: "6", name: "Sahasranama", type: "Ritual", category: "Special Seva", structure: "Varadaraja Shrine", defaultTime: "11:00 AM", basePrice: 1500, price: 1500, capacity: 40, status: "Inactive", description: "Recitation of 1000 names", endTime: "12:00 PM", frequency: "Weekly", dateRange: "All Year", endDate: "2026-03-31", maxPerDevotee: 2, groupBooking: false, free: false, refundable: true, priestRequired: true, sankalpam: true, gothram: true, nakshatra: false, walkinTracking: false, vipEnabled: false, images: [], createdAt: "2024-02-01" },
-  { id: "7", name: "Special Puja", type: "Ritual", category: "Special Seva", structure: "Main Temple", defaultTime: "10:00 AM", basePrice: 1000, price: 500, capacity: 20, status: "Active", description: "Special puja with 50% discount", endTime: "11:00 AM", frequency: "Daily", dateRange: "All Year", maxPerDevotee: 3, groupBooking: true, free: false, refundable: true, priestRequired: true, sankalpam: true, gothram: true, nakshatra: true, walkinTracking: false, vipEnabled: false, images: [], createdAt: "2024-02-05" },
+  { id: "1", name: "Suprabhatam", type: "Ritual", category: "Daily Seva", structure: "Main Temple", defaultTime: "5:30 AM", basePrice: 500, price: 500, capacity: 50, status: "Active", description: "Morning awakening ceremony for the deity", endTime: "6:00 AM", frequency: "Daily", dateRange: "All Year", maxPerDevotee: 2, groupBooking: false, free: false, refundable: true, priestRequired: true, sankalpam: true, gothram: true, nakshatra: false, walkinTracking: false, vipEnabled: false, availableOnline: true, availableCounter: true, prasadamIncluded: true, prasadamItems: [{ name: "Laddu Prasadam", quantity: 2, price: 50, showOnline: true }], images: ["https://images.unsplash.com/photo-1600693577615-9f3a0f7a16ba?w=400", "https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=400"], createdAt: "2024-01-15" },
+  { id: "2", name: "Archana", type: "Ritual", category: "Daily Seva", structure: "Padmavathi Shrine", defaultTime: "7:00 AM", basePrice: 100, price: 200, capacity: 30, status: "Active", description: "Chanting of 108 names", endTime: "7:30 AM", frequency: "Daily", dateRange: "All Year", endDate: "2026-06-30", maxPerDevotee: 5, groupBooking: true, free: false, refundable: false, priestRequired: true, sankalpam: true, gothram: true, nakshatra: true, walkinTracking: false, vipEnabled: false, availableOnline: true, availableCounter: true, prasadamIncluded: true, prasadamItems: [{ name: "Pulihora", quantity: 1, price: 0, showOnline: false }], images: ["https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400"], createdAt: "2024-01-10" },
+  { id: "3", name: "Abhishekam", type: "Ritual", category: "Special Seva", structure: "Main Temple", defaultTime: "9:00 AM", basePrice: 2000, price: 2000, capacity: 25, status: "Active", description: "Sacred bathing ceremony with milk, honey, and holy water", endTime: "10:00 AM", frequency: "Daily", dateRange: "All Year", endDate: "2026-12-31", maxPerDevotee: 1, groupBooking: false, free: false, refundable: true, priestRequired: true, sankalpam: true, gothram: true, nakshatra: true, walkinTracking: false, vipEnabled: false, availableOnline: true, availableCounter: true, images: ["https://images.unsplash.com/photo-1609766857041-ed402ea8069a?w=400"], createdAt: "2024-01-12" },
+  { id: "4", name: "Morning Darshan", type: "Darshan", category: "Regular", structure: "Main Temple", defaultTime: "6:00 AM", basePrice: 0, price: 0, capacity: 500, status: "Active", description: "General morning darshan", endTime: "10:00 AM", frequency: "Daily", dateRange: "All Year", maxPerDevotee: 10, groupBooking: true, free: true, refundable: false, priestRequired: false, sankalpam: false, gothram: false, nakshatra: false, walkinTracking: true, vipEnabled: true, availableOnline: true, availableCounter: true, images: ["https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=400"], createdAt: "2024-01-08" },
+  { id: "5", name: "VIP Darshan", type: "Darshan", category: "VIP", structure: "Main Temple", defaultTime: "8:00 AM", basePrice: 300, price: 150, capacity: 100, status: "Active", description: "Priority darshan with shorter wait", endTime: "10:00 AM", frequency: "Daily", dateRange: "All Year", endDate: "2026-04-15", maxPerDevotee: 4, groupBooking: true, free: false, refundable: true, priestRequired: false, sankalpam: false, gothram: false, nakshatra: false, walkinTracking: false, vipEnabled: true, availableOnline: true, availableCounter: false, images: [], createdAt: "2024-01-09" },
+  { id: "6", name: "Sahasranama", type: "Ritual", category: "Special Seva", structure: "Varadaraja Shrine", defaultTime: "11:00 AM", basePrice: 1500, price: 1500, capacity: 40, status: "Inactive", description: "Recitation of 1000 names", endTime: "12:00 PM", frequency: "Weekly", dateRange: "All Year", endDate: "2026-03-31", maxPerDevotee: 2, groupBooking: false, free: false, refundable: true, priestRequired: true, sankalpam: true, gothram: true, nakshatra: false, walkinTracking: false, vipEnabled: false, availableOnline: false, availableCounter: true, images: [], createdAt: "2024-02-01" },
+  { id: "7", name: "Special Puja", type: "Ritual", category: "Special Seva", structure: "Main Temple", defaultTime: "10:00 AM", basePrice: 1000, price: 500, capacity: 20, status: "Active", description: "Special puja with 50% discount", endTime: "11:00 AM", frequency: "Daily", dateRange: "All Year", maxPerDevotee: 3, groupBooking: true, free: false, refundable: true, priestRequired: true, sankalpam: true, gothram: true, nakshatra: true, walkinTracking: false, vipEnabled: false, availableOnline: true, availableCounter: true, images: [], createdAt: "2024-02-05" },
 ];
 
 const structureOptions = [
@@ -107,12 +118,6 @@ const OfferingsList = () => {
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [isAddStructureOpen, setIsAddStructureOpen] = useState(false);
 
-  interface PrasadamItem {
-    name: string;
-    quantity: number;
-    price: number;
-  }
-
   const [form, setForm] = useState({
     name: "", type: "Ritual" as "Ritual" | "Darshan", category: "", structure: "", description: "",
     defaultTime: "", endTime: "", frequency: "Daily" as FrequencyType, dateRange: "",
@@ -120,6 +125,7 @@ const OfferingsList = () => {
     free: false, basePrice: 0, price: 0,
     priestRequired: true, sankalpam: true, gothram: true, nakshatra: false,
     walkinTracking: false, vipEnabled: false,
+    availableOnline: true, availableCounter: true,
     assignedPriest: "",
     receiptTemplate: "",
     prasadamIncluded: false,
@@ -146,7 +152,7 @@ const OfferingsList = () => {
   };
 
   const resetForm = () => {
-    setForm({ name: "", type: "Ritual", category: "", structure: "", description: "", defaultTime: "", endTime: "", frequency: "Daily" as FrequencyType, dateRange: "", capacity: 50, maxPerDevotee: 2, groupBooking: false, free: false, basePrice: 0, price: 0, priestRequired: true, sankalpam: true, gothram: true, nakshatra: false, walkinTracking: false, vipEnabled: false, assignedPriest: "", receiptTemplate: "", prasadamIncluded: false, prasadamItems: [] });
+    setForm({ name: "", type: "Ritual", category: "", structure: "", description: "", defaultTime: "", endTime: "", frequency: "Daily" as FrequencyType, dateRange: "", capacity: 50, maxPerDevotee: 2, groupBooking: false, free: false, basePrice: 0, price: 0, priestRequired: true, sankalpam: true, gothram: true, nakshatra: false, walkinTracking: false, vipEnabled: false, availableOnline: true, availableCounter: true, assignedPriest: "", receiptTemplate: "", prasadamIncluded: false, prasadamItems: [] });
     setEditing(null);
     setCustomFields([]);
   };
@@ -162,7 +168,7 @@ const OfferingsList = () => {
   const openModal = (o?: Offering) => {
     if (o) {
       setEditing(o);
-      setForm({ name: o.name, type: o.type, category: o.category, structure: o.structure, description: o.description, defaultTime: o.defaultTime, endTime: o.endTime, frequency: o.frequency as FrequencyType, dateRange: o.dateRange, capacity: o.capacity, maxPerDevotee: o.maxPerDevotee, groupBooking: o.groupBooking, free: o.free, basePrice: o.basePrice, price: o.price || o.basePrice, priestRequired: o.priestRequired, sankalpam: o.sankalpam, gothram: o.gothram, nakshatra: o.nakshatra, walkinTracking: o.walkinTracking, vipEnabled: o.vipEnabled, assignedPriest: (o as any).assignedPriest || "", receiptTemplate: (o as any).receiptTemplate || "", prasadamIncluded: (o as any).prasadamIncluded || false, prasadamItems: (o as any).prasadamItems || [] });
+      setForm({ name: o.name, type: o.type, category: o.category, structure: o.structure, description: o.description, defaultTime: o.defaultTime, endTime: o.endTime, frequency: o.frequency as FrequencyType, dateRange: o.dateRange, capacity: o.capacity, maxPerDevotee: o.maxPerDevotee, groupBooking: o.groupBooking, free: o.free, basePrice: o.basePrice, price: o.price || o.basePrice, priestRequired: o.priestRequired, sankalpam: o.sankalpam, gothram: o.gothram, nakshatra: o.nakshatra, walkinTracking: o.walkinTracking, vipEnabled: o.vipEnabled, availableOnline: o.availableOnline ?? true, availableCounter: o.availableCounter ?? true, assignedPriest: (o as any).assignedPriest || "", receiptTemplate: (o as any).receiptTemplate || "", prasadamIncluded: o.prasadamIncluded || false, prasadamItems: (o.prasadamItems || []).map(item => ({ ...item, showOnline: item.showOnline ?? true })) });
     } else resetForm();
     setIsModalOpen(true);
   };
@@ -261,6 +267,7 @@ const OfferingsList = () => {
                     <TableHead>Default Time</TableHead>
                     <TableHead className="text-right">Base Price</TableHead>
                     <TableHead className="text-center">Capacity</TableHead>
+                    <TableHead>Channels</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -282,6 +289,13 @@ const OfferingsList = () => {
                       <TableCell className="text-right">{o.free ? "Free" : `₹${o.basePrice}`}</TableCell>
                       <TableCell className="text-center">{o.capacity}</TableCell>
                       <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {o.availableOnline && <Badge variant="outline" className="text-[10px]">Online</Badge>}
+                          {o.availableCounter && <Badge variant="outline" className="text-[10px]">Counter</Badge>}
+                          {!o.availableOnline && !o.availableCounter && <span className="text-xs text-muted-foreground">—</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
                         <div className="flex flex-col gap-1">
                           {getStatusBadge(o)}
                           {o.endDate && !isExpired(o) && (
@@ -301,7 +315,7 @@ const OfferingsList = () => {
                     </TableRow>
                   ))}
                   {filtered.length === 0 && (
-                    <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No offerings found</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No offerings found</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -411,6 +425,10 @@ const OfferingsList = () => {
               </div>
             </TabsContent>
             <TabsContent value="settings" className="mt-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-4 border rounded-lg flex items-center justify-between"><p className="text-sm">Available Online</p><Badge variant={viewing?.availableOnline ? "default" : "secondary"}>{viewing?.availableOnline ? "Yes" : "No"}</Badge></div>
+                <div className="p-4 border rounded-lg flex items-center justify-between"><p className="text-sm">Available at Counter</p><Badge variant={viewing?.availableCounter ? "default" : "secondary"}>{viewing?.availableCounter ? "Yes" : "No"}</Badge></div>
+              </div>
               {viewing?.type === "Ritual" ? (
                 <div className="grid grid-cols-2 gap-3">
                   {[["Priest Required", viewing.priestRequired], ["Sankalpam Required", viewing.sankalpam], ["Gothram Required", viewing.gothram], ["Nakshatra Required", viewing.nakshatra]].map(([l, v]) => (
@@ -426,15 +444,18 @@ const OfferingsList = () => {
               {/* Prasadam Info */}
               <div className="mt-4">
                 <p className="text-sm font-medium mb-2">Prasadam</p>
-                {(viewing as any)?.prasadamIncluded && (viewing as any)?.prasadamItems?.length > 0 ? (
+                {viewing?.prasadamIncluded && viewing?.prasadamItems?.length ? (
                   <div className="space-y-2">
-                    {(viewing as any).prasadamItems.map((item: any, i: number) => (
+                    {viewing.prasadamItems.map((item, i) => (
                       <div key={i} className="p-3 border rounded-lg flex items-center justify-between">
                         <div>
                           <p className="text-sm font-medium">{item.name}</p>
                           <p className="text-xs text-muted-foreground">Qty: {item.quantity} · {item.price > 0 ? `₹${item.price}` : "Free"}</p>
                         </div>
-                        <Badge variant="default">Included</Badge>
+                        <div className="flex gap-1">
+                          <Badge variant="default">Included</Badge>
+                          <Badge variant="outline">{item.showOnline ? "Online" : "Counter Only"}</Badge>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -715,12 +736,32 @@ const OfferingsList = () => {
 
             <Separator />
 
+            {/* Section D1 – Booking Channels */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Booking Channels</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2 p-3 border rounded-lg">
+                  <Switch checked={form.availableOnline} onCheckedChange={v => setForm({ ...form, availableOnline: v })} />
+                  <Label>Available Online</Label>
+                </div>
+                <div className="flex items-center gap-2 p-3 border rounded-lg">
+                  <Switch checked={form.availableCounter} onCheckedChange={v => setForm({ ...form, availableCounter: v })} />
+                  <Label>Available at Counter</Label>
+                </div>
+              </div>
+              {!form.availableOnline && !form.availableCounter && (
+                <p className="text-xs text-destructive mt-2">At least one channel should be enabled.</p>
+              )}
+            </div>
+
+            <Separator />
+
             {/* Section D2 – Prasadam */}
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Prasadam</p>
               <div className="space-y-3">
                 <div className="flex items-center gap-2 p-3 border rounded-lg">
-                  <Switch checked={form.prasadamIncluded} onCheckedChange={v => setForm({ ...form, prasadamIncluded: v, prasadamItems: v && form.prasadamItems.length === 0 ? [{ name: "", quantity: 1, price: 0 }] : form.prasadamItems })} />
+                  <Switch checked={form.prasadamIncluded} onCheckedChange={v => setForm({ ...form, prasadamIncluded: v, prasadamItems: v && form.prasadamItems.length === 0 ? [{ name: "", quantity: 1, price: 0, showOnline: true }] : form.prasadamItems })} />
                   <Label>Prasadam Included</Label>
                 </div>
                 <AnimatePresence>
@@ -748,9 +789,13 @@ const OfferingsList = () => {
                               <Input type="number" min={0} value={item.price} onChange={e => { const items = [...form.prasadamItems]; items[idx] = { ...items[idx], price: parseFloat(e.target.value) || 0 }; setForm({ ...form, prasadamItems: items }); }} placeholder="0 = Free" className="mt-1" />
                             </div>
                           </div>
+                          <div className="flex items-center gap-2">
+                            <Switch checked={item.showOnline} onCheckedChange={v => { const items = [...form.prasadamItems]; items[idx] = { ...items[idx], showOnline: v }; setForm({ ...form, prasadamItems: items }); }} />
+                            <Label className="text-xs">Show in Online Booking</Label>
+                          </div>
                         </div>
                       ))}
-                      <Button variant="outline" size="sm" className="gap-1" onClick={() => setForm({ ...form, prasadamItems: [...form.prasadamItems, { name: "", quantity: 1, price: 0 }] })}>
+                      <Button variant="outline" size="sm" className="gap-1" onClick={() => setForm({ ...form, prasadamItems: [...form.prasadamItems, { name: "", quantity: 1, price: 0, showOnline: true }] })}>
                         <Plus className="h-3 w-3" /> Add Prasadam Item
                       </Button>
                     </motion.div>

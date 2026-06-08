@@ -8,29 +8,81 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, Filter, Package } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Search, Plus, Package } from "lucide-react";
+import { toast } from "sonner";
 
-const prasadamData = [
-  { id: "PRS-001", name: "Laddu Prasadam", category: "Daily", unit: "Piece", weight: "100g", shelfLife: "12 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active" },
-  { id: "PRS-002", name: "Pulihora", category: "Daily", unit: "Packet", weight: "250g", shelfLife: "8 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active" },
-  { id: "PRS-003", name: "Sweet Pongal", category: "Daily", unit: "Packet", weight: "200g", shelfLife: "6 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active" },
-  { id: "PRS-004", name: "Vada", category: "Daily", unit: "Piece", weight: "50g", shelfLife: "8 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active" },
-  { id: "PRS-005", name: "Curd Rice", category: "Daily", unit: "Packet", weight: "300g", shelfLife: "6 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active" },
-  { id: "PRS-006", name: "Panchamritam", category: "Special", unit: "Cup", weight: "50ml", shelfLife: "4 Hours", location: "Sanctum Kitchen", structure: "Shrine - Ganesh", status: "Active" },
-  { id: "PRS-007", name: "Festival Laddu (Large)", category: "Festival", unit: "Piece", weight: "500g", shelfLife: "24 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active" },
-  { id: "PRS-008", name: "Dosa Prasadam", category: "Counter Sale", unit: "Piece", weight: "150g", shelfLife: "4 Hours", location: "Counter Kitchen", structure: "Main Temple", status: "Inactive" },
+interface PrasadamType {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  weight: string;
+  shelfLife: string;
+  location: string;
+  structure: string;
+  status: "Active" | "Inactive";
+  showOnline: boolean;
+}
+
+const initialPrasadamData: PrasadamType[] = [
+  { id: "PRS-001", name: "Laddu Prasadam", category: "Daily", unit: "Piece", weight: "100g", shelfLife: "12 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active", showOnline: true },
+  { id: "PRS-002", name: "Pulihora", category: "Daily", unit: "Packet", weight: "250g", shelfLife: "8 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active", showOnline: false },
+  { id: "PRS-003", name: "Sweet Pongal", category: "Daily", unit: "Packet", weight: "200g", shelfLife: "6 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active", showOnline: true },
+  { id: "PRS-004", name: "Vada", category: "Daily", unit: "Piece", weight: "50g", shelfLife: "8 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active", showOnline: false },
+  { id: "PRS-005", name: "Curd Rice", category: "Daily", unit: "Packet", weight: "300g", shelfLife: "6 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active", showOnline: true },
+  { id: "PRS-006", name: "Panchamritam", category: "Special", unit: "Cup", weight: "50ml", shelfLife: "4 Hours", location: "Sanctum Kitchen", structure: "Shrine - Ganesh", status: "Active", showOnline: false },
+  { id: "PRS-007", name: "Festival Laddu (Large)", category: "Festival", unit: "Piece", weight: "500g", shelfLife: "24 Hours", location: "Main Kitchen", structure: "Main Temple", status: "Active", showOnline: true },
+  { id: "PRS-008", name: "Dosa Prasadam", category: "Counter Sale", unit: "Piece", weight: "150g", shelfLife: "4 Hours", location: "Counter Kitchen", structure: "Main Temple", status: "Inactive", showOnline: false },
 ];
 
+const emptyForm = {
+  name: "",
+  category: "",
+  unit: "",
+  weight: "",
+  shelfLife: "",
+  location: "",
+  structure: "",
+  showOnline: true,
+};
+
 const PrasadamMaster = () => {
+  const [prasadamList, setPrasadamList] = useState<PrasadamType[]>(initialPrasadamData);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [showDetail, setShowDetail] = useState<typeof prasadamData[0] | null>(null);
+  const [showDetail, setShowDetail] = useState<PrasadamType | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState(emptyForm);
 
-  const filtered = prasadamData.filter(p =>
+  const filtered = prasadamList.filter(p =>
     (categoryFilter === "all" || p.category === categoryFilter) &&
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.id.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const handleSave = () => {
+    const newItem: PrasadamType = {
+      id: `PRS-${String(prasadamList.length + 1).padStart(3, "0")}`,
+      name: form.name,
+      category: form.category,
+      unit: form.unit,
+      weight: form.weight,
+      shelfLife: form.shelfLife,
+      location: form.location,
+      structure: form.structure,
+      status: "Active",
+      showOnline: form.showOnline,
+    };
+    setPrasadamList(prev => [...prev, newItem]);
+    setForm(emptyForm);
+    setShowAdd(false);
+    toast.success("Prasadam type added");
+  };
+
+  const toggleShowOnline = (id: string, showOnline: boolean) => {
+    setPrasadamList(prev => prev.map(p => p.id === id ? { ...p, showOnline } : p));
+    if (showDetail?.id === id) setShowDetail(prev => prev ? { ...prev, showOnline } : null);
+  };
 
   return (
     <div className="space-y-6">
@@ -73,6 +125,7 @@ const PrasadamMaster = () => {
                 <TableHead>Weight</TableHead>
                 <TableHead>Shelf Life</TableHead>
                 <TableHead>Structure</TableHead>
+                <TableHead>Online</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -86,6 +139,9 @@ const PrasadamMaster = () => {
                   <TableCell>{p.weight}</TableCell>
                   <TableCell>{p.shelfLife}</TableCell>
                   <TableCell className="text-xs">{p.structure}</TableCell>
+                  <TableCell onClick={e => e.stopPropagation()}>
+                    <Switch checked={p.showOnline} onCheckedChange={v => toggleShowOnline(p.id, v)} />
+                  </TableCell>
                   <TableCell>
                     <Badge variant={p.status === "Active" ? "default" : "secondary"} className="text-xs">{p.status}</Badge>
                   </TableCell>
@@ -122,6 +178,13 @@ const PrasadamMaster = () => {
                   <div><span className="text-muted-foreground">Location:</span> {showDetail.location}</div>
                   <div className="col-span-2"><span className="text-muted-foreground">Structure:</span> {showDetail.structure}</div>
                 </div>
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium">Show in Online Booking</p>
+                    <p className="text-xs text-muted-foreground">When enabled, devotees can see and select this prasadam online</p>
+                  </div>
+                  <Switch checked={showDetail.showOnline} onCheckedChange={v => toggleShowOnline(showDetail.id, v)} />
+                </div>
               </TabsContent>
               <TabsContent value="recipe" className="mt-3">
                 <p className="text-sm text-muted-foreground">Recipe ingredients linked to this prasadam will appear here.</p>
@@ -140,10 +203,11 @@ const PrasadamMaster = () => {
           <DialogHeader><DialogTitle>Add Prasadam Type</DialogTitle></DialogHeader>
           <div className="grid gap-4">
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Prasadam Name</Label><Input placeholder="e.g. Laddu Prasadam" /></div>
+              <div><Label>Prasadam Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Laddu Prasadam" /></div>
               <div>
                 <Label>Category</Label>
-                <Select><SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <Select value={form.category} onValueChange={v => setForm({ ...form, category: v })}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Daily">Daily</SelectItem>
                     <SelectItem value="Festival">Festival</SelectItem>
@@ -154,18 +218,22 @@ const PrasadamMaster = () => {
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div><Label>Unit Type</Label><Input placeholder="Piece / Kg" /></div>
-              <div><Label>Weight per Unit</Label><Input placeholder="100g" /></div>
-              <div><Label>Shelf Life</Label><Input placeholder="12 Hours" /></div>
+              <div><Label>Unit Type</Label><Input value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} placeholder="Piece / Kg" /></div>
+              <div><Label>Weight per Unit</Label><Input value={form.weight} onChange={e => setForm({ ...form, weight: e.target.value })} placeholder="100g" /></div>
+              <div><Label>Shelf Life</Label><Input value={form.shelfLife} onChange={e => setForm({ ...form, shelfLife: e.target.value })} placeholder="12 Hours" /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Preparation Location</Label><Input placeholder="Main Kitchen" /></div>
-              <div><Label>Linked Structure</Label><Input placeholder="Main Temple" /></div>
+              <div><Label>Preparation Location</Label><Input value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Main Kitchen" /></div>
+              <div><Label>Linked Structure</Label><Input value={form.structure} onChange={e => setForm({ ...form, structure: e.target.value })} placeholder="Main Temple" /></div>
+            </div>
+            <div className="flex items-center gap-2 p-3 border rounded-lg">
+              <Switch checked={form.showOnline} onCheckedChange={v => setForm({ ...form, showOnline: v })} />
+              <Label>Show in Online Booking</Label>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowAdd(false)}>Cancel</Button>
-            <Button onClick={() => setShowAdd(false)}>Save Prasadam</Button>
+            <Button onClick={handleSave} disabled={!form.name || !form.category}>Save Prasadam</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -17,17 +17,18 @@ interface PrasadamItem {
   name: string;
   quantity: number;
   price: number;
+  showOnline?: boolean;
 }
 
 const offerings = [
-  { id: "1", name: "Suprabhatam", type: "Ritual", structure: "Main Temple", time: "5:30 AM", price: 500, available: 12, prasadamIncluded: true, prasadamItems: [{ name: "Laddu Prasadam", quantity: 2, price: 50 }] as PrasadamItem[] },
-  { id: "2", name: "Archana", type: "Ritual", structure: "Padmavathi Shrine", time: "7:00 AM", price: 100, available: 8, prasadamIncluded: true, prasadamItems: [{ name: "Pulihora", quantity: 1, price: 0 }] as PrasadamItem[] },
-  { id: "3", name: "Abhishekam", type: "Ritual", structure: "Main Temple", time: "9:00 AM", price: 2000, available: 5, prasadamIncluded: true, prasadamItems: [{ name: "Sweet Pongal", quantity: 1, price: 100 }, { name: "Laddu", quantity: 2, price: 50 }] as PrasadamItem[] },
-  { id: "4", name: "Morning Darshan", type: "Darshan", structure: "Main Temple", time: "6:00 AM – 10:00 AM", price: 0, available: 180, prasadamIncluded: false, prasadamItems: [] as PrasadamItem[] },
-  { id: "5", name: "VIP Darshan", type: "Darshan", structure: "Main Temple", time: "8:00 AM – 10:00 AM", price: 300, available: 45, prasadamIncluded: true, prasadamItems: [{ name: "Laddu Prasadam", quantity: 1, price: 50 }] as PrasadamItem[] },
-  { id: "6", name: "Sahasranama", type: "Ritual", structure: "Varadaraja Shrine", time: "11:00 AM", price: 1500, available: 28, prasadamIncluded: true, prasadamItems: [{ name: "Pulihora", quantity: 1, price: 0 }] as PrasadamItem[] },
-  { id: "7", name: "Lalitha Sahasranama", type: "Ritual", structure: "Padmavathi Shrine", time: "10:00 AM", price: 800, available: 15, prasadamIncluded: false, prasadamItems: [] as PrasadamItem[] },
-  { id: "8", name: "Evening Darshan", type: "Darshan", structure: "Main Temple", time: "4:00 PM – 8:00 PM", price: 0, available: 200, prasadamIncluded: false, prasadamItems: [] as PrasadamItem[] },
+  { id: "1", name: "Suprabhatam", type: "Ritual", structure: "Main Temple", time: "5:30 AM", price: 500, available: 12, availableCounter: true, prasadamIncluded: true, prasadamItems: [{ name: "Laddu Prasadam", quantity: 2, price: 50, showOnline: true }] as PrasadamItem[] },
+  { id: "2", name: "Archana", type: "Ritual", structure: "Padmavathi Shrine", time: "7:00 AM", price: 100, available: 8, availableCounter: true, prasadamIncluded: true, prasadamItems: [{ name: "Pulihora", quantity: 1, price: 0, showOnline: false }] as PrasadamItem[] },
+  { id: "3", name: "Abhishekam", type: "Ritual", structure: "Main Temple", time: "9:00 AM", price: 2000, available: 5, availableCounter: true, prasadamIncluded: true, prasadamItems: [{ name: "Sweet Pongal", quantity: 1, price: 100, showOnline: true }, { name: "Laddu", quantity: 2, price: 50, showOnline: true }] as PrasadamItem[] },
+  { id: "4", name: "Morning Darshan", type: "Darshan", structure: "Main Temple", time: "6:00 AM – 10:00 AM", price: 0, available: 180, availableCounter: true, prasadamIncluded: false, prasadamItems: [] as PrasadamItem[] },
+  { id: "5", name: "VIP Darshan", type: "Darshan", structure: "Main Temple", time: "8:00 AM – 10:00 AM", price: 300, available: 45, availableCounter: false, prasadamIncluded: true, prasadamItems: [{ name: "Laddu Prasadam", quantity: 1, price: 50, showOnline: true }] as PrasadamItem[] },
+  { id: "6", name: "Sahasranama", type: "Ritual", structure: "Varadaraja Shrine", time: "11:00 AM", price: 1500, available: 28, availableCounter: true, prasadamIncluded: true, prasadamItems: [{ name: "Pulihora", quantity: 1, price: 0, showOnline: false }] as PrasadamItem[] },
+  { id: "7", name: "Lalitha Sahasranama", type: "Ritual", structure: "Padmavathi Shrine", time: "10:00 AM", price: 800, available: 15, availableCounter: true, prasadamIncluded: false, prasadamItems: [] as PrasadamItem[] },
+  { id: "8", name: "Evening Darshan", type: "Darshan", structure: "Main Temple", time: "4:00 PM – 8:00 PM", price: 0, available: 200, availableCounter: true, prasadamIncluded: false, prasadamItems: [] as PrasadamItem[] },
 ];
 
 const structureOptions = [
@@ -147,6 +148,7 @@ const CounterBooking = () => {
   const filteredOfferings = offerings.filter(o => {
     if (filterStructure !== "all" && o.structure !== filterStructure) return false;
     if (filterType !== "all" && o.type !== filterType) return false;
+    if (!o.availableCounter) return false;
     return o.available > 0;
   });
 
@@ -238,6 +240,7 @@ const CounterBooking = () => {
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Devotee</span><span className="font-medium">{devotee.name}</span></div>
                 <div className="flex justify-between text-sm font-bold text-base"><span>Total</span><span>₹{cartTotal}</span></div>
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Payment</span><span className="font-medium">{paymentMode}</span></div>
+                {refNumber && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Bank Ref / UTR</span><span className="font-medium font-mono text-xs">{refNumber}</span></div>}
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Source</span><Badge variant="secondary">Counter</Badge></div>
               </div>
               <div className="flex gap-2 justify-center">
@@ -474,31 +477,37 @@ const CounterBooking = () => {
                     <Label>Payment Mode</Label>
                     <div className="grid grid-cols-5 gap-2 mt-2">
                       {["Cash", "UPI", "Card", "Cheque", "Temple QR"].map(mode => (
-                        <button key={mode} onClick={() => setPaymentMode(mode)} className={`p-3 border rounded-lg text-center text-sm font-medium transition-all ${paymentMode === mode ? "border-primary bg-primary/5 text-primary" : "hover:bg-muted/50"}`}>{mode}</button>
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setPaymentMode(mode)}
+                          className={`p-3 border rounded-lg text-center text-sm font-medium ${paymentMode === mode ? "border-foreground" : "border-border"}`}
+                        >
+                          {mode}
+                        </button>
                       ))}
                     </div>
                   </div>
-                  {paymentMode !== "Cash" && (
-                    <div>
-                      <Label>
-                        {paymentMode === "UPI" && "UPI Reference / Txn ID"}
-                        {paymentMode === "Card" && "Card Txn / Approval Code"}
-                        {paymentMode === "Cheque" && "Cheque Number"}
-                        {paymentMode === "Temple QR" && "Temple QR Txn / UPI Ref"}
-                      </Label>
-                      <Input
-                        value={refNumber}
-                        onChange={e => setRefNumber(e.target.value)}
-                        placeholder={
-                          paymentMode === "UPI" ? "e.g. 4XXXXXXXXXXX (UTR / UPI ref)" :
-                          paymentMode === "Card" ? "e.g. last 4 digits or approval code" :
-                          paymentMode === "Cheque" ? "e.g. 123456 — Bank, Date" :
-                          paymentMode === "Temple QR" ? "e.g. UPI ref from temple QR scan" :
-                          "Reference"
-                        }
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <Label>
+                      {paymentMode === "Cash" ? "Bank Reference / UTR No" :
+                        paymentMode === "UPI" ? "UPI Reference / Txn ID" :
+                        paymentMode === "Card" ? "Card Txn / Approval Code" :
+                        paymentMode === "Cheque" ? "Cheque Number" :
+                        "Temple QR Txn / UPI Ref"}
+                    </Label>
+                    <Input
+                      value={refNumber}
+                      onChange={e => setRefNumber(e.target.value)}
+                      placeholder={
+                        paymentMode === "Cash" ? "e.g. UTR for cash deposit to bank (optional)" :
+                        paymentMode === "UPI" ? "e.g. 4XXXXXXXXXXX (UTR / UPI ref)" :
+                        paymentMode === "Card" ? "e.g. last 4 digits or approval code" :
+                        paymentMode === "Cheque" ? "e.g. 123456 — Bank, Date" :
+                        "e.g. UPI ref from temple QR scan"
+                      }
+                    />
+                  </div>
                   <div className="flex justify-between">
                     <Button variant="outline" onClick={() => setCurrentStep(1)}>Back</Button>
                     <Button onClick={() => setCurrentStep(3)}>Continue</Button>
@@ -541,6 +550,7 @@ const CounterBooking = () => {
                     {devotee.nakshatra && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Nakshatra</span><span className="font-medium">{devotee.nakshatra}</span></div>}
                     <Separator />
                     <div className="flex justify-between text-sm"><span className="text-muted-foreground">Payment</span><span className="font-medium">{paymentMode}</span></div>
+                    {refNumber && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Bank Ref / UTR</span><span className="font-medium font-mono text-xs">{refNumber}</span></div>}
                     <div className="flex justify-between text-sm font-bold text-base"><span>Total Amount</span><span>₹{cartTotal}</span></div>
                     <div className="flex justify-between text-sm"><span className="text-muted-foreground">Source</span><Badge variant="secondary">Counter</Badge></div>
                   </div>

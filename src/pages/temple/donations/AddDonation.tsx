@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Check, Receipt, MessageCircle, Save, ArrowLeft, ArrowRight, Search, UserPlus, User, Award } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { recordDonation, getReceipt80GForDonation } from "@/modules/donations/donationsStore";
-import { useDonors } from "@/modules/donations/hooks";
+import { useDonationConfig, useDonors } from "@/modules/donations/hooks";
 import { downloadReceiptPdf } from "@/lib/pdfDocs";
 import { download80GReceiptPdf } from "@/lib/eightyGReceipt";
 import { projects } from "@/data/projectData";
@@ -60,6 +60,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
   const navigate = useNavigate();
   const location  = useLocation();
   const { toast } = useToast();
+  const donationConfig = useDonationConfig();
 
   const nature: DonationNature = (location.state as any)?.nature ?? initialNature ?? "Cash";
   const isCash = nature === "Cash";
@@ -144,10 +145,12 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
 
   // ── Derived ──
   const amt = parseFloat(isCash ? amount : ncValue) || 0;
-  const suggests80G = amt >= 2000;
+  const suggests80G = amt >= donationConfig.eightyGThreshold;
   const effective80G = wants80G === "" ? (suggests80G ? "Yes" : "") : wants80G;
-  const panRequired  = effective80G === "Yes";
-  const panValid     = !panRequired || PAN_REGEX.test(pan.toUpperCase());
+  const is80GSelected = effective80G === "Yes";
+  const panRequired  = false;
+  const panValid     = !pan.trim() || PAN_REGEX.test(pan.toUpperCase());
+  const panFormatValid = PAN_REGEX.test(pan.toUpperCase());
   const nameValid    = donorName.trim().length >= 3 && donorName.trim().length <= 100;
   const mobileValid  = MOBILE_REGEX.test(mobile.trim());
   const addressValid = !panRequired || (address.trim().length >= 10 && address.trim().length <= 500);
@@ -157,16 +160,20 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
 
 
   // ── Step definitions ──
-  const cashSteps   = ["Amount & 80G", "Donor Info", "Purpose", "Payment", "Review"];
-  const ncashSteps  = ["Material", "80G & PAN", "Donor Info", "Purpose", "Review"];
+  // Cash:     Step 0 = Amount, 80G & Purpose | Step 1 = Donor Info | Step 2 = Payment | Step 3 = Review
+  // Non-cash: Step 0 = Material | Step 1 = 80G, PAN & Purpose | Step 2 = Donor Info | Step 3 = Review
+  const cashSteps   = ["Amount & Purpose", "Donor Info", "Payment", "Review"];
+  const ncashSteps  = ["Material", "80G & Purpose", "Donor Info", "Review"];
   const stepLabels  = isCash ? cashSteps : ncashSteps;
 
   // ── Step validity ──
-  const ncMaterialOk = ncCategory !== "" && ncName.trim().length >= 2 && parseFloat(ncQty) > 0 && amt > 0;
-  const amtOk        = isCash ? (amt > 0 && (effective80G !== "") && panValid && (!panRequired || pan.trim().length === 10))
-                               : (ncMaterialOk && (effective80G !== "") && panValid && (!panRequired || pan.trim().length === 10));
-  const donorOk      = nameValid && mobileValid && addressValid;
+  const minOk = amt >= donationConfig.minDonationAmount;
+  const ncMaterialOk = ncCategory !== "" && ncName.trim().length >= 2 && parseFloat(ncQty) > 0 && minOk;
   const purposeOk    = purposeKey !== "" && (decoded.type !== "Other" || remarks.trim().length > 0);
+  const amtOk        = isCash
+    ? (minOk && (effective80G !== "") && panValid && (!panRequired || pan.trim().length === 10) && purposeOk)
+    : (ncMaterialOk && (effective80G !== "") && panValid && (!panRequired || pan.trim().length === 10) && purposeOk);
+  const donorOk      = nameValid && mobileValid && addressValid;
   const paymentOk    = paymentMode !== "" &&
     (paymentMode !== "Cash"     || (counterNo.trim() !== "" && collectedBy.trim() !== "")) &&
     (paymentMode !== "UPI"      || paymentStatus === "Paid") &&
@@ -174,8 +181,8 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
     (paymentMode !== "Cheque"   || (chequeNo.trim() !== "" && bankName.trim() !== ""));
 
   const stepOk = isCash
-    ? [amtOk, donorOk, purposeOk, paymentOk, true]
-    : [ncMaterialOk, amtOk, donorOk, purposeOk, true];
+    ? [amtOk, donorOk, paymentOk, true]
+    : [ncMaterialOk, amtOk, donorOk, true];
 
   const canNext = stepOk[step];
 
@@ -200,12 +207,13 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
     };
     const referenceNo = paymentMode === "Cheque" ? chequeNo
       : paymentMode === "NEFT" ? utrNumber
-      : paymentMode === "UPI" ? `WA:${whatsappNumber}` : undefined;
+      : paymentMode === "UPI" ? `WA:${whatsappNumber}`
+      : paymentMode === "Cash" && utrNumber.trim() ? utrNumber.trim() : undefined;
 
     const donation = recordDonation({
       donorName: donorName.trim(), phone: mobile.trim(),
       email: email.trim() || undefined, city: address.trim() || undefined,
-      pan: panRequired ? pan.toUpperCase().trim() : undefined,
+      pan: panFormatValid ? pan.toUpperCase().trim() : undefined,
       wants80G: effective80G === "Yes",
       nature, amount: amt, purpose: purposeLabel || "General",
       channel: isCash ? (channelMap[paymentMode] as any) : "In-Kind",
@@ -238,12 +246,12 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
       receiptNo: savedIds.receiptNo,
       date: new Date().toISOString().slice(0, 10),
       donorName: donorName.trim(),
-      donorPan: panRequired ? pan.toUpperCase().trim() : undefined,
+      donorPan: panFormatValid ? pan.toUpperCase().trim() : undefined,
       donorAddress: address.trim() || undefined,
       amount: amt,
       mode: isCash ? paymentMode : "In-Kind",
       donationType: purposeLabel.toLowerCase().includes("corpus") ? "Corpus" : "General",
-      is80G: panRequired,
+      is80G: is80GSelected,
     });
     toast({ title: "Receipt downloaded", description: `${savedIds.receiptNo}.pdf` });
   };
@@ -294,35 +302,92 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
       </div>
     );
 
-    // Cash step 0 OR Non-cash step 1 = Amount/80G
+    // Cash step 0 OR Non-cash step 1 = Amount / 80G / Purpose combined
     const is80GStep = (isCash && step===0) || (!isCash && step===1);
     if (is80GStep) return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {isCash && (
+      <div className="space-y-6">
+        {/* Amount + 80G + PAN row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {isCash && (
+            <div className="space-y-2">
+              <Label>Donation Amount (₹) *</Label>
+              <Input type="number" placeholder="0" value={amount} onChange={e=>setAmount(e.target.value)} />
+              {suggests80G && <p className="text-[11px] text-amber-600">Amount ≥ ₹{donationConfig.eightyGThreshold.toLocaleString("en-IN")} — 80G recommended.</p>}
+              {!minOk && amt > 0 && <FieldError t={`Minimum donation amount is ₹${donationConfig.minDonationAmount.toLocaleString("en-IN")}.`} />}
+            </div>
+          )}
           <div className="space-y-2">
-            <Label>Donation Amount (₹) *</Label>
-            <Input type="number" placeholder="0" value={amount} onChange={e=>setAmount(e.target.value)} />
-            {suggests80G && <p className="text-[11px] text-amber-600">Amount ≥ ₹2,000 — 80G recommended.</p>}
+            <Label>80G Tax Exemption *</Label>
+            <Select value={effective80G} onValueChange={v=>setWants80G(v as "Yes"|"No")}>
+              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Yes">Yes — I want 80G</SelectItem>
+                <SelectItem value="No">No — Skip 80G</SelectItem>
+              </SelectContent>
+            </Select>
+            {suggests80G && effective80G === "Yes" && <FieldInfo t={`Auto-suggested (amount ≥ ₹${donationConfig.eightyGThreshold.toLocaleString("en-IN")}). You can change this.`} />}
           </div>
-        )}
-        <div className="space-y-2">
-          <Label>80G Tax Exemption *</Label>
-          <Select value={effective80G} onValueChange={v=>setWants80G(v as "Yes"|"No")}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Yes">Yes — I want 80G</SelectItem>
-              <SelectItem value="No">No — Skip 80G</SelectItem>
-            </SelectContent>
-          </Select>
-          {suggests80G && effective80G === "Yes" && <FieldInfo t="Auto-suggested (amount ≥ ₹2,000). You can change this." />}
-        </div>
-        {panRequired && (
           <div className="space-y-2">
-            <Label>PAN Number *</Label>
+            <Label>PAN Number {panRequired && <span className="text-destructive">*</span>}</Label>
             <Input placeholder="ABCDE1234F" maxLength={10} value={pan} onChange={e=>setPan(e.target.value.toUpperCase())} />
-            {pan.length===10 && !panValid ? <FieldError t="Invalid PAN. Format: AAAAA9999A" /> : <FieldInfo t="Format: AAAAA9999A" />}
+            {panRequired && pan.trim().length === 0
+              ? <FieldError t="PAN is required." />
+              : (pan.trim().length > 0 && !panValid ? <FieldError t="Invalid PAN. Format: AAAAA9999A" /> : <FieldInfo t="Format: AAAAA9999A" />)}
           </div>
-        )}
+        </div>
+
+        {/* Donation Purpose — inline in step 1 */}
+        <div className="border-t pt-5 space-y-4">
+          <div className="space-y-2">
+            <Label>Donation Purpose *</Label>
+            <Select value={purposeKey} onValueChange={v => { setPurposeKey(v); setRemarks(""); }}>
+              <SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger>
+              <SelectContent>
+                {donationConfig.purposeCategories.general && (
+                  <SelectGroup>
+                    <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">General</SelectLabel>
+                    <SelectItem value="Counter">Counter Donation</SelectItem>
+                  </SelectGroup>
+                )}
+                {donationConfig.purposeCategories.events && allEvents.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">Events</SelectLabel>
+                    {allEvents.map(e => (
+                      <SelectItem key={e.id} value={`EVT:${e.id}`}>{e.name}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+                {donationConfig.purposeCategories.project && activeProjects.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">Projects</SelectLabel>
+                    {activeProjects.map(p => (
+                      <SelectItem key={p.id} value={`PRJ:${p.id}`}>{p.title}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+                {donationConfig.purposeCategories.others && (
+                  <SelectGroup>
+                    <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">Others</SelectLabel>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectGroup>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          {decoded.type === "Other" && (
+            <div className="space-y-2">
+              <Label>
+                Other Purpose Details <span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                placeholder="What should this donation be used for? (required)"
+                value={remarks}
+                onChange={e => setRemarks(e.target.value)}
+                rows={2}
+              />
+            </div>
+          )}
+        </div>
       </div>
     );
 
@@ -409,65 +474,17 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
         </div>
         <div className="space-y-2 md:col-span-2">
           <Label>Address {panRequired && <span className="text-destructive">*</span>}</Label>
-          <Textarea placeholder={panRequired?"Min 10 chars — required for 80G":"Optional"} value={address} onChange={e=>setAddress(e.target.value.slice(0,500))} rows={2} />
+          <Textarea placeholder={panRequired?"Min 10 chars — required for PAN":"Optional"} value={address} onChange={e=>setAddress(e.target.value.slice(0,500))} rows={2} />
           <div className="flex justify-between">
-            {panRequired && address.length>0 && address.trim().length<10 && <FieldError t="Min 10 characters for 80G." />}
+            {panRequired && address.length>0 && address.trim().length<10 && <FieldError t="Min 10 characters for PAN details." />}
             <span className="text-[10px] text-muted-foreground ml-auto">{address.length}/500</span>
           </div>
         </div>
       </div>
     );
 
-    // Purpose step
-    const purposeStep = isCash ? 2 : 3;
-    if (step === purposeStep) return (
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label>Donation Purpose *</Label>
-          <Select value={purposeKey} onValueChange={v => { setPurposeKey(v); setRemarks(""); }}>
-            <SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">General</SelectLabel>
-                <SelectItem value="Counter">Counter Donation</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectGroup>
-              {allEvents.length > 0 && (
-                <SelectGroup>
-                  <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">Events</SelectLabel>
-                  {allEvents.map(e => (
-                    <SelectItem key={e.id} value={`EVT:${e.id}`}>{e.name}</SelectItem>
-                  ))}
-                </SelectGroup>
-              )}
-              {activeProjects.length > 0 && (
-                <SelectGroup>
-                  <SelectLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1">Projects</SelectLabel>
-                  {activeProjects.map(p => (
-                    <SelectItem key={p.id} value={`PRJ:${p.id}`}>{p.title}</SelectItem>
-                  ))}
-                </SelectGroup>
-              )}
-            </SelectContent>
-          </Select>
-        </div>
-        {(decoded.type === "Other" || decoded.type === "Counter") && (
-          <div className="space-y-2">
-            <Label>Remarks {decoded.type === "Other" && <span className="text-destructive">*</span>}</Label>
-            <Textarea
-              placeholder={decoded.type === "Other" ? "Describe the donation purpose (required)" : "Optional notes"}
-              value={remarks}
-              onChange={e => setRemarks(e.target.value)}
-              rows={2}
-            />
-          </div>
-        )}
-      </div>
-    );
-
-
     // Payment step (cash only)
-    const payStep = 3;
+    const payStep = 2;
     if (isCash && step===payStep) return (
       <div className="space-y-4">
         {/* Mode selector */}
@@ -489,6 +506,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Counter No *</Label><Input value={counterNo} onChange={e => setCounterNo(e.target.value)} placeholder="e.g. CTR-01" /></div>
             <div className="space-y-2"><Label>Collected By *</Label><Input value={collectedBy} onChange={e => setCollectedBy(e.target.value)} placeholder="Staff name" /></div>
+            <div className="space-y-2 md:col-span-2"><Label>UTR / Bank Reference No <span className="text-xs text-muted-foreground">(optional)</span></Label><Input value={utrNumber} onChange={e => setUtrNumber(e.target.value)} placeholder="e.g. UTR12345678" /></div>
           </div>
         )}
 
@@ -535,7 +553,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
             <div key={label} className="p-4 rounded-xl bg-muted/40 border space-y-1">
               <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
               {badge
-                ? (panRequired ? <Badge className="bg-green-100 text-green-700 text-xs">Eligible</Badge> : <Badge variant="outline" className="text-xs">Not Applied</Badge>)
+                ? (is80GSelected ? <Badge className="bg-green-100 text-green-700 text-xs">Eligible</Badge> : <Badge variant="outline" className="text-xs">Not Applied</Badge>)
                 : <p className={`text-sm font-semibold ${mono?"font-mono":""}`}>{val}</p>}
             </div>
           ))}
@@ -547,7 +565,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
             ["Mobile", mobile],
             ["Purpose", purposeLabel],
             isCash ? ["Payment Mode", paymentMode] : ["Material", `${ncQty} ${ncUnit} ${ncName} (${ncCategory})`],
-            panRequired ? ["PAN", pan.toUpperCase()] : null,
+            panFormatValid ? ["PAN", pan.toUpperCase()] : null,
           ].filter(Boolean).map(([k,v])=>(
             <div key={k} className="flex px-4 py-2.5 gap-4">
               <span className="w-32 text-muted-foreground shrink-0">{k}</span>
@@ -562,7 +580,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
           <Button variant="outline" disabled={!savedIds} onClick={handleDownloadReceipt}>
             <Receipt className="h-4 w-4 mr-2"/>Download Receipt
           </Button>
-          {panRequired && (
+          {is80GSelected && (
             <Button variant="outline" disabled={!savedIds?.receipt80GId} onClick={handleDownload80G}>
               <Award className="h-4 w-4 mr-2"/>Download 80G
             </Button>

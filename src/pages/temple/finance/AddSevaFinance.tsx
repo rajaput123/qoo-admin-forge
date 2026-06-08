@@ -13,13 +13,14 @@ const AddSevaFinance = () => {
   const [sevaType, setSevaType] = useState("");
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState("");
+  const [bankRef, setBankRef] = useState("");
   const [date, setDate] = useState("");
   const [remarks, setRemarks] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     toast.success("Seva booking recorded successfully");
-    setDevoteeName(""); setSevaType(""); setAmount(""); setMode(""); setDate(""); setRemarks("");
+    setDevoteeName(""); setSevaType(""); setAmount(""); setMode(""); setBankRef(""); setDate(""); setRemarks("");
   };
 
   return (
@@ -51,7 +52,7 @@ const AddSevaFinance = () => {
             <div><Label>Amount (₹)</Label><Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Enter amount" className="mt-1" required /></div>
             <div>
               <Label>Payment Mode</Label>
-              <Select value={mode} onValueChange={setMode}>
+              <Select value={mode} onValueChange={v => { setMode(v); setBankRef(""); }}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="Select mode" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="cash">Cash</SelectItem>
@@ -61,6 +62,27 @@ const AddSevaFinance = () => {
                 </SelectContent>
               </Select>
             </div>
+            {mode && (
+              <div>
+                <Label>
+                  {mode === "cash" ? "Bank Reference / UTR No" :
+                    mode === "bank" ? "Bank Reference / UTR No" :
+                    mode === "upi" ? "UPI Reference / Txn ID" :
+                    "Payment Reference"}
+                </Label>
+                <Input
+                  value={bankRef}
+                  onChange={e => setBankRef(e.target.value)}
+                  placeholder={
+                    mode === "cash" ? "e.g. UTR for cash deposit (optional)" :
+                    mode === "bank" ? "e.g. NEFT/RTGS UTR number" :
+                    mode === "upi" ? "e.g. UPI transaction reference" :
+                    "e.g. gateway transaction ID"
+                  }
+                  className="mt-1"
+                />
+              </div>
+            )}
             <div><Label>Seva Date</Label><Input type="date" value={date} onChange={e => setDate(e.target.value)} className="mt-1" required /></div>
             <div className="md:col-span-2">
               <Label>Remarks</Label>

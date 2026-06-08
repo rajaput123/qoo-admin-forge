@@ -22,10 +22,9 @@ const formatCurrency = (val: number | undefined | null): string => {
 };
 
 const donationTypeColors: Record<string, string> = {
-  Counter: "#3b82f6",
-  "Online/Booking": "#22c55e",
-  Event: "#f59e0b",
-  Project: "#8b5cf6",
+  General: "#3b82f6",
+  Events: "#f59e0b",
+  Projects: "#8b5cf6",
   Other: "#6b7280",
 };
 
@@ -94,15 +93,24 @@ const Dashboard = () => {
           
           // Determine type from donation data
           if (!type) {
-            if (d.sourceModule === "Counter" || d.counterId) type = "Counter";
-            else if (d.sourceModule === "Online Portal" || d.sourceModule === "Booking") type = "Online/Booking";
-            else if (d.sourceModule === "Event" || d.sourceRecordId?.startsWith("EVT")) type = "Event";
-            else if (d.purpose?.includes("Project") || d.sourceRecordId?.startsWith("PRJ")) type = "Project";
-            else type = "Other"; // Default to Other for unknown types
+            if (d.sourceModule === "Event" || d.sourceRecordId?.startsWith("EVT")) type = "Events";
+            else if (d.purpose?.includes("Project") || d.sourceRecordId?.startsWith("PRJ")) type = "Projects";
+            else if (
+              d.sourceModule === "Counter" ||
+              d.counterId ||
+              d.sourceModule === "Online Portal" ||
+              d.sourceModule === "Booking" ||
+              d.purpose === "Counter Donation" ||
+              d.purpose === "General"
+            ) {
+              type = "General";
+            } else {
+              type = "Other";
+            }
           }
           
           // Map to standard types or "Other"
-          const standardTypes = ["Counter", "Online/Booking", "Event", "Project"];
+          const standardTypes = ["General", "Events", "Projects"];
           const finalType = standardTypes.includes(type) ? type : "Other";
           
           const currentAmount = typeof d.amount === 'number' && Number.isFinite(d.amount) ? d.amount : 0;
@@ -145,10 +153,18 @@ const Dashboard = () => {
   };
 
   const getDonationType = (donation: any): string => {
-    if (donation.sourceModule === "Counter" || donation.counterId) return "Counter";
-    if (donation.sourceModule === "Online Portal" || donation.sourceModule === "Booking") return "Online/Booking";
-    if (donation.sourceModule === "Event" || donation.sourceRecordId?.startsWith("EVT")) return "Event";
-    if (donation.purpose?.includes("Project") || donation.sourceRecordId?.startsWith("PRJ")) return "Project";
+    if (donation.sourceModule === "Event" || donation.sourceRecordId?.startsWith("EVT")) return "Events";
+    if (donation.purpose?.includes("Project") || donation.sourceRecordId?.startsWith("PRJ")) return "Projects";
+    if (
+      donation.sourceModule === "Counter" ||
+      donation.counterId ||
+      donation.sourceModule === "Online Portal" ||
+      donation.sourceModule === "Booking" ||
+      donation.purpose === "Counter Donation" ||
+      donation.purpose === "General"
+    ) {
+      return "General";
+    }
     return "Other";
   };
 

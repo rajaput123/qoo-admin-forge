@@ -49,6 +49,7 @@ const EventTemplates = () => {
 
   // Section 3: Donation Setup
   const [formEnableDonations, setFormEnableDonations] = useState(false);
+  const [formDonationEightyGType, setFormDonationEightyGType] = useState<"" | "80G" | "Non-80G">("");
   const [formDonationGoal, setFormDonationGoal] = useState("");
   const [formMinDonation, setFormMinDonation] = useState("");
   const [formTransparencyNote, setFormTransparencyNote] = useState("");
@@ -79,6 +80,7 @@ const EventTemplates = () => {
     setFormAttachedSevas([]);
     setFormSlotStructure("");
     setFormEnableDonations(false);
+    setFormDonationEightyGType("");
     setFormDonationGoal("");
     setFormMinDonation("");
     setFormTransparencyNote("");
@@ -101,6 +103,7 @@ const EventTemplates = () => {
     setFormEnableSevaBooking(template.enableSevaBooking);
     setFormAttachedSevas([...template.attachedSevas]);
     setFormEnableDonations(template.enableDonations);
+    setFormDonationEightyGType(template.donationEightyGType || "");
     setFormDonationGoal(template.suggestedDonationGoal?.toString() || "");
     setFormMinDonation(template.minimumDonationAmount?.toString() || "");
     setFormTransparencyNote(template.transparencyNote || "");
@@ -134,6 +137,7 @@ const EventTemplates = () => {
       enableSevaBooking: formEnableSevaBooking,
       attachedSevas: formAttachedSevas,
       enableDonations: formEnableDonations,
+      donationEightyGType: formEnableDonations && formDonationEightyGType ? formDonationEightyGType : undefined,
       suggestedDonationGoal: formDonationGoal ? Number(formDonationGoal) : undefined,
       minimumDonationAmount: formMinDonation ? Number(formMinDonation) : undefined,
       transparencyNote: formTransparencyNote || undefined,
@@ -481,6 +485,21 @@ const EventTemplates = () => {
                   {formEnableDonations && (
                     <>
                       <div className="space-y-2">
+                        <Label>80G Account Type</Label>
+                        <Select
+                          value={formDonationEightyGType || ""}
+                          onValueChange={(v) => setFormDonationEightyGType(v as "80G" | "Non-80G")}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select 80G or Non-80G" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover">
+                            <SelectItem value="80G">80G</SelectItem>
+                            <SelectItem value="Non-80G">Non-80G</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
                         <Label>Suggested Donation Goal (₹)</Label>
                         <Input
                           type="number"
@@ -686,6 +705,7 @@ const EventTemplates = () => {
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Donation Settings</p>
                   <div className="text-sm space-y-1">
+                    <p>80G Type: {viewTemplate.donationEightyGType || "—"}</p>
                     <p>Goal: ₹{viewTemplate.suggestedDonationGoal?.toLocaleString() || "—"}</p>
                     <p>Minimum: ₹{viewTemplate.minimumDonationAmount?.toLocaleString() || "—"}</p>
                   </div>

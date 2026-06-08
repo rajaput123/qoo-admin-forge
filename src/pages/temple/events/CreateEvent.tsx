@@ -62,9 +62,12 @@ export interface RegistrationData {
   };
 }
 
+export type EventDonationEightyGType = "80G" | "Non-80G";
+
 export interface DonationsData {
   enabled: boolean;
   accountName: string;
+  eightyGType: EventDonationEightyGType | "";
 }
 
 const CreateEvent = () => {
@@ -109,6 +112,7 @@ const CreateEvent = () => {
   const [donations, setDonations] = useState<DonationsData>({
     enabled: false,
     accountName: "",
+    eightyGType: "",
   });
 
   // Validation

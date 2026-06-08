@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Download, FileText, BarChart3, FileDown } from "lucide-react";
 import { useDonations, useDonors, useAllocations } from "@/modules/donations/hooks";
 import { downloadReceipt } from "@/lib/receiptGenerator";
+import { downloadCsv } from "@/lib/csvExport";
 import { useToast } from "@/hooks/use-toast";
 const formatCurrency = (val: number | undefined | null): string => {
   try {
@@ -22,7 +23,7 @@ const formatCurrency = (val: number | undefined | null): string => {
 };
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
-type DonationType = "Counter" | "Online/Booking" | "Event" | "Project";
+type DonationType = "General" | "Projects" | "Events" | "Other";
 
 const Reports = () => {
   // Hooks must be called unconditionally
@@ -36,17 +37,26 @@ const Reports = () => {
   const [selectedFund, setSelectedFund] = useState("all");
   const [selectedDonor, setSelectedDonor] = useState("all");
   const [selectedType, setSelectedType] = useState<DonationType | "all">("all");
+  const [taxFilter, setTaxFilter] = useState<"all" | "80g" | "no-80g">("all");
 
   // Get unique funds and donors
   const funds = Array.from(new Set(donations.map(d => d.purpose)));
   const donorOptions = donors.map(d => ({ value: d.donorId, label: d.name }));
 
   // Get donation type
-  const getDonationType = (donation: any): DonationType | "Other" => {
-    if (donation.sourceModule === "Counter" || donation.counterId) return "Counter";
-    if (donation.sourceModule === "Online Portal" || donation.sourceModule === "Booking") return "Online/Booking";
-    if (donation.sourceModule === "Event" || donation.sourceRecordId?.startsWith("EVT")) return "Event";
-    if (donation.purpose?.includes("Project") || donation.sourceRecordId?.startsWith("PRJ")) return "Project";
+  const getDonationType = (donation: any): DonationType => {
+    if (donation.sourceModule === "Event" || donation.sourceRecordId?.startsWith("EVT")) return "Events";
+    if (donation.purpose?.includes("Project") || donation.sourceRecordId?.startsWith("PRJ")) return "Projects";
+    if (
+      donation.sourceModule === "Counter" ||
+      donation.counterId ||
+      donation.sourceModule === "Online Portal" ||
+      donation.sourceModule === "Booking" ||
+      donation.purpose === "Counter Donation" ||
+      donation.purpose === "General"
+    ) {
+      return "General";
+    }
     return "Other";
   };
 
@@ -69,9 +79,14 @@ const Reports = () => {
     if (selectedType !== "all") {
       filtered = filtered.filter(d => getDonationType(d) === selectedType);
     }
+    if (taxFilter === "80g") {
+      filtered = filtered.filter(d => d.is80G === true);
+    } else if (taxFilter === "no-80g") {
+      filtered = filtered.filter(d => d.is80G !== true);
+    }
 
     return filtered;
-  }, [donations, dateFrom, dateTo, selectedFund, selectedDonor, selectedType]);
+  }, [donations, dateFrom, dateTo, selectedFund, selectedDonor, selectedType, taxFilter]);
 
   // Donation Register Report
   const donationRegister = filteredDonations.sort((a, b) => 
@@ -185,25 +200,40 @@ const Reports = () => {
 
   const handleExport = (format: "csv" | "pdf") => {
     if (format === "csv") {
-      const csv = [
-        ["Date", "Donor Name", "Amount", "Fund", "Type", "Receipt Number"].join(","),
-        ...donationRegister.map(d => [
-          d.date,
-          d.donorName,
-          d.amount,
-          d.purpose,
-          getDonationType(d),
-          d.receiptNo
-        ].join(","))
-      ].join("\n");
-      
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `donation-report-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      const rows = donationRegister.map(d => {
+        const donor = donors.find(dr => dr.donorId === d.donorId);
+        return {
+          "Donation ID": d.donationId,
+          "Receipt No": d.receiptNo || "—",
+          "Date": d.date,
+          "Time": d.time || "—",
+          "Amount": d.amount,
+          "Fund / Purpose": d.purpose || "—",
+          "Category / Type": getDonationType(d),
+          "Payment Channel": d.channel || "—",
+          "Payment Mode": d.mode || "—",
+          "Ref No / Txn ID": d.referenceNo || "—",
+          "Nature": d.nature || "—",
+          "Source Module": d.sourceModule || "—",
+          "Source Record ID": d.sourceRecordId || "—",
+          "Counter ID": d.counterId || "—",
+          "80G Eligible": d.is80G ? "Yes" : "No",
+          "80G Receipt ID": d.receipt80GId || "—",
+          "Settlement ID": d.settlementId || "—",
+          "Remarks": d.remarks || "—",
+          "Created At": d.createdAt || "—",
+          "Donor ID": d.donorId,
+          "Donor Name": d.donorName,
+          "Donor Phone": donor?.phone && donor.phone !== "-" ? donor.phone : "—",
+          "Donor Email": donor?.email && donor.email !== "-" ? donor.email : "—",
+          "Donor City": donor?.city && donor.city !== "-" ? donor.city : "—",
+          "Donor PAN": donor?.pan && donor.pan !== "-" ? donor.pan : "—",
+          "Donor Category": donor?.category || "—",
+          "Donor 80G Consent": donor?.eligible80G ? "Yes" : "No"
+        };
+      });
+      downloadCsv(rows as any[], `donation-report-${new Date().toISOString().split('T')[0]}.csv`);
+      toast({ title: "CSV exported", description: `${rows.length} donation${rows.length !== 1 ? "s" : ""} downloaded` });
     } else {
       // PDF export would require a library like jsPDF
       alert("PDF export feature coming soon");
@@ -236,7 +266,7 @@ const Reports = () => {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div className="space-y-2">
               <Label>Date From</Label>
               <Input
@@ -289,11 +319,23 @@ const Reports = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="Counter">Counter</SelectItem>
-                  <SelectItem value="Online/Booking">Online/Booking</SelectItem>
-                  <SelectItem value="Event">Event</SelectItem>
-                  <SelectItem value="Project">Project</SelectItem>
+                  <SelectItem value="General">General</SelectItem>
+                  <SelectItem value="Projects">Projects</SelectItem>
+                  <SelectItem value="Events">Events</SelectItem>
                   <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>80G Eligibility</Label>
+              <Select value={taxFilter} onValueChange={(v) => setTaxFilter(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="80g">80G</SelectItem>
+                  <SelectItem value="no-80g">No 80G</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -326,13 +368,14 @@ const Reports = () => {
                       <TableHead>Amount</TableHead>
                       <TableHead>Fund</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Ref No / Txn ID</TableHead>
                       <TableHead>Receipt Number</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {donationRegister.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                           No donations found for selected filters
                         </TableCell>
                       </TableRow>
@@ -344,6 +387,7 @@ const Reports = () => {
                           <TableCell className="font-semibold">{formatCurrency(donation.amount)}</TableCell>
                           <TableCell>{donation.purpose}</TableCell>
                           <TableCell>{getDonationType(donation)}</TableCell>
+                          <TableCell className="font-mono text-xs">{donation.referenceNo || "—"}</TableCell>
                           <TableCell className="font-mono text-sm">
                             {donation.receiptNo ? (
                               <Button
@@ -502,10 +546,9 @@ const Reports = () => {
                     >
                       {typeAnalysis.map((entry, index) => {
                         const colors: Record<string, string> = {
-                          Counter: "#3b82f6",
-                          "Online/Booking": "#22c55e",
-                          Event: "#f59e0b",
-                          Project: "#8b5cf6",
+                          General: "#3b82f6",
+                          Events: "#f59e0b",
+                          Projects: "#8b5cf6",
                           Other: "#6b7280",
                         };
                         return <Cell key={`cell-${index}`} fill={colors[entry.type] || "#6b7280"} />;

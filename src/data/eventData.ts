@@ -188,6 +188,7 @@ export interface EventTemplate {
   slotStructure?: string;
   // Donation Setup
   enableDonations: boolean;
+  donationEightyGType?: "80G" | "Non-80G";
   suggestedDonationGoal?: number;
   minimumDonationAmount?: number;
   transparencyNote?: string;
@@ -218,6 +219,7 @@ export const eventTemplates: EventTemplate[] = [
     enableSevaBooking: true,
     attachedSevas: ["Suprabhatam", "Abhishekam", "Kalyanotsavam", "Special Darshan"],
     enableDonations: true,
+    donationEightyGType: "80G",
     suggestedDonationGoal: 2000000,
     minimumDonationAmount: 100,
     defaultPriests: ["Sri Ramachandra Sharma"],
@@ -263,6 +265,7 @@ export const eventTemplates: EventTemplate[] = [
     enableSevaBooking: false,
     attachedSevas: [],
     enableDonations: true,
+    donationEightyGType: "Non-80G",
     suggestedDonationGoal: 500000,
     minimumDonationAmount: 50,
     transparencyNote: "Donations will be used for procuring ingredients and serving meals to devotees",

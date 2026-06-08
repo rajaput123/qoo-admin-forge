@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Plus, Download, FileDown, User, Phone, Mail, MapPin, CreditCard, Hash, Banknote, Receipt, X, Award } from "lucide-react";
 import { useDonations, useDonors, useReceipts80G } from "@/modules/donations/hooks";
 import { downloadReceiptPdf } from "@/lib/pdfDocs";
@@ -22,7 +23,7 @@ const formatCurrency = (val: number | undefined | null): string => {
   } catch { return "₹0"; }
 };
 
-type DonationType = "All" | "Counter" | "Online/Booking" | "Event" | "Project" | "Other";
+type DonationType = "All" | "General" | "Projects" | "Events" | "Other";
 
 const DonationsList = () => {
   const navigate = useNavigate();
@@ -35,13 +36,22 @@ const DonationsList = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
+  const [taxFilter, setTaxFilter] = useState<"all" | "80g" | "no-80g">("all");
   const [selectedDonation, setSelectedDonation] = useState<(typeof donations)[number] | null>(null);
 
-  const getDonationType = (donation: any): DonationType | "Other" => {
-    if (donation.sourceModule === "Counter" || donation.counterId) return "Counter";
-    if (donation.sourceModule === "Online Portal" || donation.sourceModule === "Booking") return "Online/Booking";
-    if (donation.sourceModule === "Event" || donation.sourceRecordId?.startsWith("EVT")) return "Event";
-    if (donation.purpose?.includes("Project") || donation.sourceRecordId?.startsWith("PRJ")) return "Project";
+  const getDonationType = (donation: any): DonationType => {
+    if (donation.sourceModule === "Event" || donation.sourceRecordId?.startsWith("EVT")) return "Events";
+    if (donation.purpose?.includes("Project") || donation.sourceRecordId?.startsWith("PRJ")) return "Projects";
+    if (
+      donation.sourceModule === "Counter" ||
+      donation.counterId ||
+      donation.sourceModule === "Online Portal" ||
+      donation.sourceModule === "Booking" ||
+      donation.purpose === "Counter Donation" ||
+      donation.purpose === "General"
+    ) {
+      return "General";
+    }
     return "Other";
   };
 
@@ -49,6 +59,11 @@ const DonationsList = () => {
     let filtered = donations;
     if (activeTab !== "All") {
       filtered = filtered.filter(d => getDonationType(d) === activeTab);
+    }
+    if (taxFilter === "80g") {
+      filtered = filtered.filter(d => d?.is80G === true);
+    } else if (taxFilter === "no-80g") {
+      filtered = filtered.filter(d => d?.is80G !== true);
     }
     if (fromDate) filtered = filtered.filter(d => d?.date && d.date >= fromDate);
     if (toDate) filtered = filtered.filter(d => d?.date && d.date <= toDate);
@@ -68,7 +83,7 @@ const DonationsList = () => {
       try { return new Date(b?.date ?? 0).getTime() - new Date(a?.date ?? 0).getTime(); }
       catch { return 0; }
     });
-  }, [donations, activeTab, searchQuery, fromDate, toDate]);
+  }, [donations, activeTab, searchQuery, fromDate, toDate, taxFilter]);
 
   const getDonorInfo = (donorId: string) => donors.find(d => d.donorId === donorId);
 
@@ -111,14 +126,36 @@ const DonationsList = () => {
     const rows = filteredDonations.map(d => {
       const donor = getDonorInfo(d.donorId);
       return {
-        "Receipt No": d.receiptNo, Date: d.date, "Donor Name": d.donorName,
-        PAN: donor?.pan && donor.pan !== "-" ? donor.pan : "",
-        Mode: d.mode || d.channel, Amount: d.amount,
-        Type: (d.purpose || "").toLowerCase().includes("corpus") ? "Corpus" : "General",
-        Fund: d.purpose,
+        "Donation ID": d.donationId,
+        "Receipt No": d.receiptNo || "—",
+        "Date": d.date,
+        "Time": d.time || "—",
+        "Amount": d.amount,
+        "Fund / Purpose": d.purpose || "—",
+        "Category / Type": getDonationType(d),
+        "Payment Channel": d.channel || "—",
+        "Payment Mode": d.mode || "—",
+        "Ref No / Txn ID": d.referenceNo || "—",
+        "Nature": d.nature || "—",
+        "Source Module": d.sourceModule || "—",
+        "Source Record ID": d.sourceRecordId || "—",
+        "Counter ID": d.counterId || "—",
+        "80G Eligible": d.is80G ? "Yes" : "No",
+        "80G Receipt ID": d.receipt80GId || "—",
+        "Settlement ID": d.settlementId || "—",
+        "Remarks": d.remarks || "—",
+        "Created At": d.createdAt || "—",
+        "Donor ID": d.donorId,
+        "Donor Name": d.donorName,
+        "Donor Phone": donor?.phone && donor.phone !== "-" ? donor.phone : "—",
+        "Donor Email": donor?.email && donor.email !== "-" ? donor.email : "—",
+        "Donor City": donor?.city && donor.city !== "-" ? donor.city : "—",
+        "Donor PAN": donor?.pan && donor.pan !== "-" ? donor.pan : "—",
+        "Donor Category": donor?.category || "—",
+        "Donor 80G Consent": donor?.eligible80G ? "Yes" : "No"
       };
     });
-    downloadCsv(rows, `donation-register-${activeTab.toLowerCase()}-${new Date().toISOString().split("T")[0]}.csv`);
+    downloadCsv(rows as any[], `donation-register-${activeTab.toLowerCase()}-${new Date().toISOString().split("T")[0]}.csv`);
     toast({ title: "CSV exported", description: `${rows.length} donation${rows.length !== 1 ? "s" : ""} downloaded` });
   };
 
@@ -127,10 +164,9 @@ const DonationsList = () => {
   const selType = sel ? getDonationType(sel) : "";
 
   const typeColors: Record<string, string> = {
-    Counter: "bg-blue-100 text-blue-700",
-    "Online/Booking": "bg-green-100 text-green-700",
-    Event: "bg-amber-100 text-amber-700",
-    Project: "bg-purple-100 text-purple-700",
+    General: "bg-blue-100 text-blue-700",
+    Events: "bg-amber-100 text-amber-700",
+    Projects: "bg-purple-100 text-purple-700",
     Other: "bg-gray-100 text-gray-700",
   };
 
@@ -160,11 +196,23 @@ const DonationsList = () => {
       </div>
       <AddDonationDialog open={addOpen} onOpenChange={setAddOpen} />
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search by donor name, receipt number, or donation ID..."
-          value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+      {/* Search & Filters */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search by donor name, receipt number, or donation ID..."
+            value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+        </div>
+        <Select value={taxFilter} onValueChange={(v) => setTaxFilter(v as any)}>
+          <SelectTrigger className="w-[180px] shrink-0">
+            <SelectValue placeholder="80G Eligibility" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All (80G & Non-80G)</SelectItem>
+            <SelectItem value="80g">80G Tax Exemption</SelectItem>
+            <SelectItem value="no-80g">Non-80G / Direct</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
 
@@ -173,10 +221,9 @@ const DonationsList = () => {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DonationType)}>
         <TabsList>
           <TabsTrigger value="All">All</TabsTrigger>
-          <TabsTrigger value="Counter">Counter</TabsTrigger>
-          <TabsTrigger value="Online/Booking">Online/Booking</TabsTrigger>
-          <TabsTrigger value="Event">Event</TabsTrigger>
-          <TabsTrigger value="Project">Project</TabsTrigger>
+          <TabsTrigger value="General">General</TabsTrigger>
+          <TabsTrigger value="Projects">Projects</TabsTrigger>
+          <TabsTrigger value="Events">Events</TabsTrigger>
           <TabsTrigger value="Other">Other</TabsTrigger>
         </TabsList>
 
@@ -193,6 +240,7 @@ const DonationsList = () => {
                       <TableHead className="text-right">Amount</TableHead>
                       <TableHead>Fund</TableHead>
                       <TableHead>Donation Type</TableHead>
+                      <TableHead>Ref No / Txn ID</TableHead>
                       <TableHead>Donation Receipt</TableHead>
                       <TableHead>80G Receipt</TableHead>
                       <TableHead>PAN No</TableHead>
@@ -201,7 +249,7 @@ const DonationsList = () => {
                   <TableBody>
                     {filteredDonations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center text-muted-foreground py-8">No donations found</TableCell>
+                        <TableCell colSpan={10} className="text-center text-muted-foreground py-8">No donations found</TableCell>
                       </TableRow>
                     ) : filteredDonations.map((donation) => {
                       const donationType = getDonationType(donation);
@@ -223,6 +271,7 @@ const DonationsList = () => {
                           <TableCell>
                             <Badge className={typeColors[donationType] || "bg-gray-100 text-gray-700"}>{donationType}</Badge>
                           </TableCell>
+                          <TableCell className="font-mono text-xs">{donation.referenceNo || "—"}</TableCell>
                           <TableCell className="font-mono text-xs">
                             <Button variant="link" size="sm"
                               className="h-auto p-0 text-xs text-primary hover:underline"

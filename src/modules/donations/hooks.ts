@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { donationSelectors, getDonationsState, subscribeDonationsStore, getSettlements } from "./donationsStore";
+import { getDonationConfig, subscribeDonationConfig } from "./donationConfig";
 
 export function useDonationsState() {
   return useSyncExternalStore(subscribeDonationsStore, getDonationsState, getDonationsState);
@@ -47,4 +48,8 @@ export function useFundExpenses() {
 
 export function useSettlements() {
   return useSyncExternalStore(subscribeDonationsStore, getSettlements, getSettlements);
+}
+
+export function useDonationConfig() {
+  return useSyncExternalStore(subscribeDonationConfig, getDonationConfig, getDonationConfig);
 }

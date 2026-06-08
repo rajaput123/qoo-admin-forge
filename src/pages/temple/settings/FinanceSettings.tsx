@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -47,6 +48,7 @@ import {
 
 const BANKS_LS_KEY = "qoo.finance.banks";
 const PURPOSE_OPTIONS = ["Donations", "Seva Payments", "Event Payments", "Salaries", "General Expenses", "Project Funds"];
+type EightyGLink = "Non-80G" | "80G" | "Both";
 
 interface BankAccount {
   id: string;
@@ -59,6 +61,7 @@ interface BankAccount {
   gatewayAccountId?: string;
   purpose?: string;
   panNumber?: string;
+  eightyGLink: EightyGLink;
   isDefaultDonation: boolean;
   isDefaultSeva: boolean;
   status: "Active" | "Paused";
@@ -76,6 +79,7 @@ function normalizeBank(raw: Partial<BankAccount> & Pick<BankAccount, "id">): Ban
     gatewayAccountId: raw.gatewayAccountId,
     purpose: raw.purpose,
     panNumber: raw.panNumber,
+    eightyGLink: raw.eightyGLink ?? "Non-80G",
     isDefaultDonation: raw.isDefaultDonation ?? false,
     isDefaultSeva: raw.isDefaultSeva ?? false,
     status: raw.status ?? "Active",
@@ -101,6 +105,7 @@ const emptyBankForm = () => ({
   branch: "",
   purpose: "",
   panNumber: "",
+  eightyGLink: "Non-80G" as EightyGLink,
   isDefaultDonation: false,
   isDefaultSeva: false,
 });
@@ -213,6 +218,7 @@ const FinanceSettings = () => {
       branch: account.branch,
       purpose: account.purpose || "",
       panNumber: account.panNumber || "",
+      eightyGLink: account.eightyGLink,
       isDefaultDonation: account.isDefaultDonation,
       isDefaultSeva: account.isDefaultSeva,
     });
@@ -345,7 +351,7 @@ const FinanceSettings = () => {
                 <Building2 className="h-4 w-4" />
                 Bank accounts
               </CardTitle>
-              <CardDescription>Add temple bank accounts and set which one receives donations</CardDescription>
+              <CardDescription>Add temple bank accounts and set defaults</CardDescription>
             </div>
             <Dialog open={showAddBank} onOpenChange={setShowAddBank}>
               <DialogTrigger asChild>
@@ -357,8 +363,7 @@ const FinanceSettings = () => {
                 <DialogHeader>
                   <DialogTitle>{editingBank ? "Edit Bank Account" : "Add Bank Account"}</DialogTitle>
                   <p className="text-xs text-muted-foreground pt-1">
-                    No separate 80G bank account — 80G and regular donations both credit the account marked{" "}
-                    <strong>Default Donation Account</strong>. Temple 80G registration is in the 80G tab.
+                    Link this account to your temple 80G registration in the 80G tab, or mark it as non-80G.
                   </p>
                 </DialogHeader>
                 <div className="space-y-4 py-2 overflow-y-auto flex-1 pr-1">
@@ -438,11 +443,35 @@ const FinanceSettings = () => {
                       className="font-mono uppercase"
                     />
                   </div>
+                  <div className="space-y-1.5">
+                    <Label>80G Account Type</Label>
+                    <Select
+                      value={bankForm.eightyGLink}
+                      onValueChange={(v) => setBankForm({ ...bankForm, eightyGLink: v as EightyGLink })}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-[100]">
+                        <SelectItem value="Non-80G">Non-80G — general</SelectItem>
+                        <SelectItem value="80G">
+                          80G — {eightyGForm.registration80G || templeCfg.registration80G || "tax exempt"}
+                        </SelectItem>
+                        <SelectItem value="Both">Both — 80G & Non-80G</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {bankForm.eightyGLink !== "Non-80G" && (eightyGForm.registration80G || templeCfg.registration80G) && (
+                      <p className="text-xs text-muted-foreground">
+                        80G reg: {eightyGForm.registration80G || templeCfg.registration80G}
+                        {(eightyGForm.pan || templeCfg.pan) && ` · PAN ${eightyGForm.pan || templeCfg.pan}`}
+                      </p>
+                    )}
+                  </div>
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <div className="space-y-0.5">
-                      <Label className="text-sm font-medium">Default Donation Account</Label>
+                      <Label className="text-sm font-medium">Default Account</Label>
                       <p className="text-xs text-muted-foreground">
-                        Required — online, UPI & bank donations credit this account. Check for the Donations badge in the table.
+                        Required — online, UPI & bank receipts credit this account. Check for the Default badge in the table.
                       </p>
                     </div>
                     <Switch
@@ -479,24 +508,24 @@ const FinanceSettings = () => {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle className="text-sm">No bank account yet</AlertTitle>
               <AlertDescription className="text-xs">
-                Add at least one account and turn on <strong>Default Donation Account</strong>. Until then, online/UPI/bank donation amounts cannot be routed to your temple account.
+                Add at least one account and turn on <strong>Default Account</strong>. Until then, online/UPI/bank amounts cannot be routed to your temple account.
               </AlertDescription>
             </Alert>
           ) : !hasDefaultDonationAccount ? (
             <Alert variant="destructive" className="border-amber-300 bg-amber-50 text-amber-950 [&>svg]:text-amber-700">
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle className="text-sm">Default donation account not set</AlertTitle>
+              <AlertTitle className="text-sm">Default account not set</AlertTitle>
               <AlertDescription className="text-xs">
-                Edit an account and enable <strong>Default Donation Account</strong>. Donations will not be credited until one account has the <strong>Donations</strong> badge in the table below.
+                Edit an account and enable <strong>Default Account</strong>. Amounts will not be credited until one account has the <strong>Default</strong> badge in the table below.
               </AlertDescription>
             </Alert>
           ) : (
             <Alert className="border-green-200/80 bg-green-50/50">
               <CheckCircle2 className="h-4 w-4 text-green-700" />
-              <AlertTitle className="text-green-900 text-sm">Donations routed correctly</AlertTitle>
+              <AlertTitle className="text-green-900 text-sm">Default account configured</AlertTitle>
               <AlertDescription className="text-green-800/90 text-xs">
-                Default donation account: <strong>{defaultDonationAccount!.accountName}</strong> ({defaultDonationAccount!.bankName} · {defaultDonationAccount!.accountNumber}).
-                Look for the <strong>Donations</strong> badge in the table to verify.
+                Default account: <strong>{defaultDonationAccount!.accountName}</strong> ({defaultDonationAccount!.bankName} · {defaultDonationAccount!.accountNumber}).
+                Look for the <strong>Default</strong> badge in the table to verify.
               </AlertDescription>
             </Alert>
           )}
@@ -527,8 +556,13 @@ const FinanceSettings = () => {
                       <div className="space-y-1">
                         <span>{account.accountName}</span>
                         <div className="flex flex-wrap gap-1">
+                          {account.eightyGLink !== "Non-80G" && (
+                            <Badge variant="outline" className="text-[10px]">
+                              {account.eightyGLink === "80G" ? "80G" : "80G & Non-80G"}
+                            </Badge>
+                          )}
                           {account.isDefaultDonation && (
-                            <Badge variant="outline" className="text-[10px]">Donations</Badge>
+                            <Badge variant="outline" className="text-[10px]">Default</Badge>
                           )}
                           {account.isDefaultSeva && (
                             <Badge variant="outline" className="text-[10px]">Seva</Badge>
@@ -610,7 +644,7 @@ const FinanceSettings = () => {
 
           {bankStepDone && isFinanceSetupComplete() && (
             <p className="text-xs text-green-700 flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Bank setup complete — donations will credit your default account
+              <CheckCircle2 className="h-3.5 w-3.5" /> Bank setup complete — amounts will credit your default account
             </p>
           )}
         </CardContent>
@@ -664,7 +698,7 @@ const FinanceSettings = () => {
               <p>
                 80G only issues tax certificates when a donor has PAN. Payment still goes to your{" "}
                 <button type="button" className="underline font-medium" onClick={() => setActiveTab("bank")}>
-                  default donation bank account
+                  default bank account
                 </button>
                 {hasDefaultDonationAccount ? "." : " (not set yet — configure in Bank Accounts tab)."}
               </p>

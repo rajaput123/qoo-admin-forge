@@ -15,6 +15,7 @@ export interface TempleConfig {
   email: string;
   eightyGEnabled: boolean;
   associatedBankAccountId: string | null;
+  associated80GBankAccountId: string | null;
 }
 
 export const DEFAULT_TEMPLE_CONFIG: TempleConfig = {
@@ -29,6 +30,7 @@ export const DEFAULT_TEMPLE_CONFIG: TempleConfig = {
   email: "office@svdevasthanam.org",
   eightyGEnabled: true,
   associatedBankAccountId: "BANK-001",
+  associated80GBankAccountId: null,
 };
 
 /** @deprecated Use getTempleConfig() for runtime values */
