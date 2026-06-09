@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,13 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Store, ChevronRight, Check, Printer, MessageSquare, ShoppingCart, Plus, Trash2, X, Cookie } from "lucide-react";
+import { Store, ChevronRight, Check, Printer, MessageSquare, ShoppingCart, Plus, Trash2, X, Cookie, MessageCircle, Banknote, QrCode, FileText, Smartphone, Loader2 } from "lucide-react";
+import { TEMPLE_CONFIG } from "@/components/TempleQRPanel";
 import { toast } from "sonner";
 import SearchableSelect from "@/components/SearchableSelect";
 import CustomFieldsSection, { CustomField } from "@/components/CustomFieldsSection";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CalendarIcon } from "lucide-react";
 
 interface PrasadamItem {
@@ -161,6 +163,105 @@ function buildSlotOptions(offering: typeof offerings[0]): SlotOption[] {
 
 const steps = ["Browse & Add to Cart", "Devotee Details", "Payment", "Confirm"];
 
+const COUNTER_PAYMENT_MODES = [
+  { id: "Cash", label: "Cash", purpose: "Cash received directly at the counter" },
+  {
+    id: "Temple QR / Bank Transfer",
+    label: "Temple QR",
+    purpose: "Temple QR or bank transfer — record reference no",
+    refLabel: "Reference No / UTR",
+    refPlaceholder: "e.g. UTR4827384 or bank transfer reference",
+  },
+  {
+    id: "Cheque",
+    label: "Cheque",
+    purpose: "Payment by cheque — record cheque details for bank deposit",
+    refLabel: "Cheque Number",
+    refPlaceholder: "e.g. 123456 — Bank name, cheque date",
+  },
+  { id: "UPI", label: "UPI", purpose: "Send payment link to devotee via WhatsApp on mobile" },
+  { id: "QR Code", label: "QR", purpose: "Open temple QR — devotee scans and pays at counter" },
+] as const;
+
+const COUNTER_PAYMENT_GROUPS = [
+  {
+    title: "Cash, Temple QR & Cheque",
+    modes: ["Cash", "Temple QR / Bank Transfer", "Cheque"] as const,
+  },
+  {
+    title: "UPI & QR",
+    modes: ["UPI", "QR Code"] as const,
+  },
+] as const;
+
+type CounterPaymentMode = (typeof COUNTER_PAYMENT_MODES)[number]["id"];
+
+function getCounterPaymentMode(mode: string) {
+  return COUNTER_PAYMENT_MODES.find((m) => m.id === mode) ?? COUNTER_PAYMENT_MODES[0];
+}
+
+function paymentModeNeedsRef(mode: string) {
+  return mode === "Cheque" || mode === "Temple QR / Bank Transfer";
+}
+
+function buildSevaUpiLink(amount: number) {
+  return `upi://pay?pa=${TEMPLE_CONFIG.upiId}&pn=${encodeURIComponent(TEMPLE_CONFIG.upiDisplayName)}&am=${amount}&cu=INR&tn=${encodeURIComponent("Seva Booking")}`;
+}
+
+function DigitalPaymentWaiting({
+  mode,
+  amount,
+  phone,
+  received,
+  onPaymentReceived,
+}: {
+  mode: "UPI" | "QR Code";
+  amount: number;
+  phone: string;
+  received: boolean;
+  onPaymentReceived: () => void;
+}) {
+  if (received) {
+    return (
+      <div className="flex flex-col items-center py-8 text-center space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50">
+        <Check className="h-10 w-10 text-emerald-600" />
+        <p className="font-semibold text-emerald-800">Payment received</p>
+        <p className="text-sm text-emerald-700/80">You can confirm and continue</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center py-8 px-4 text-center space-y-4 rounded-xl border border-dashed bg-muted/20">
+      <Loader2 className="h-12 w-12 text-primary animate-spin" />
+      <div className="space-y-1.5">
+        <p className="font-semibold text-base">Waiting for payment</p>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+          {mode === "UPI"
+            ? `Payment link already sent via WhatsApp to +91 ${phone || "__________"}`
+            : "Temple QR is active — waiting for devotee to scan and pay"}
+        </p>
+      </div>
+      <p className="text-2xl font-bold">₹{amount.toLocaleString("en-IN")}</p>
+      <p className="text-xs text-muted-foreground">Tap below once payment is completed</p>
+      <Button type="button" className="w-full" onClick={onPaymentReceived}>
+        Payment Received
+      </Button>
+    </div>
+  );
+}
+
+function paymentModeIcon(mode: CounterPaymentMode) {
+  switch (mode) {
+    case "Cash": return Banknote;
+    case "Temple QR / Bank Transfer": return QrCode;
+    case "Cheque": return FileText;
+    case "UPI": return MessageCircle;
+    case "QR Code": return Smartphone;
+    default: return Banknote;
+  }
+}
+
 const CounterBooking = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [filterStructure, setFilterStructure] = useState("all");
@@ -176,10 +277,56 @@ const CounterBooking = () => {
 
   // Devotee & payment state
   const [devotee, setDevotee] = useState({ name: "", phone: "", email: "", gothram: "", nakshatra: "", sankalpam: "" });
-  const [paymentMode, setPaymentMode] = useState("Cash");
+  const [paymentMode, setPaymentMode] = useState<CounterPaymentMode>("Cash");
   const [refNumber, setRefNumber] = useState("");
+  const [upiLinkSent, setUpiLinkSent] = useState(false);
+  const [upiPaymentReceived, setUpiPaymentReceived] = useState(false);
+  const [qrPaymentStatus, setQrPaymentStatus] = useState<"Pending Payment" | "Paid">("Pending Payment");
   const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const [bookingComplete, setBookingComplete] = useState(false);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentConfigured, setPaymentConfigured] = useState(false);
+
+  const validatePaymentDetails = (mode: CounterPaymentMode): string | null => {
+    if (mode === "UPI" && !upiPaymentReceived) return "Mark payment as received on the waiting screen";
+    if (mode === "QR Code" && qrPaymentStatus !== "Paid") return "Mark payment as received on the waiting screen";
+    if (paymentModeNeedsRef(mode) && !refNumber.trim()) {
+      const meta = getCounterPaymentMode(mode);
+      return `${"refLabel" in meta ? meta.refLabel : "Reference"} is required`;
+    }
+    return null;
+  };
+
+  const selectPaymentMode = (modeId: CounterPaymentMode) => {
+    if (modeId !== paymentMode) {
+      setRefNumber("");
+      setUpiLinkSent(false);
+      setUpiPaymentReceived(false);
+      setQrPaymentStatus("Pending Payment");
+      setPaymentConfigured(false);
+    }
+    setPaymentMode(modeId);
+    setPaymentDialogOpen(true);
+  };
+
+  useEffect(() => {
+    if (!paymentDialogOpen || paymentMode !== "UPI" || upiLinkSent) return;
+    const phone = devotee.phone.replace(/\D/g, "").slice(-10);
+    if (phone.length === 10) {
+      sendWhatsAppPaymentLink();
+    }
+  }, [paymentDialogOpen, paymentMode]);
+
+  const confirmPaymentDialog = () => {
+    const error = validatePaymentDetails(paymentMode);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    setPaymentConfigured(true);
+    setPaymentDialogOpen(false);
+    toast.success(`${getCounterPaymentMode(paymentMode).label} payment details saved`);
+  };
 
   const filteredOfferings = offerings.filter(o => {
     if (filterStructure !== "all" && o.structure !== filterStructure) return false;
@@ -222,6 +369,20 @@ const CounterBooking = () => {
     ));
   };
 
+  const sendWhatsAppPaymentLink = () => {
+    const phone = devotee.phone.replace(/\D/g, "").slice(-10);
+    if (phone.length !== 10) {
+      toast.error("Add a valid 10-digit mobile number in devotee details");
+      return;
+    }
+    const message = encodeURIComponent(
+      `Namaste ${devotee.name || "Devotee"},\n\nPlease pay ₹${cartTotal.toLocaleString("en-IN")} for your seva booking at ${TEMPLE_CONFIG.name}.\n\nUPI ID: ${TEMPLE_CONFIG.upiId}\nPayment link: ${buildSevaUpiLink(cartTotal)}\n\nThank you.`
+    );
+    window.open(`https://wa.me/91${phone}?text=${message}`, "_blank");
+    setUpiLinkSent(true);
+    toast.success("Payment link opened in WhatsApp");
+  };
+
   const handleConfirm = () => {
     setBookingComplete(true);
     toast.success("Counter booking created successfully!");
@@ -237,6 +398,11 @@ const CounterBooking = () => {
     setDevotee({ name: "", phone: "", email: "", gothram: "", nakshatra: "", sankalpam: "" });
     setPaymentMode("Cash");
     setRefNumber("");
+    setUpiLinkSent(false);
+    setUpiPaymentReceived(false);
+    setQrPaymentStatus("Pending Payment");
+    setPaymentDialogOpen(false);
+    setPaymentConfigured(false);
     setAddingPrasadam(false);
     setCustomFields([]);
     setBookingComplete(false);
@@ -278,7 +444,24 @@ const CounterBooking = () => {
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Devotee</span><span className="font-medium">{devotee.name}</span></div>
                 <div className="flex justify-between text-sm font-bold text-base"><span>Total</span><span>₹{cartTotal}</span></div>
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Payment</span><span className="font-medium">{paymentMode}</span></div>
-                {refNumber && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Bank Ref / UTR</span><span className="font-medium font-mono text-xs">{refNumber}</span></div>}
+                {paymentMode === "UPI" && upiLinkSent && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">WhatsApp Link</span>
+                    <span className="font-medium text-xs">Sent to +91 {devotee.phone.replace(/\D/g, "").slice(-10)}</span>
+                  </div>
+                )}
+                {paymentMode === "QR Code" && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">QR Payment</span>
+                    <Badge variant="secondary">{qrPaymentStatus}</Badge>
+                  </div>
+                )}
+                {refNumber && paymentModeNeedsRef(paymentMode) && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">{"refLabel" in getCounterPaymentMode(paymentMode) ? getCounterPaymentMode(paymentMode).refLabel : "Reference"}</span>
+                    <span className="font-medium font-mono text-xs">{refNumber}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Source</span><Badge variant="secondary">Counter</Badge></div>
               </div>
               <div className="flex gap-2 justify-center">
@@ -542,44 +725,178 @@ const CounterBooking = () => {
                     <Separator className="my-2" />
                     <div className="flex justify-between font-bold text-lg"><span>Total</span><span>₹{cartTotal}</span></div>
                   </div>
-                  <div>
+                  <div className="space-y-4">
                     <Label>Payment Mode</Label>
-                    <div className="grid grid-cols-5 gap-2 mt-2">
-                      {["Cash", "UPI", "Card", "Cheque", "Temple QR"].map(mode => (
-                        <button
-                          key={mode}
-                          type="button"
-                          onClick={() => setPaymentMode(mode)}
-                          className={`p-3 border rounded-lg text-center text-sm font-medium ${paymentMode === mode ? "border-foreground" : "border-border"}`}
+                    {COUNTER_PAYMENT_GROUPS.map((group, groupIndex) => (
+                      <div
+                        key={group.title}
+                        className={`rounded-xl border p-3 space-y-2.5 ${groupIndex === 0 ? "bg-amber-50/60 border-amber-200/80" : "bg-sky-50/50 border-sky-200/80"}`}
+                      >
+                        <p
+                          className={`text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md w-fit ${
+                            groupIndex === 0
+                              ? "bg-amber-100 text-amber-900 border border-amber-200"
+                              : "bg-sky-100 text-sky-900 border border-sky-200"
+                          }`}
                         >
-                          {mode}
-                        </button>
-                      ))}
+                          {group.title}
+                        </p>
+                        <div className={`grid gap-2 ${group.modes.length === 3 ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2"}`}>
+                          {group.modes.map((modeId) => {
+                            const mode = getCounterPaymentMode(modeId);
+                            const selected = paymentMode === mode.id;
+                            return (
+                              <button
+                                key={mode.id}
+                                type="button"
+                                onClick={() => selectPaymentMode(mode.id)}
+                                className={`p-3 border-2 rounded-lg text-left transition-all ${
+                                  selected
+                                    ? groupIndex === 0
+                                      ? "border-amber-600 bg-amber-100/80 shadow-sm ring-1 ring-amber-300/50"
+                                      : "border-sky-600 bg-sky-100/80 shadow-sm ring-1 ring-sky-300/50"
+                                    : "border-border bg-background hover:bg-muted/30"
+                                }`}
+                              >
+                                <span className={`text-sm font-semibold block ${selected ? "text-foreground" : ""}`}>
+                                  {mode.label}
+                                </span>
+                                <span className={`text-[10px] leading-snug mt-1 block ${selected ? "text-foreground/80" : "text-muted-foreground"}`}>
+                                  {mode.purpose}
+                                </span>
+                                {selected && paymentConfigured ? (
+                                  <span className="text-[9px] font-semibold mt-2 block text-emerald-700">✓ Ready — tap to edit</span>
+                                ) : (
+                                  <span className={`text-[9px] mt-2 block ${selected ? (groupIndex === 0 ? "text-amber-700 font-semibold" : "text-sky-700 font-semibold") : "text-muted-foreground/70"}`}>
+                                    {selected ? "Complete in popup" : "Tap to open"}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {paymentConfigured && (
+                    <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/60 px-3 py-2.5 text-sm">
+                      <span className="text-emerald-800">
+                        <span className="font-medium">{getCounterPaymentMode(paymentMode).label}</span> payment ready
+                        {refNumber && paymentModeNeedsRef(paymentMode) && (
+                          <span className="text-emerald-700/80"> · Ref: {refNumber}</span>
+                        )}
+                      </span>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 text-xs text-emerald-800" onClick={() => setPaymentDialogOpen(true)}>
+                        Edit
+                      </Button>
                     </div>
-                  </div>
-                  <div>
-                    <Label>
-                      {paymentMode === "Cash" ? "Bank Reference / UTR No" :
-                        paymentMode === "UPI" ? "UPI Reference / Txn ID" :
-                        paymentMode === "Card" ? "Card Txn / Approval Code" :
-                        paymentMode === "Cheque" ? "Cheque Number" :
-                        "Temple QR Txn / UPI Ref"}
-                    </Label>
-                    <Input
-                      value={refNumber}
-                      onChange={e => setRefNumber(e.target.value)}
-                      placeholder={
-                        paymentMode === "Cash" ? "e.g. UTR for cash deposit to bank (optional)" :
-                        paymentMode === "UPI" ? "e.g. 4XXXXXXXXXXX (UTR / UPI ref)" :
-                        paymentMode === "Card" ? "e.g. last 4 digits or approval code" :
-                        paymentMode === "Cheque" ? "e.g. 123456 — Bank, Date" :
-                        "e.g. UPI ref from temple QR scan"
-                      }
-                    />
-                  </div>
+                  )}
+
+                  <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
+                    <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                      {(() => {
+                        const modeMeta = getCounterPaymentMode(paymentMode);
+                        const ModeIcon = paymentModeIcon(paymentMode);
+                        return (
+                          <>
+                            <DialogHeader>
+                              <DialogTitle className="flex items-center gap-2">
+                                <ModeIcon className="h-5 w-5 text-primary" />
+                                {modeMeta.label}
+                              </DialogTitle>
+                              <DialogDescription>{modeMeta.purpose}</DialogDescription>
+                            </DialogHeader>
+
+                            <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm">
+                              <span className="text-muted-foreground">Amount to collect</span>
+                              <span className="font-bold">₹{cartTotal.toLocaleString("en-IN")}</span>
+                            </div>
+
+                            <div className="space-y-4 py-1">
+                              {paymentMode === "Cash" && (
+                                <p className="text-sm text-muted-foreground">
+                                  Collect <span className="font-semibold text-foreground">₹{cartTotal.toLocaleString("en-IN")}</span> in cash at the counter. No reference number is needed.
+                                </p>
+                              )}
+
+                              {paymentMode === "UPI" && (
+                                <>
+                                  {devotee.phone.replace(/\D/g, "").slice(-10).length !== 10 ? (
+                                    <p className="text-sm text-destructive rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                                      Add a valid 10-digit mobile number in devotee details to send the WhatsApp payment link.
+                                    </p>
+                                  ) : (
+                                    <DigitalPaymentWaiting
+                                      mode="UPI"
+                                      amount={cartTotal}
+                                      phone={devotee.phone.replace(/\D/g, "").slice(-10)}
+                                      received={upiPaymentReceived}
+                                      onPaymentReceived={() => setUpiPaymentReceived(true)}
+                                    />
+                                  )}
+                                  {upiLinkSent && !upiPaymentReceived && (
+                                    <p className="text-[11px] text-center text-muted-foreground">Link sent · waiting for devotee to pay</p>
+                                  )}
+                                </>
+                              )}
+
+                              {paymentMode === "QR Code" && (
+                                <DigitalPaymentWaiting
+                                  mode="QR Code"
+                                  amount={cartTotal}
+                                  phone=""
+                                  received={qrPaymentStatus === "Paid"}
+                                  onPaymentReceived={() => setQrPaymentStatus("Paid")}
+                                />
+                              )}
+
+                              {paymentModeNeedsRef(paymentMode) && (
+                                <div className="space-y-2">
+                                  <Label>
+                                    {"refLabel" in modeMeta ? modeMeta.refLabel : "Reference"} *
+                                  </Label>
+                                  <Input
+                                    value={refNumber}
+                                    onChange={(e) => setRefNumber(e.target.value)}
+                                    placeholder={"refPlaceholder" in modeMeta ? modeMeta.refPlaceholder : ""}
+                                    autoFocus
+                                  />
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Enter the reference from cheque, bank receipt, or UPI confirmation.
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            <DialogFooter className="gap-2 sm:gap-0">
+                              <Button type="button" variant="outline" onClick={() => setPaymentDialogOpen(false)}>
+                                Cancel
+                              </Button>
+                              <Button type="button" onClick={confirmPaymentDialog}>
+                                Confirm Payment
+                              </Button>
+                            </DialogFooter>
+                          </>
+                        );
+                      })()}
+                    </DialogContent>
+                  </Dialog>
+
                   <div className="flex justify-between">
                     <Button variant="outline" onClick={() => setCurrentStep(1)}>Back</Button>
-                    <Button onClick={() => setCurrentStep(3)}>Continue</Button>
+                    <Button
+                      onClick={() => {
+                        if (!paymentConfigured) {
+                          toast.error("Select a payment mode and complete the popup first");
+                          setPaymentDialogOpen(true);
+                          return;
+                        }
+                        setCurrentStep(3);
+                      }}
+                    >
+                      Continue
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -619,7 +936,25 @@ const CounterBooking = () => {
                     {devotee.nakshatra && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Nakshatra</span><span className="font-medium">{devotee.nakshatra}</span></div>}
                     <Separator />
                     <div className="flex justify-between text-sm"><span className="text-muted-foreground">Payment</span><span className="font-medium">{paymentMode}</span></div>
-                    {refNumber && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Bank Ref / UTR</span><span className="font-medium font-mono text-xs">{refNumber}</span></div>}
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Purpose</span><span className="text-right text-xs max-w-[60%]">{getCounterPaymentMode(paymentMode).purpose}</span></div>
+                    {paymentMode === "UPI" && upiLinkSent && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">WhatsApp Link</span>
+                        <span className="font-medium text-xs">Sent to +91 {devotee.phone.replace(/\D/g, "").slice(-10)}</span>
+                      </div>
+                    )}
+                    {paymentMode === "QR Code" && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">QR Payment</span>
+                        <Badge variant="secondary">{qrPaymentStatus}</Badge>
+                      </div>
+                    )}
+                    {refNumber && paymentModeNeedsRef(paymentMode) && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">{"refLabel" in getCounterPaymentMode(paymentMode) ? getCounterPaymentMode(paymentMode).refLabel : "Reference"}</span>
+                        <span className="font-medium font-mono text-xs">{refNumber}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm font-bold text-base"><span>Total Amount</span><span>₹{cartTotal}</span></div>
                     <div className="flex justify-between text-sm"><span className="text-muted-foreground">Source</span><Badge variant="secondary">Counter</Badge></div>
                   </div>
