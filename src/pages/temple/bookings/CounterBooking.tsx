@@ -167,8 +167,8 @@ const COUNTER_PAYMENT_MODES = [
   { id: "Cash", label: "Cash", purpose: "Cash received directly at the counter" },
   {
     id: "Temple QR / Bank Transfer",
-    label: "Temple QR",
-    purpose: "Temple QR or bank transfer — record reference no",
+    label: "Online Transfer [neft (net banking)/upi/qr]",
+    purpose: "Direct transfer or NEFT — record reference no",
     refLabel: "Reference No / UTR",
     refPlaceholder: "e.g. UTR4827384 or bank transfer reference",
   },
@@ -179,17 +179,17 @@ const COUNTER_PAYMENT_MODES = [
     refLabel: "Cheque Number",
     refPlaceholder: "e.g. 123456 — Bank name, cheque date",
   },
-  { id: "UPI", label: "UPI", purpose: "Send payment link to devotee via WhatsApp on mobile" },
-  { id: "QR Code", label: "QR", purpose: "Open temple QR — devotee scans and pays at counter" },
+  { id: "UPI", label: "upi", purpose: "Send payment link to devotee via WhatsApp on mobile" },
+  { id: "QR Code", label: "qr", purpose: "Open temple QR — devotee scans and pays at counter" },
 ] as const;
 
 const COUNTER_PAYMENT_GROUPS = [
   {
-    title: "Cash, Temple QR & Cheque",
+    title: "Cash -- Online Transfer [neft (net banking)/upi/qr] -- Cheque",
     modes: ["Cash", "Temple QR / Bank Transfer", "Cheque"] as const,
   },
   {
-    title: "UPI & QR",
+    title: "Online payment gateway",
     modes: ["UPI", "QR Code"] as const,
   },
 ] as const;
@@ -239,7 +239,7 @@ function DigitalPaymentWaiting({
         <p className="text-sm text-muted-foreground max-w-xs mx-auto">
           {mode === "UPI"
             ? `Payment link already sent via WhatsApp to +91 ${phone || "__________"}`
-            : "Temple QR is active — waiting for devotee to scan and pay"}
+            : "QR is active — waiting for devotee to scan and pay"}
         </p>
       </div>
       <p className="text-2xl font-bold">₹{amount.toLocaleString("en-IN")}</p>
@@ -443,7 +443,7 @@ const CounterBooking = () => {
                 <Separator />
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Devotee</span><span className="font-medium">{devotee.name}</span></div>
                 <div className="flex justify-between text-sm font-bold text-base"><span>Total</span><span>₹{cartTotal}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Payment</span><span className="font-medium">{paymentMode}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Payment</span><span className="font-medium">{getCounterPaymentMode(paymentMode).label}</span></div>
                 {paymentMode === "UPI" && upiLinkSent && (
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">WhatsApp Link</span>
@@ -488,11 +488,10 @@ const CounterBooking = () => {
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
           {steps.map((step, i) => (
             <div key={i} className="flex items-center gap-2 flex-shrink-0">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-                i < currentStep ? "bg-primary text-primary-foreground" :
-                i === currentStep ? "bg-primary text-primary-foreground ring-4 ring-primary/20" :
-                "bg-muted text-muted-foreground"
-              }`}>{i < currentStep ? <Check className="h-4 w-4" /> : i + 1}</div>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${i < currentStep ? "bg-primary text-primary-foreground" :
+                  i === currentStep ? "bg-primary text-primary-foreground ring-4 ring-primary/20" :
+                    "bg-muted text-muted-foreground"
+                }`}>{i < currentStep ? <Check className="h-4 w-4" /> : i + 1}</div>
               <span className={`text-xs font-medium ${i <= currentStep ? "text-foreground" : "text-muted-foreground"}`}>{step}</span>
               {i < steps.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
             </div>
@@ -521,53 +520,52 @@ const CounterBooking = () => {
                             </Button>
                           </div>
                         </CardHeader>
-                         <CardContent className="space-y-3">
-                           <div className="flex items-center gap-3 flex-wrap">
-                             <div className="flex-1 min-w-[180px]">
-                               <Label className="text-xs text-muted-foreground">Date</Label>
-                               <Popover>
-                                 <PopoverTrigger asChild>
-                                   <Button variant="outline" className="w-full justify-start h-9 font-normal mt-1">
-                                     <CalendarIcon className="h-4 w-4 mr-2" />
-                                     {addingDate ? format(addingDate, "EEE, dd MMM yyyy") : "Pick a date"}
-                                   </Button>
-                                 </PopoverTrigger>
-                                 <PopoverContent className="w-auto p-0" align="start">
-                                   <Calendar
-                                     mode="single"
-                                     selected={addingDate}
-                                     onSelect={(d) => { setAddingDate(d); setAddingSlot(null); }}
-                                     disabled={(d) => {
-                                       const today = new Date();
-                                       today.setHours(0, 0, 0, 0);
-                                       return d < today;
-                                     }}
-                                     initialFocus
-                                     className="pointer-events-auto"
-                                   />
-                                 </PopoverContent>
-                               </Popover>
-                             </div>
-                           </div>
-                           <div>
-                             <Label className="text-xs text-muted-foreground">
-                               {addingDate ? `Available time slots` : "Pick a date to view slots"}
-                             </Label>
-                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mt-2 max-h-[180px] overflow-y-auto pr-1">
-                               {addingDate && buildSlotsForDate(addingOffering, addingDate).map(slot => (
-                                 <button
-                                   key={slot.id}
-                                   onClick={() => { setAddingSlot(slot); setAddingQty(q => Math.min(q, slot.available)); }}
-                                   className={`p-2 border rounded-lg text-left transition-all text-sm hover:bg-muted/50 ${
-                                     addingSlot?.id === slot.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : ""
-                                   }`}
-                                 >
-                                   <p className="font-semibold text-xs">{slot.timeLabel}</p>
-                                   <Badge variant="secondary" className="text-[9px] mt-1">{slot.available} left</Badge>
-                                 </button>
-                               ))}
-                             </div>
-                           </div>
+                        <CardContent className="space-y-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <div className="flex-1 min-w-[180px]">
+                              <Label className="text-xs text-muted-foreground">Date</Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" className="w-full justify-start h-9 font-normal mt-1">
+                                    <CalendarIcon className="h-4 w-4 mr-2" />
+                                    {addingDate ? format(addingDate, "EEE, dd MMM yyyy") : "Pick a date"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={addingDate}
+                                    onSelect={(d) => { setAddingDate(d); setAddingSlot(null); }}
+                                    disabled={(d) => {
+                                      const today = new Date();
+                                      today.setHours(0, 0, 0, 0);
+                                      return d < today;
+                                    }}
+                                    initialFocus
+                                    className="pointer-events-auto"
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-xs text-muted-foreground">
+                              {addingDate ? `Available time slots` : "Pick a date to view slots"}
+                            </Label>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mt-2 max-h-[180px] overflow-y-auto pr-1">
+                              {addingDate && buildSlotsForDate(addingOffering, addingDate).map(slot => (
+                                <button
+                                  key={slot.id}
+                                  onClick={() => { setAddingSlot(slot); setAddingQty(q => Math.min(q, slot.available)); }}
+                                  className={`p-2 border rounded-lg text-left transition-all text-sm hover:bg-muted/50 ${addingSlot?.id === slot.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : ""
+                                    }`}
+                                >
+                                  <p className="font-semibold text-xs">{slot.timeLabel}</p>
+                                  <Badge variant="secondary" className="text-[9px] mt-1">{slot.available} left</Badge>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                           {addingOffering.prasadamIncluded && (
                             <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
                               <div className="flex items-center gap-2">
@@ -634,9 +632,8 @@ const CounterBooking = () => {
                           <button
                             key={o.id}
                             onClick={() => { setAddingOffering(o); setAddingSlot(null); setAddingQty(1); setAddingPrasadam(false); }}
-                            className={`p-4 border rounded-lg text-left hover:border-primary hover:bg-muted/50 transition-all relative ${
-                              addingOffering?.id === o.id ? "border-primary bg-primary/5" : ""
-                            }`}
+                            className={`p-4 border rounded-lg text-left hover:border-primary hover:bg-muted/50 transition-all relative ${addingOffering?.id === o.id ? "border-primary bg-primary/5" : ""
+                              }`}
                           >
                             {inCart && (
                               <div className="absolute top-2 right-2">
@@ -733,11 +730,10 @@ const CounterBooking = () => {
                         className={`rounded-xl border p-3 space-y-2.5 ${groupIndex === 0 ? "bg-amber-50/60 border-amber-200/80" : "bg-sky-50/50 border-sky-200/80"}`}
                       >
                         <p
-                          className={`text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md w-fit ${
-                            groupIndex === 0
+                          className={`text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-md w-fit ${groupIndex === 0
                               ? "bg-amber-100 text-amber-900 border border-amber-200"
                               : "bg-sky-100 text-sky-900 border border-sky-200"
-                          }`}
+                            }`}
                         >
                           {group.title}
                         </p>
@@ -750,13 +746,12 @@ const CounterBooking = () => {
                                 key={mode.id}
                                 type="button"
                                 onClick={() => selectPaymentMode(mode.id)}
-                                className={`p-3 border-2 rounded-lg text-left transition-all ${
-                                  selected
+                                className={`p-3 border-2 rounded-lg text-left transition-all ${selected
                                     ? groupIndex === 0
                                       ? "border-amber-600 bg-amber-100/80 shadow-sm ring-1 ring-amber-300/50"
                                       : "border-sky-600 bg-sky-100/80 shadow-sm ring-1 ring-sky-300/50"
                                     : "border-border bg-background hover:bg-muted/30"
-                                }`}
+                                  }`}
                               >
                                 <span className={`text-sm font-semibold block ${selected ? "text-foreground" : ""}`}>
                                   {mode.label}
@@ -935,7 +930,7 @@ const CounterBooking = () => {
                     {devotee.gothram && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Gothram</span><span className="font-medium">{devotee.gothram}</span></div>}
                     {devotee.nakshatra && <div className="flex justify-between text-sm"><span className="text-muted-foreground">Nakshatra</span><span className="font-medium">{devotee.nakshatra}</span></div>}
                     <Separator />
-                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Payment</span><span className="font-medium">{paymentMode}</span></div>
+                    <div className="flex justify-between text-sm"><span className="text-muted-foreground">Payment</span><span className="font-medium">{getCounterPaymentMode(paymentMode).label}</span></div>
                     <div className="flex justify-between text-sm"><span className="text-muted-foreground">Purpose</span><span className="text-right text-xs max-w-[60%]">{getCounterPaymentMode(paymentMode).purpose}</span></div>
                     {paymentMode === "UPI" && upiLinkSent && (
                       <div className="flex justify-between text-sm">
