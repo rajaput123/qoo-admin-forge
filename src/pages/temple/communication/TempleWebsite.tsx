@@ -31,6 +31,7 @@ interface TemplateDef {
     sections: {
       about: boolean; timings: boolean; gallery: boolean;
       donations: boolean; contact: boolean; sevas: boolean; events: boolean;
+      childTemples?: boolean; sacredDetails?: boolean; announcements?: boolean;
     };
   };
 }
