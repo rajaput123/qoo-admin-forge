@@ -31,10 +31,10 @@ const mockTransactions = [
 
 const statCards = [
   { key: "cash", label: "Cash", ...mockSummary.cash, color: "text-green-700", bg: "bg-green-50", border: "border-green-200", icon: Wallet, clickable: true },
-  { key: "upi", label: "UPI / Online", total: mockSummary.upi_online.total, count: mockSummary.upi_online.count, color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", icon: CreditCard },
-  { key: "cheque", label: "Cheque / DD", total: mockSummary.cheque_dd.total, count: mockSummary.cheque_dd.count, color: "text-amber-800", bg: "bg-amber-50", border: "border-amber-200", icon: Banknote },
-  { key: "neft", label: "NEFT / RTGS", total: mockSummary.neft_rtgs.total, count: mockSummary.neft_rtgs.count, color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-200", icon: ArrowRightLeft },
-  { key: "total", label: "Grand Total", total: mockSummary.grand_total, count: mockSummary.grand_txn_count, color: "text-red-700", bg: "bg-red-50", border: "border-red-200", icon: IndianRupee },
+  { key: "upi", label: "UPI / Online", total: mockSummary.upi_online.total, count: mockSummary.upi_online.count, color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", icon: CreditCard, clickable: false },
+  { key: "cheque", label: "Cheque / DD", total: mockSummary.cheque_dd.total, count: mockSummary.cheque_dd.count, color: "text-amber-800", bg: "bg-amber-50", border: "border-amber-200", icon: Banknote, clickable: false },
+  { key: "neft", label: "NEFT / RTGS", total: mockSummary.neft_rtgs.total, count: mockSummary.neft_rtgs.count, color: "text-purple-700", bg: "bg-purple-50", border: "border-purple-200", icon: ArrowRightLeft, clickable: false },
+  { key: "total", label: "Grand Total", total: mockSummary.grand_total, count: mockSummary.grand_txn_count, color: "text-red-700", bg: "bg-red-50", border: "border-red-200", icon: IndianRupee, clickable: false },
 ];
 
 const CashNonCashPage = () => {

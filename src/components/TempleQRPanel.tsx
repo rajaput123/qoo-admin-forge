@@ -7,6 +7,8 @@
 import { QRCodeSVG } from "qrcode.react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ShieldCheck, Copy, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -25,9 +27,11 @@ interface TempleQRPanelProps {
   mode: "QR Code" | "UPI";
   paymentStatus: "Pending Payment" | "Paid";
   onConfirmPaid: () => void;
+  referenceNo?: string;
+  onReferenceNoChange?: (val: string) => void;
 }
 
-const TempleQRPanel = ({ amount, mode, paymentStatus, onConfirmPaid }: TempleQRPanelProps) => {
+const TempleQRPanel = ({ amount, mode, paymentStatus, onConfirmPaid, referenceNo, onReferenceNoChange }: TempleQRPanelProps) => {
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -93,6 +97,24 @@ const TempleQRPanel = ({ amount, mode, paymentStatus, onConfirmPaid }: TempleQRP
             <span className="font-bold text-lg">₹{amount.toLocaleString("en-IN")}</span>
           </div>
         </div>
+
+        {/* UTR / Bank Reference capture */}
+        {onReferenceNoChange && (
+          <div className="rounded-xl border bg-background p-4 space-y-2">
+            <Label className="text-xs">
+              UTR / Bank Reference No <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
+              value={referenceNo ?? ""}
+              onChange={(e) => onReferenceNoChange(e.target.value)}
+              placeholder="e.g. 412345678901"
+              className="font-mono text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Enter the UTR shown in the donor's UPI app for reconciliation.
+            </p>
+          </div>
+        )}
 
         {/* Payment confirmation */}
         {paymentStatus !== "Paid" ? (

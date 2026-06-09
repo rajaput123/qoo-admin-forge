@@ -39,7 +39,7 @@ const NeftRtgsFormPage = () => {
         chequeAmount: item.chequeAmount,
         purpose: item.purpose,
         paymentHead: item.paymentHead,
-        billNo: "billNo" in item ? item.billNo : "",
+        billNo: "billNo" in item ? String((item as { billNo?: unknown }).billNo ?? "") : "",
       });
     }
   };

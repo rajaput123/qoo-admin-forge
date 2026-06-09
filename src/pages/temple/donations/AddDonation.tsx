@@ -206,9 +206,9 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
       Cash: "Cash", "QR Code": "UPI", UPI: "UPI", Cheque: "Cheque",
     };
     const referenceNo = paymentMode === "Cheque" ? chequeNo
-      : paymentMode === "NEFT" ? utrNumber
+      : paymentMode === "QR Code" && utrNumber.trim() ? utrNumber.trim()
       : paymentMode === "UPI" ? `WA:${whatsappNumber}`
-      : paymentMode === "Cash" && utrNumber.trim() ? utrNumber.trim() : undefined;
+      : undefined;
 
     const donation = recordDonation({
       donorName: donorName.trim(), phone: mobile.trim(),
@@ -506,7 +506,6 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Counter No *</Label><Input value={counterNo} onChange={e => setCounterNo(e.target.value)} placeholder="e.g. CTR-01" /></div>
             <div className="space-y-2"><Label>Collected By *</Label><Input value={collectedBy} onChange={e => setCollectedBy(e.target.value)} placeholder="Staff name" /></div>
-            <div className="space-y-2 md:col-span-2"><Label>UTR / Bank Reference No <span className="text-xs text-muted-foreground">(optional)</span></Label><Input value={utrNumber} onChange={e => setUtrNumber(e.target.value)} placeholder="e.g. UTR12345678" /></div>
           </div>
         )}
 
@@ -517,6 +516,8 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
             mode="QR Code"
             paymentStatus={paymentStatus}
             onConfirmPaid={() => setPaymentStatus("Paid")}
+            referenceNo={utrNumber}
+            onReferenceNoChange={setUtrNumber}
           />
         )}
 
