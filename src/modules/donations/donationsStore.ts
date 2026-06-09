@@ -399,6 +399,7 @@ function getSafeDonationsState(): DonationsState {
         audit: [],
         funds: [],
         fundExpenses: [],
+        settlements: [],
       };
     }
   }
