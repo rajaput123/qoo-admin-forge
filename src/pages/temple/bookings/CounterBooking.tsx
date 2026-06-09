@@ -12,6 +12,8 @@ import { Store, ChevronRight, Check, Printer, MessageSquare, ShoppingCart, Plus,
 import { toast } from "sonner";
 import SearchableSelect from "@/components/SearchableSelect";
 import CustomFieldsSection, { CustomField } from "@/components/CustomFieldsSection";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 
 interface PrasadamItem {
   name: string;
@@ -97,6 +99,37 @@ function getDateLabel(offsetDays = 0) {
   return d.toLocaleDateString("en-IN", { weekday: "short", day: "2-digit", month: "short" });
 }
 
+function dateToIso(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function buildSlotsForDate(offering: typeof offerings[0], date: Date): SlotOption[] {
+  const iso = dateToIso(date);
+  const label = format(date, "EEE, dd MMM");
+  const time = offering.time;
+  if (time.includes("–") || time.includes("-")) {
+    const parts = time.split("–").length > 1 ? time.split("–") : time.split("-");
+    const startMin = parse12hToMinutes(parts[0]?.trim() ?? "");
+    const endMin = parse12hToMinutes(parts[1]?.trim() ?? "");
+    if (startMin != null && endMin != null && endMin > startMin) {
+      const interval = 30;
+      const times: number[] = [];
+      for (let t = startMin; t <= endMin; t += interval) times.push(t);
+      const count = times.length || 1;
+      const base = Math.max(1, Math.floor(offering.available / count));
+      let remainder = Math.max(0, offering.available - base * count);
+      return times.map(t => {
+        const extra = remainder > 0 ? 1 : 0;
+        remainder = Math.max(0, remainder - extra);
+        return { id: `${iso}-${t}`, dateLabel: label, dateIso: iso, timeLabel: minutesTo12hLabel(t), available: base + extra };
+      });
+    }
+  }
+  const fixed = parse12hToMinutes(time);
+  const timeLabel = fixed != null ? minutesTo12hLabel(fixed) : time;
+  return [{ id: `${iso}-${timeLabel}`, dateLabel: label, dateIso: iso, timeLabel, available: offering.available }];
+}
+
 function buildSlotOptions(offering: typeof offerings[0]): SlotOption[] {
   const time = offering.time;
   if (time.includes("–") || time.includes("-")) {
@@ -135,6 +168,7 @@ const CounterBooking = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [addingOffering, setAddingOffering] = useState<typeof offerings[0] | null>(null);
   const [addingSlot, setAddingSlot] = useState<SlotOption | null>(null);
+  const [addingDate, setAddingDate] = useState<Date | undefined>(new Date());
   const [addingQty, setAddingQty] = useState(1);
   const [addingPrasadam, setAddingPrasadam] = useState(false);
 
@@ -171,6 +205,7 @@ const CounterBooking = () => {
     toast.success(`${addingOffering.name} added to cart`);
     setAddingOffering(null);
     setAddingSlot(null);
+    setAddingDate(new Date());
     setAddingQty(1);
     setAddingPrasadam(false);
   };
@@ -195,6 +230,7 @@ const CounterBooking = () => {
     setCart([]);
     setAddingOffering(null);
     setAddingSlot(null);
+    setAddingDate(new Date());
     setAddingQty(1);
     setDevotee({ name: "", phone: "", email: "", gothram: "", nakshatra: "", sankalpam: "" });
     setPaymentMode("Cash");
@@ -295,26 +331,46 @@ const CounterBooking = () => {
                               <CardTitle className="text-base">Select Slot for {addingOffering.name}</CardTitle>
                               <CardDescription>{addingOffering.structure} · {addingOffering.time}</CardDescription>
                             </div>
-                            <Button variant="ghost" size="icon" onClick={() => { setAddingOffering(null); setAddingSlot(null); setAddingQty(1); }}>
+                            <Button variant="ghost" size="icon" onClick={() => { setAddingOffering(null); setAddingSlot(null); setAddingDate(new Date()); setAddingQty(1); }}>
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            {buildSlotOptions(addingOffering).map(slot => (
-                              <button
-                                key={slot.id}
-                                onClick={() => { setAddingSlot(slot); setAddingQty(q => Math.min(q, slot.available)); }}
-                                className={`p-2.5 border rounded-lg text-left transition-all text-sm hover:bg-muted/50 ${
-                                  addingSlot?.id === slot.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : ""
-                                }`}
-                              >
-                                <p className="text-[10px] text-muted-foreground">{slot.dateLabel}</p>
-                                <p className="font-semibold text-xs">{slot.timeLabel}</p>
-                                <Badge variant="secondary" className="text-[9px] mt-1">{slot.available} left</Badge>
-                              </button>
-                            ))}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="flex justify-center md:justify-start">
+                              <Calendar
+                                mode="single"
+                                selected={addingDate}
+                                onSelect={(d) => { setAddingDate(d); setAddingSlot(null); }}
+                                disabled={(d) => {
+                                  const today = new Date();
+                                  today.setHours(0, 0, 0, 0);
+                                  return d < today;
+                                }}
+                                initialFocus
+                                className="rounded-md border pointer-events-auto"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">
+                                {addingDate ? `Available time slots for ${format(addingDate, "EEE, dd MMM yyyy")}` : "Pick a date to view slots"}
+                              </Label>
+                              <div className="grid grid-cols-2 gap-2 mt-2 max-h-[260px] overflow-y-auto pr-1">
+                                {addingDate && buildSlotsForDate(addingOffering, addingDate).map(slot => (
+                                  <button
+                                    key={slot.id}
+                                    onClick={() => { setAddingSlot(slot); setAddingQty(q => Math.min(q, slot.available)); }}
+                                    className={`p-2.5 border rounded-lg text-left transition-all text-sm hover:bg-muted/50 ${
+                                      addingSlot?.id === slot.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : ""
+                                    }`}
+                                  >
+                                    <p className="font-semibold text-xs">{slot.timeLabel}</p>
+                                    <Badge variant="secondary" className="text-[9px] mt-1">{slot.available} left</Badge>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                           {addingOffering.prasadamIncluded && (
                             <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
