@@ -14,6 +14,8 @@ import SearchableSelect from "@/components/SearchableSelect";
 import CustomFieldsSection, { CustomField } from "@/components/CustomFieldsSection";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 
 interface PrasadamItem {
   name: string;
@@ -336,42 +338,53 @@ const CounterBooking = () => {
                             </Button>
                           </div>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="flex justify-center md:justify-start">
-                              <Calendar
-                                mode="single"
-                                selected={addingDate}
-                                onSelect={(d) => { setAddingDate(d); setAddingSlot(null); }}
-                                disabled={(d) => {
-                                  const today = new Date();
-                                  today.setHours(0, 0, 0, 0);
-                                  return d < today;
-                                }}
-                                initialFocus
-                                className="rounded-md border pointer-events-auto"
-                              />
-                            </div>
-                            <div>
-                              <Label className="text-xs text-muted-foreground">
-                                {addingDate ? `Available time slots for ${format(addingDate, "EEE, dd MMM yyyy")}` : "Pick a date to view slots"}
-                              </Label>
-                              <div className="grid grid-cols-2 gap-2 mt-2 max-h-[260px] overflow-y-auto pr-1">
-                                {addingDate && buildSlotsForDate(addingOffering, addingDate).map(slot => (
-                                  <button
-                                    key={slot.id}
-                                    onClick={() => { setAddingSlot(slot); setAddingQty(q => Math.min(q, slot.available)); }}
-                                    className={`p-2.5 border rounded-lg text-left transition-all text-sm hover:bg-muted/50 ${
-                                      addingSlot?.id === slot.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : ""
-                                    }`}
-                                  >
-                                    <p className="font-semibold text-xs">{slot.timeLabel}</p>
-                                    <Badge variant="secondary" className="text-[9px] mt-1">{slot.available} left</Badge>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
+                         <CardContent className="space-y-3">
+                           <div className="flex items-center gap-3 flex-wrap">
+                             <div className="flex-1 min-w-[180px]">
+                               <Label className="text-xs text-muted-foreground">Date</Label>
+                               <Popover>
+                                 <PopoverTrigger asChild>
+                                   <Button variant="outline" className="w-full justify-start h-9 font-normal mt-1">
+                                     <CalendarIcon className="h-4 w-4 mr-2" />
+                                     {addingDate ? format(addingDate, "EEE, dd MMM yyyy") : "Pick a date"}
+                                   </Button>
+                                 </PopoverTrigger>
+                                 <PopoverContent className="w-auto p-0" align="start">
+                                   <Calendar
+                                     mode="single"
+                                     selected={addingDate}
+                                     onSelect={(d) => { setAddingDate(d); setAddingSlot(null); }}
+                                     disabled={(d) => {
+                                       const today = new Date();
+                                       today.setHours(0, 0, 0, 0);
+                                       return d < today;
+                                     }}
+                                     initialFocus
+                                     className="pointer-events-auto"
+                                   />
+                                 </PopoverContent>
+                               </Popover>
+                             </div>
+                           </div>
+                           <div>
+                             <Label className="text-xs text-muted-foreground">
+                               {addingDate ? `Available time slots` : "Pick a date to view slots"}
+                             </Label>
+                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mt-2 max-h-[180px] overflow-y-auto pr-1">
+                               {addingDate && buildSlotsForDate(addingOffering, addingDate).map(slot => (
+                                 <button
+                                   key={slot.id}
+                                   onClick={() => { setAddingSlot(slot); setAddingQty(q => Math.min(q, slot.available)); }}
+                                   className={`p-2 border rounded-lg text-left transition-all text-sm hover:bg-muted/50 ${
+                                     addingSlot?.id === slot.id ? "border-primary bg-primary/5 ring-2 ring-primary/20" : ""
+                                   }`}
+                                 >
+                                   <p className="font-semibold text-xs">{slot.timeLabel}</p>
+                                   <Badge variant="secondary" className="text-[9px] mt-1">{slot.available} left</Badge>
+                                 </button>
+                               ))}
+                             </div>
+                           </div>
                           {addingOffering.prasadamIncluded && (
                             <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
                               <div className="flex items-center gap-2">

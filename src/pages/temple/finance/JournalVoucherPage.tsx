@@ -17,7 +17,6 @@ import { NeftRtgsRemittanceForm } from "@/components/finance/NeftRtgsRemittanceF
 import { VoucherPrintDialog } from "@/components/finance/VoucherPrintDialog";
 import { defaultNeftRtgsTemplate, type NeftRtgsFormData } from "@/data/neftRtgsTemplateData";
 import { isNeftRtgsMode, buildPaymentVoucherNeftForm, mergeNeftForm } from "@/lib/neftRtgsUtils";
-import { getPaymentReferenceMeta } from "@/lib/paymentReferenceUtils";
 
 interface Voucher {
   id: string;
@@ -114,12 +113,6 @@ const JournalVoucherPage = () => {
   const [previewNeftForm, setPreviewNeftForm] = useState<NeftRtgsFormData | null>(null);
 
   const showNeftForm = isNeftRtgsMode(formPaymentMode);
-  const paymentRefMeta = getPaymentReferenceMeta(formPaymentMode);
-
-  const handlePaymentModeChange = (mode: string) => {
-    setFormPaymentMode(mode);
-    setFormUtrCheque("");
-  };
 
   const handleOpenNeftPreview = () => {
     setPreviewNeftForm(
@@ -182,19 +175,6 @@ const JournalVoucherPage = () => {
     }
     if (!formNarration.trim()) {
       toast.error("Narration is required");
-      return;
-    }
-    if (paymentRefMeta.required && !formUtrCheque.trim()) {
-      toast.error(`${paymentRefMeta.label} is required for ${formPaymentMode}`);
-      return;
-    }
-    if (
-      formUtrCheque.trim() &&
-      formUtrCheque.trim().length < 12 &&
-      !formPaymentMode.toUpperCase().includes("CHEQUE") &&
-      formPaymentMode !== "Cash"
-    ) {
-      toast.error(`${paymentRefMeta.label} must be at least 12 characters`);
       return;
     }
 
@@ -726,7 +706,7 @@ const JournalVoucherPage = () => {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="formPaymentMode" className="text-[10px] font-bold uppercase tracking-wider text-gray-500">Payment Mode</Label>
-                  <Select value={formPaymentMode} onValueChange={handlePaymentModeChange}>
+                  <Select value={formPaymentMode} onValueChange={setFormPaymentMode}>
                     <SelectTrigger id="formPaymentMode" className="h-10 text-xs">
                       <SelectValue placeholder="Cash" />
                     </SelectTrigger>
@@ -751,25 +731,18 @@ const JournalVoucherPage = () => {
                 </div>
               </div>
 
-              {/* Row 5: Payment reference (label changes by mode) & 80G Certificate */}
+              {/* Row 5: UTR / Cheque No & 80G Certificate */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="formUtrCheque" className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                    {paymentRefMeta.label}
-                    {paymentRefMeta.required ? " *" : ""}
-                  </Label>
+                  <Label htmlFor="formUtrCheque" className="text-[10px] font-bold uppercase tracking-wider text-gray-500">UTR / Cheque No</Label>
                   <Input
                     id="formUtrCheque"
-                    placeholder={paymentRefMeta.placeholder}
+                    placeholder="E.g. UTR4827384 (12-30 CHARS)"
                     className="h-10 text-xs font-mono uppercase"
                     value={formUtrCheque}
-                    onChange={(e) => setFormUtrCheque(e.target.value.slice(0, paymentRefMeta.maxLength))}
-                    required={paymentRefMeta.required}
+                    onChange={(e) => setFormUtrCheque(e.target.value.slice(0, 30))}
                   />
-                  <div className="text-[9px] text-muted-foreground/80 text-right">
-                    {formUtrCheque.length}/{paymentRefMeta.maxLength}
-                    {paymentRefMeta.hint ? ` — ${paymentRefMeta.hint}` : ""}
-                  </div>
+                  <div className="text-[9px] text-muted-foreground/80 text-right">{formUtrCheque.length}/30 characters (A-Z, 0-9, min 12 if entered)</div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="form80G" className="text-[10px] font-bold uppercase tracking-wider text-gray-500">80G Certificate</Label>
