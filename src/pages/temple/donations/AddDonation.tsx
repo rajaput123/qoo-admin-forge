@@ -499,7 +499,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
             <SelectTrigger><SelectValue placeholder="Select payment mode" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Cash">Cash</SelectItem>
-              <SelectItem value="Online">Online Transfer (Net Banking / UPI / QR)</SelectItem>
+              <SelectItem value="Online">Online Transfer [net banking/upi/qr]</SelectItem>
               <SelectItem value="Cheque">Cheque</SelectItem>
             </SelectContent>
           </Select>
