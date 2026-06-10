@@ -16,7 +16,8 @@ import { projects } from "@/data/projectData";
 import { getEvents } from "@/modules/events/eventStore";
 import TempleQRPanel from "@/components/TempleQRPanel";
 
-type PaymentMode = "Cash" | "QR Code" | "UPI" | "Cheque";
+type PaymentMode = "Cash" | "Online" | "Cheque";
+type OnlineSubMode = "" | "UPI Link" | "QR";
 type DonationNature = "Cash" | "Non-Cash";
 type Purpose = "Counter" | "Project" | "Event" | "Other";
 
@@ -133,6 +134,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
   const [remarks, setRemarks] = useState("");
 
   const [paymentMode, setPaymentMode] = useState<""|PaymentMode>("");
+  const [onlineSubMode, setOnlineSubMode] = useState<OnlineSubMode>("");
   const [counterNo, setCounterNo]   = useState("");
   const [collectedBy, setCollectedBy] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
@@ -175,10 +177,9 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
     : (ncMaterialOk && (effective80G !== "") && panValid && (!panRequired || pan.trim().length === 10) && purposeOk);
   const donorOk      = nameValid && mobileValid && addressValid;
   const paymentOk    = paymentMode !== "" &&
-    (paymentMode !== "Cash"     || (counterNo.trim() !== "" && collectedBy.trim() !== "")) &&
-    (paymentMode !== "UPI"      || paymentStatus === "Paid") &&
-    (paymentMode !== "QR Code"  || paymentStatus === "Paid") &&
-    (paymentMode !== "Cheque"   || (chequeNo.trim() !== "" && bankName.trim() !== ""));
+    (paymentMode !== "Cash"   || (counterNo.trim() !== "" && collectedBy.trim() !== "")) &&
+    (paymentMode !== "Online" || (onlineSubMode !== "" && paymentStatus === "Paid")) &&
+    (paymentMode !== "Cheque" || (chequeNo.trim() !== "" && bankName.trim() !== ""));
 
   const stepOk = isCash
     ? [amtOk, donorOk, paymentOk, true]
@@ -203,11 +204,11 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
 
   const saveDonation = () => {
     const channelMap: Record<string, string> = {
-      Cash: "Cash", "QR Code": "UPI", UPI: "UPI", Cheque: "Cheque",
+      Cash: "Cash", Online: "UPI", Cheque: "Cheque",
     };
     const referenceNo = paymentMode === "Cheque" ? chequeNo
-      : paymentMode === "QR Code" && utrNumber.trim() ? utrNumber.trim()
-      : paymentMode === "UPI" ? `WA:${whatsappNumber}`
+      : paymentMode === "Online" && onlineSubMode === "QR" && utrNumber.trim() ? utrNumber.trim()
+      : paymentMode === "Online" && onlineSubMode === "UPI Link" ? `WA:${whatsappNumber}`
       : undefined;
 
     const donation = recordDonation({
@@ -217,7 +218,9 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
       wants80G: effective80G === "Yes",
       nature, amount: amt, purpose: purposeLabel || "General",
       channel: isCash ? (channelMap[paymentMode] as any) : "In-Kind",
-      mode: isCash ? paymentMode : "In-Kind",
+      mode: isCash ? (paymentMode === "Online"
+              ? (onlineSubMode === "QR" ? "QR Code" : "UPI")
+              : paymentMode) : "In-Kind",
       referenceNo,
       nonCashDetails: !isCash ? { assetName:ncName.trim(), quantity:parseFloat(ncQty), unit:ncUnit, estimatedValue:amt, category:ncCategory } : undefined,
       sourceModule: decoded.type==="Counter"?"Counter" : decoded.type==="Event"?"Event":"Manual",
@@ -249,7 +252,9 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
       donorPan: panFormatValid ? pan.toUpperCase().trim() : undefined,
       donorAddress: address.trim() || undefined,
       amount: amt,
-      mode: isCash ? paymentMode : "In-Kind",
+      mode: isCash ? (paymentMode === "Online"
+              ? (onlineSubMode === "QR" ? "QR Code" : "UPI")
+              : paymentMode) : "In-Kind",
       donationType: purposeLabel.toLowerCase().includes("corpus") ? "Corpus" : "General",
       is80G: is80GSelected,
     });
@@ -490,12 +495,11 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
         {/* Mode selector */}
         <div className="space-y-2">
           <Label>Payment Mode *</Label>
-          <Select value={paymentMode} onValueChange={v => { setPaymentMode(v as PaymentMode); setPaymentStatus("Pending Payment"); }}>
+          <Select value={paymentMode} onValueChange={v => { setPaymentMode(v as PaymentMode); setOnlineSubMode(""); setPaymentStatus("Pending Payment"); }}>
             <SelectTrigger><SelectValue placeholder="Select payment mode" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="Cash">Cash</SelectItem>
-              <SelectItem value="QR Code">QR Code</SelectItem>
-              <SelectItem value="UPI">UPI</SelectItem>
+              <SelectItem value="Online">Online Transfer (Net Banking / UPI / QR)</SelectItem>
               <SelectItem value="Cheque">Cheque</SelectItem>
             </SelectContent>
           </Select>
@@ -509,26 +513,73 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
           </div>
         )}
 
-        {/* QR Code — official temple QR */}
-        {paymentMode === "QR Code" && (
-          <TempleQRPanel
-            amount={amt}
-            mode="QR Code"
-            paymentStatus={paymentStatus}
-            onConfirmPaid={() => setPaymentStatus("Paid")}
-            referenceNo={utrNumber}
-            onReferenceNoChange={setUtrNumber}
-          />
-        )}
+        {/* Online — choose sub-mode */}
+        {paymentMode === "Online" && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Online Payment Method *</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant={onlineSubMode === "UPI Link" ? "default" : "outline"}
+                  onClick={() => { setOnlineSubMode("UPI Link"); setPaymentStatus("Pending Payment"); }}
+                  className="h-auto py-3 flex flex-col items-start"
+                >
+                  <span className="text-sm font-semibold">Generate Mobile UPI Link</span>
+                  <span className="text-[11px] opacity-80">Send payment link via WhatsApp</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={onlineSubMode === "QR" ? "default" : "outline"}
+                  onClick={() => { setOnlineSubMode("QR"); setPaymentStatus("Pending Payment"); }}
+                  className="h-auto py-3 flex flex-col items-start"
+                >
+                  <span className="text-sm font-semibold">Generate QR</span>
+                  <span className="text-[11px] opacity-80">Scan with any UPI app</span>
+                </Button>
+              </div>
+            </div>
 
-        {/* UPI — official temple UPI ID */}
-        {paymentMode === "UPI" && (
-          <TempleQRPanel
-            amount={amt}
-            mode="UPI"
-            paymentStatus={paymentStatus}
-            onConfirmPaid={() => setPaymentStatus("Paid")}
-          />
+            {onlineSubMode === "QR" && (
+              <TempleQRPanel
+                amount={amt}
+                mode="QR Code"
+                paymentStatus={paymentStatus}
+                onConfirmPaid={() => setPaymentStatus("Paid")}
+                referenceNo={utrNumber}
+                onReferenceNoChange={setUtrNumber}
+              />
+            )}
+
+            {onlineSubMode === "UPI Link" && (
+              <div className="rounded-xl border bg-muted/10 p-4 space-y-3">
+                <Label className="text-xs">Donor's WhatsApp Number *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="10-digit mobile"
+                    maxLength={10}
+                    value={whatsappNumber}
+                    onChange={e => setWhatsappNumber(e.target.value.replace(/\D/g, ""))}
+                  />
+                  <Button type="button" onClick={generateLink} disabled={!MOBILE_REGEX.test(whatsappNumber)}>
+                    {paymentLinkSent ? "Resend Link" : "Send Link"}
+                  </Button>
+                </div>
+                {paymentLinkSent && (
+                  <p className="text-[11px] text-emerald-600">✓ UPI payment link sent to +91 {whatsappNumber}</p>
+                )}
+                <div className="pt-2 border-t">
+                  {paymentStatus !== "Paid" ? (
+                    <Button className="w-full" variant="outline" disabled={!paymentLinkSent} onClick={() => setPaymentStatus("Paid")}>
+                      Confirm Payment Received
+                    </Button>
+                  ) : (
+                    <p className="text-center text-sm font-semibold text-emerald-600">Payment Confirmed</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Cheque */}
