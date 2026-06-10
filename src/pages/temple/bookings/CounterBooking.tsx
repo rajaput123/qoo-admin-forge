@@ -946,7 +946,7 @@ const CounterBooking = () => {
                     )}
                     {refNumber && paymentModeNeedsRef(paymentMode) && (
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">{"refLabel" in getCounterPaymentMode(paymentMode) ? getCounterPaymentMode(paymentMode).refLabel : "Reference"}</span>
+                        <span className="text-muted-foreground">{(getCounterPaymentMode(paymentMode) as { refLabel?: string }).refLabel ?? "Reference"}</span>
                         <span className="font-medium font-mono text-xs">{refNumber}</span>
                       </div>
                     )}
