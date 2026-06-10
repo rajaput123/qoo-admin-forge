@@ -16,7 +16,7 @@ import { projects } from "@/data/projectData";
 import { getEvents } from "@/modules/events/eventStore";
 import TempleQRPanel from "@/components/TempleQRPanel";
 
-type PaymentMode = "Cash" | "Online" | "Cheque";
+type PaymentMode = "Cash" | "Online" | "Bank Transfer" | "Cheque";
 type OnlineSubMode = "" | "UPI Link" | "QR";
 type DonationNature = "Cash" | "Non-Cash";
 type Purpose = "Counter" | "Project" | "Event" | "Other";
@@ -179,6 +179,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
   const paymentOk    = paymentMode !== "" &&
     (paymentMode !== "Cash"   || (counterNo.trim() !== "" && collectedBy.trim() !== "")) &&
     (paymentMode !== "Online" || (onlineSubMode !== "" && paymentStatus === "Paid")) &&
+    (paymentMode !== "Bank Transfer" || utrNumber.trim() !== "") &&
     (paymentMode !== "Cheque" || (chequeNo.trim() !== "" && bankName.trim() !== ""));
 
   const stepOk = isCash
@@ -204,9 +205,10 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
 
   const saveDonation = () => {
     const channelMap: Record<string, string> = {
-      Cash: "Cash", Online: "UPI", Cheque: "Cheque",
+      Cash: "Cash", Online: "UPI", "Bank Transfer": "Bank Transfer", Cheque: "Cheque",
     };
     const referenceNo = paymentMode === "Cheque" ? chequeNo
+      : paymentMode === "Bank Transfer" ? utrNumber.trim()
       : paymentMode === "Online" && onlineSubMode === "QR" && utrNumber.trim() ? utrNumber.trim()
       : paymentMode === "Online" && onlineSubMode === "UPI Link" ? `WA:${whatsappNumber}`
       : undefined;
@@ -220,6 +222,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
       channel: isCash ? (channelMap[paymentMode] as any) : "In-Kind",
       mode: isCash ? (paymentMode === "Online"
               ? (onlineSubMode === "QR" ? "QR Code" : "UPI")
+              : paymentMode === "Bank Transfer" ? "Bank Transfer"
               : paymentMode) : "In-Kind",
       referenceNo,
       nonCashDetails: !isCash ? { assetName:ncName.trim(), quantity:parseFloat(ncQty), unit:ncUnit, estimatedValue:amt, category:ncCategory } : undefined,
@@ -500,6 +503,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
             <SelectContent>
               <SelectItem value="Cash">Cash</SelectItem>
               <SelectItem value="Online">Online Transfer [net banking/upi/qr]</SelectItem>
+              <SelectItem value="Bank Transfer">Bank Transfer / NEFT (with UTR)</SelectItem>
               <SelectItem value="Cheque">Cheque</SelectItem>
             </SelectContent>
           </Select>
@@ -582,7 +586,22 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
           </div>
         )}
 
-        {/* Cheque */}
+        {/* Bank Transfer — only UTR / bank ref */}
+        {paymentMode === "Bank Transfer" && (
+          <div className="rounded-xl border bg-muted/10 p-4 space-y-2">
+            <Label className="text-xs">UTR / Bank Reference No *</Label>
+            <Input
+              value={utrNumber}
+              onChange={e => setUtrNumber(e.target.value)}
+              placeholder="e.g. 412345678901"
+              className="font-mono text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              Enter the UTR / bank reference number for reconciliation.
+            </p>
+          </div>
+        )}
+
         {paymentMode === "Cheque" && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2"><Label>Cheque No *</Label><Input value={chequeNo} onChange={e => setChequeNo(e.target.value)} /></div>
