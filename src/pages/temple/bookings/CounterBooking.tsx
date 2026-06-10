@@ -167,7 +167,7 @@ const COUNTER_PAYMENT_MODES = [
   { id: "Cash", label: "Cash", purpose: "Cash received directly at the counter" },
   {
     id: "Temple QR / Bank Transfer",
-    label: "Online Transfer [neft (net banking)/upi/qr]",
+    label: "Online Transfer [net banking/upi/qr]",
     purpose: "Direct transfer or NEFT — record reference no",
     refLabel: "Reference No / UTR",
     refPlaceholder: "e.g. UTR4827384 or bank transfer reference",
@@ -179,13 +179,13 @@ const COUNTER_PAYMENT_MODES = [
     refLabel: "Cheque Number",
     refPlaceholder: "e.g. 123456 — Bank name, cheque date",
   },
-  { id: "UPI", label: "upi", purpose: "Send payment link to devotee via WhatsApp on mobile" },
-  { id: "QR Code", label: "qr", purpose: "Open temple QR — devotee scans and pays at counter" },
+  { id: "UPI", label: "Generate Mobile UPI Link", purpose: "Send payment link to devotee via WhatsApp on mobile" },
+  { id: "QR Code", label: "Generate QR", purpose: "Open temple QR — devotee scans and pays at counter" },
 ] as const;
 
 const COUNTER_PAYMENT_GROUPS = [
   {
-    title: "Cash -- Online Transfer [neft (net banking)/upi/qr] -- Cheque",
+    title: "Cash -- Online Transfer [net banking/upi/qr] -- Cheque",
     modes: ["Cash", "Temple QR / Bank Transfer", "Cheque"] as const,
   },
   {
