@@ -586,11 +586,6 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
           </div>
         )}
 
-        {/* Cheque */}
-        {paymentMode === "Cheque" && (
-          <></>
-        )}
-
         {/* Bank Transfer — only UTR / bank ref */}
         {paymentMode === "Bank Transfer" && (
           <div className="rounded-xl border bg-muted/10 p-4 space-y-2">
