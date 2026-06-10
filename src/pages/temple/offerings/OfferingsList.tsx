@@ -138,6 +138,11 @@ const OfferingsList = () => {
   const [specificDate, setSpecificDate] = useState("1");
   const [nthOrdinal, setNthOrdinal] = useState("2nd");
   const [nthWeekday, setNthWeekday] = useState("Saturday");
+  // "all" = every month, "specific" = only chosen months
+  const [monthlyScope, setMonthlyScope] = useState<"all" | "specific">("all");
+  const [selectedMonths, setSelectedMonths] = useState<number[]>([]);
+  // Per-month selected dates for Monthly frequency (multi-date calendar)
+  const [monthlyDates, setMonthlyDates] = useState<Date[]>([]);
 
   const toggleDay = (day: string) => {
     setSelectedDays((prev) => prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]);
@@ -575,37 +580,39 @@ const OfferingsList = () => {
                   </Select>
                 </div>
 
-                {/* Active Date Range */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label>Active From</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {dateFrom ? format(dateFrom, "PPP") : "Pick start date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className="p-3 pointer-events-auto" />
-                      </PopoverContent>
-                    </Popover>
+                {/* Active Date Range — hidden for Monthly since months selector handles it */}
+                {form.frequency !== "Monthly" && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Active From</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateFrom && "text-muted-foreground")}>
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {dateFrom ? format(dateFrom, "PPP") : "Pick start date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className="p-3 pointer-events-auto" />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Active Until</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {dateTo ? format(dateTo, "PPP") : "Pick end date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <CalendarComponent mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="p-3 pointer-events-auto" />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label>Active Until</Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateTo && "text-muted-foreground")}>
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {dateTo ? format(dateTo, "PPP") : "Pick end date"}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="p-3 pointer-events-auto" />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </div>
+                )}
 
                 {/* Helper Text */}
                 {frequencyHelper[form.frequency] && (
@@ -640,44 +647,95 @@ const OfferingsList = () => {
 
                   {/* Conditional: Monthly */}
                   {form.frequency === "Monthly" && (
-                    <motion.div key="monthly" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-3 overflow-hidden">
-                      <Label>Repeat Pattern</Label>
-                      <div className="flex gap-2">
-                        <Button type="button" size="sm" variant={monthlyMode === "specific-date" ? "default" : "outline"} onClick={() => setMonthlyMode("specific-date")}>Specific Date</Button>
-                        <Button type="button" size="sm" variant={monthlyMode === "nth-weekday" ? "default" : "outline"} onClick={() => setMonthlyMode("nth-weekday")}>Nth Weekday</Button>
+                    <motion.div key="monthly" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-4 overflow-hidden">
+
+                      {/* Step 1 — Scope */}
+                      <div className="space-y-2">
+                        <Label>Applies to</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button type="button"
+                            onClick={() => { setMonthlyScope("all"); setSelectedMonths([]); }}
+                            className={cn("flex flex-col items-start gap-0.5 p-3 rounded-xl border text-left transition-all",
+                              monthlyScope === "all" ? "border-primary bg-primary/5 ring-1 ring-primary" : "border-border hover:border-primary/50 hover:bg-muted/30")}>
+                            <span className="text-sm font-semibold">Every month of the year</span>
+                            <span className="text-xs text-muted-foreground">e.g. Ekadashi, Amavasya — date may vary per month</span>
+                          </button>
+                          <button type="button"
+                            onClick={() => setMonthlyScope("specific")}
+                            className={cn("flex flex-col items-start gap-0.5 p-3 rounded-xl border text-left transition-all",
+                              monthlyScope === "specific" ? "border-amber-600 bg-amber-50/60 ring-1 ring-amber-600" : "border-border hover:border-amber-500/50 hover:bg-muted/30")}>
+                            <span className="text-sm font-semibold">Only in specific months</span>
+                            <span className="text-xs text-muted-foreground">e.g. festival sevas, seasonal pujas</span>
+                          </button>
+                        </div>
                       </div>
-                      <AnimatePresence mode="wait">
-                        {monthlyMode === "specific-date" ? (
-                          <motion.div key="specific" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-3">
-                            <span className="text-sm text-muted-foreground">On the</span>
-                            <Select value={specificDate} onValueChange={setSpecificDate}>
-                              <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
-                              <SelectContent className="bg-popover max-h-48">
-                                {Array.from({ length: 31 }, (_, i) => (
-                                  <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <span className="text-sm text-muted-foreground">of every month</span>
-                          </motion.div>
-                        ) : (
-                          <motion.div key="nth" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-3 flex-wrap">
-                            <span className="text-sm text-muted-foreground">Every</span>
-                            <Select value={nthOrdinal} onValueChange={setNthOrdinal}>
-                              <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
-                              <SelectContent className="bg-popover">
-                                {NTH_OPTIONS.map((opt) => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
-                            <Select value={nthWeekday} onValueChange={setNthWeekday}>
-                              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                              <SelectContent className="bg-popover">
-                                {WEEKDAY_FULL.map((day) => <SelectItem key={day} value={day}>{day}</SelectItem>)}
-                              </SelectContent>
-                            </Select>
+
+                      {/* Step 2 — Month selector (only for specific) */}
+                      <AnimatePresence>
+                        {monthlyScope === "specific" && (
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden space-y-2">
+                            <Label className="text-sm">Select Months</Label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((month, idx) => {
+                                const active = selectedMonths.includes(idx + 1);
+                                return (
+                                  <button key={month} type="button"
+                                    onClick={() => setSelectedMonths(prev => active ? prev.filter(m => m !== idx + 1) : [...prev, idx + 1].sort((a,b) => a-b))}
+                                    className={cn("px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border",
+                                      active ? "bg-amber-700 text-white border-amber-700 shadow-sm" : "bg-background text-foreground border-border hover:border-amber-600 hover:bg-amber-50")}>
+                                    {month}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {selectedMonths.length === 0 && <p className="text-xs text-destructive">Select at least one month.</p>}
                           </motion.div>
                         )}
                       </AnimatePresence>
+
+                      {/* Step 3 — Multi-date calendar picker */}
+                      {monthlyMode === "specific-date" && (
+                        <div className="space-y-2 border-t pt-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label className="text-sm">Select Dates on Calendar</Label>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Click to select the exact dates each month this seva occurs (e.g. Jan 11, Feb 9, Mar 10 for Ekadashi).
+                              </p>
+                            </div>
+                            {monthlyDates.length > 0 && (
+                              <button type="button" onClick={() => setMonthlyDates([])}
+                                className="text-xs text-destructive hover:underline shrink-0 ml-2">Clear all</button>
+                            )}
+                          </div>
+                          <div className="border rounded-xl overflow-hidden bg-card">
+                            <CalendarComponent
+                              mode="multiple"
+                              selected={monthlyDates}
+                              onSelect={(dates) => setMonthlyDates(dates ?? [])}
+                              numberOfMonths={2}
+                              className="p-3 pointer-events-auto"
+                              disabled={monthlyScope === "specific"
+                                ? (date) => !selectedMonths.includes(date.getMonth() + 1)
+                                : undefined}
+                            />
+                          </div>
+                          {monthlyDates.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {[...monthlyDates]
+                                .sort((a, b) => a.getTime() - b.getTime())
+                                .map((d, i) => (
+                                  <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                                    {format(d, "dd MMM")}
+                                    <button type="button" onClick={() => setMonthlyDates(prev => prev.filter(x => x.getTime() !== d.getTime()))} className="hover:text-destructive">×</button>
+                                  </span>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+
                     </motion.div>
                   )}
                 </AnimatePresence>

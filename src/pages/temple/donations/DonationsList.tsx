@@ -8,13 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Download, FileDown, User, Phone, Mail, MapPin, CreditCard, Hash, Banknote, Receipt, X, Award } from "lucide-react";
+import { Search, Plus, Download, FileDown, User, Phone, Mail, MapPin, CreditCard, Hash, Banknote, Receipt, X, Award, Upload } from "lucide-react";
 import { useDonations, useDonors, useReceipts80G } from "@/modules/donations/hooks";
 import { downloadReceiptPdf } from "@/lib/pdfDocs";
 import { download80GReceiptPdf } from "@/lib/eightyGReceipt";
 import { downloadCsv } from "@/lib/csvExport";
 import { useToast } from "@/hooks/use-toast";
 import AddDonationDialog from "./AddDonationDialog";
+import BulkImportDonationsDialog from "./BulkImportDonationsDialog";
 
 const formatCurrency = (val: number | undefined | null): string => {
   try {
@@ -28,6 +29,7 @@ type DonationType = "All" | "General" | "Projects" | "Events" | "Other";
 const DonationsList = () => {
   const navigate = useNavigate();
   const [addOpen, setAddOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const donations = useDonations();
   const donors = useDonors();
   const receipts80G = useReceipts80G();
@@ -191,10 +193,14 @@ const DonationsList = () => {
             <Button variant="ghost" size="sm" onClick={() => { setFromDate(""); setToDate(""); }}>Clear</Button>
           )}
           <Button variant="outline" onClick={handleExport}><Download className="h-4 w-4 mr-2" />Export</Button>
+          <Button variant="outline" onClick={() => setBulkImportOpen(true)} className="gap-2 border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800">
+            <Upload className="h-4 w-4" />Bulk Import
+          </Button>
           <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-2" />Add Donation</Button>
         </div>
       </div>
       <AddDonationDialog open={addOpen} onOpenChange={setAddOpen} />
+      <BulkImportDonationsDialog open={bulkImportOpen} onOpenChange={setBulkImportOpen} />
 
       {/* Search & Filters */}
       <div className="flex gap-2">

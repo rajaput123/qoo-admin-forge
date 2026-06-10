@@ -18,6 +18,7 @@ import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CalendarIcon } from "lucide-react";
+import { recordSevaBookings } from "@/modules/sevas/sevaStore";
 
 interface PrasadamItem {
   name: string;
@@ -383,7 +384,49 @@ const CounterBooking = () => {
     toast.success("Payment link opened in WhatsApp");
   };
 
+
   const handleConfirm = () => {
+    const bookingsToRecord = cart.map(item => {
+      let paymentMethod: "Cash" | "UPI" | "Bank" | "Online" = "Cash";
+      let paymentModeStr = "Cash";
+      
+      if (paymentMode === "Cash") {
+        paymentMethod = "Cash";
+        paymentModeStr = "Cash";
+      } else if (paymentMode === "Temple QR / Bank Transfer") {
+        paymentMethod = "Bank";
+        paymentModeStr = "Bank Transfer";
+      } else if (paymentMode === "Cheque") {
+        paymentMethod = "Bank";
+        paymentModeStr = "Cheque";
+      } else if (paymentMode === "UPI" || paymentMode === "QR Code") {
+        paymentMethod = "UPI";
+        paymentModeStr = paymentMode;
+      }
+      
+      const itemPrasadamCost = item.includePrasadam && item.offering.prasadamIncluded && item.offering.prasadamItems.length > 0
+        ? item.offering.prasadamItems.reduce((s, p) => s + p.price * p.quantity, 0) * item.quantity
+        : 0;
+      const totalItemAmount = (item.offering.price * item.quantity) + itemPrasadamCost;
+
+      return {
+        sevaName: item.offering.name,
+        sevaCategory: item.offering.type === "Ritual" ? "Daily Sevas" : "Darshan",
+        devoteeName: devotee.name,
+        devoteePhone: devotee.phone,
+        date: item.slot.dateIso,
+        time: item.slot.timeLabel,
+        amount: totalItemAmount,
+        paymentMethod,
+        paymentMode: paymentModeStr,
+        referenceNo: refNumber || "",
+        status: "Confirmed" as const,
+        counterId: "CTR-001",
+        sourceModule: "Counter" as const,
+      };
+    });
+
+    recordSevaBookings(bookingsToRecord);
     setBookingComplete(true);
     toast.success("Counter booking created successfully!");
   };

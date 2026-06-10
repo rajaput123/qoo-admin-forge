@@ -15,16 +15,16 @@ import { cn } from "@/lib/utils";
 
 // --- Table data ---
 const allSlots = [
-  { id: "1", time: "5:30 AM", name: "Suprabhatam", type: "Ritual" as const, structure: "Main Temple", capacity: 50, booked: 48, available: 2, priest: "Pandit Sharma", walkin: 0, status: "In Progress" },
-  { id: "2", time: "7:00 AM", name: "Archana", type: "Ritual" as const, structure: "Padmavathi Shrine", capacity: 30, booked: 30, available: 0, priest: "Pandit Rao", walkin: 0, status: "Fully Booked" },
-  { id: "3", time: "9:00 AM", name: "Abhishekam", type: "Ritual" as const, structure: "Main Temple", capacity: 25, booked: 18, available: 7, priest: "Pandit Kumar", walkin: 0, status: "Open" },
-  { id: "4", time: "6:00 AM – 8:00 AM", name: "Morning Darshan", type: "Darshan" as const, structure: "Main Temple", capacity: 500, booked: 320, available: 180, priest: "—", walkin: 45, status: "Open" },
-  { id: "5", time: "8:00 AM – 10:00 AM", name: "Morning Darshan", type: "Darshan" as const, structure: "Main Temple", capacity: 500, booked: 500, available: 0, priest: "—", walkin: 0, status: "Fully Booked" },
-  { id: "6", time: "11:00 AM", name: "Sahasranama", type: "Ritual" as const, structure: "Varadaraja Shrine", capacity: 40, booked: 12, available: 28, priest: "Pandit Iyer", walkin: 0, status: "Open" },
-  { id: "7", time: "10:00 AM – 12:00 PM", name: "Shrine Darshan", type: "Darshan" as const, structure: "Padmavathi Shrine", capacity: 200, booked: 150, available: 50, priest: "—", walkin: 22, status: "Open" },
-  { id: "8", time: "4:00 PM", name: "Ashtottara", type: "Ritual" as const, structure: "Lakshmi Shrine", capacity: 20, booked: 0, available: 20, priest: "Unassigned", walkin: 0, status: "Upcoming" },
-  { id: "9", time: "4:00 PM – 6:00 PM", name: "Evening Darshan", type: "Darshan" as const, structure: "Main Temple", capacity: 500, booked: 180, available: 320, priest: "—", walkin: 0, status: "Upcoming" },
-  { id: "10", time: "7:00 PM", name: "Ekantha Seva", type: "Ritual" as const, structure: "Main Temple", capacity: 15, booked: 15, available: 0, priest: "Pandit Sharma", walkin: 0, status: "Fully Booked" },
+  { id: "1", time: "5:30 AM", name: "Suprabhatam", type: "Ritual" as const, frequency: "Daily", structure: "Main Temple", capacity: 50, booked: 48, available: 2, priest: "Pandit Sharma", walkin: 0, status: "In Progress" },
+  { id: "2", time: "7:00 AM", name: "Archana", type: "Ritual" as const, frequency: "Daily", structure: "Padmavathi Shrine", capacity: 30, booked: 30, available: 0, priest: "Pandit Rao", walkin: 0, status: "Fully Booked" },
+  { id: "3", time: "9:00 AM", name: "Abhishekam", type: "Ritual" as const, frequency: "Daily", structure: "Main Temple", capacity: 25, booked: 18, available: 7, priest: "Pandit Kumar", walkin: 0, status: "Open" },
+  { id: "4", time: "6:00 AM – 8:00 AM", name: "Morning Darshan", type: "Darshan" as const, frequency: "Daily", structure: "Main Temple", capacity: 500, booked: 320, available: 180, priest: "—", walkin: 45, status: "Open" },
+  { id: "5", time: "8:00 AM – 10:00 AM", name: "Morning Darshan", type: "Darshan" as const, frequency: "Daily", structure: "Main Temple", capacity: 500, booked: 500, available: 0, priest: "—", walkin: 0, status: "Fully Booked" },
+  { id: "6", time: "11:00 AM", name: "Sahasranama", type: "Ritual" as const, frequency: "Weekly", structure: "Varadaraja Shrine", capacity: 40, booked: 12, available: 28, priest: "Pandit Iyer", walkin: 0, status: "Open" },
+  { id: "7", time: "10:00 AM – 12:00 PM", name: "Shrine Darshan", type: "Darshan" as const, frequency: "Daily", structure: "Padmavathi Shrine", capacity: 200, booked: 150, available: 50, priest: "—", walkin: 22, status: "Open" },
+  { id: "8", time: "4:00 PM", name: "Ashtottara", type: "Ritual" as const, frequency: "Monthly", structure: "Lakshmi Shrine", capacity: 20, booked: 0, available: 20, priest: "Unassigned", walkin: 0, status: "Upcoming" },
+  { id: "9", time: "4:00 PM – 6:00 PM", name: "Evening Darshan", type: "Darshan" as const, frequency: "Daily", structure: "Main Temple", capacity: 500, booked: 180, available: 320, priest: "—", walkin: 0, status: "Upcoming" },
+  { id: "10", time: "7:00 PM", name: "Ekantha Seva", type: "Ritual" as const, frequency: "Daily", structure: "Main Temple", capacity: 15, booked: 15, available: 0, priest: "Pandit Sharma", walkin: 0, status: "Fully Booked" },
 ];
 
 // --- Calendar data ---
@@ -54,6 +54,7 @@ const Today = () => {
   const [filterType, setFilterType] = useState("all");
   const [filterStructure, setFilterStructure] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterFrequency, setFilterFrequency] = useState("all");
 
   // Calendar state
   const today = new Date();
@@ -66,6 +67,7 @@ const Today = () => {
     if (filterType !== "all" && s.type !== filterType) return false;
     if (filterStructure !== "all" && s.structure !== filterStructure) return false;
     if (filterStatus !== "all" && s.status !== filterStatus) return false;
+    if (filterFrequency !== "all" && s.frequency !== filterFrequency) return false;
     return true;
   });
 
@@ -321,6 +323,17 @@ const Today = () => {
                 <SelectTrigger className="w-[140px] bg-background"><SelectValue placeholder="Type" /></SelectTrigger>
                 <SelectContent><SelectItem value="all">All Types</SelectItem><SelectItem value="Ritual">Ritual</SelectItem><SelectItem value="Darshan">Darshan</SelectItem></SelectContent>
               </Select>
+              <Select value={filterFrequency} onValueChange={setFilterFrequency}>
+                <SelectTrigger className="w-[150px] bg-background"><SelectValue placeholder="Frequency" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Frequencies</SelectItem>
+                  <SelectItem value="Daily">Daily</SelectItem>
+                  <SelectItem value="Weekly">Weekly</SelectItem>
+                  <SelectItem value="Monthly">Monthly</SelectItem>
+                  <SelectItem value="Annual">Annual</SelectItem>
+                  <SelectItem value="On Demand">On Demand</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={filterStructure} onValueChange={setFilterStructure}>
                 <SelectTrigger className="w-[170px] bg-background"><SelectValue placeholder="Structure" /></SelectTrigger>
                 <SelectContent><SelectItem value="all">All Structures</SelectItem>{structures.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
@@ -340,6 +353,7 @@ const Today = () => {
                       <TableHead>Time</TableHead>
                       <TableHead>Offering</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>Frequency</TableHead>
                       <TableHead>Structure</TableHead>
                       <TableHead className="text-center">Capacity</TableHead>
                       <TableHead className="text-center">Booked</TableHead>
@@ -356,6 +370,14 @@ const Today = () => {
                         <TableCell className="font-medium text-sm">{r.time}</TableCell>
                         <TableCell className="font-medium">{r.name}</TableCell>
                         <TableCell><Badge variant={r.type === "Ritual" ? "default" : "secondary"}>{r.type}</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`text-[10px] ${
+                            r.frequency === "Daily" ? "text-green-700 border-green-300 bg-green-50"
+                            : r.frequency === "Weekly" ? "text-blue-700 border-blue-300 bg-blue-50"
+                            : r.frequency === "Monthly" ? "text-amber-700 border-amber-300 bg-amber-50"
+                            : "text-purple-700 border-purple-300 bg-purple-50"
+                          }`}>{r.frequency}</Badge>
+                        </TableCell>
                         <TableCell className="text-muted-foreground text-sm">{r.structure}</TableCell>
                         <TableCell className="text-center">{r.capacity}</TableCell>
                         <TableCell className="text-center font-medium">{r.booked}</TableCell>

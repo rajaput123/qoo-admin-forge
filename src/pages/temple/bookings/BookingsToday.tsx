@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,8 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CalendarCheck, IndianRupee, Store, Globe, Clock, AlertCircle, Image, ArrowLeft, Printer, MessageSquare } from "lucide-react";
+import { useSevaBookings } from "@/modules/sevas/sevaStore";
 
-const todayBookings = [
+const MOCK_TODAY_BOOKINGS = [
   { id: "1", bookingId: "BK-0001", time: "5:30 AM", offering: "Suprabhatam", type: "Ritual" as const, structure: "Main Temple", devotee: "Ramesh Kumar", quantity: 2, amount: 1000, source: "Online" as const, paymentStatus: "Paid", bookingStatus: "Confirmed", phone: "+91 98765 43210", email: "ramesh@email.com", gothram: "Bharadwaja", nakshatra: "Rohini", priest: "Pandit Sharma", paymentMode: "UPI", txnId: "TXN-98765", images: ["https://images.unsplash.com/photo-1600693577615-9f3a0f7a16ba?w=400"], notes: "Family prayer", createdAt: "2026-02-08" },
   { id: "2", bookingId: "BK-0002", time: "7:00 AM", offering: "Archana", type: "Ritual" as const, structure: "Padmavathi Shrine", devotee: "Lakshmi Devi", quantity: 1, amount: 100, source: "Counter" as const, paymentStatus: "Paid", bookingStatus: "Completed", phone: "+91 87654 32109", email: "", gothram: "Kashyapa", nakshatra: "Ashwini", priest: "Pandit Rao", paymentMode: "Cash", txnId: "CSH-001", images: [], notes: "", createdAt: "2026-02-09" },
   { id: "3", bookingId: "BK-0003", time: "9:00 AM", offering: "Abhishekam", type: "Ritual" as const, structure: "Main Temple", devotee: "Suresh Reddy", quantity: 1, amount: 2000, source: "Online" as const, paymentStatus: "Paid", bookingStatus: "Confirmed", phone: "+91 76543 21098", email: "suresh@email.com", gothram: "Vasishta", nakshatra: "Pushya", priest: "Pandit Kumar", paymentMode: "Card", txnId: "TXN-54321", images: [], notes: "", createdAt: "2026-02-07" },
@@ -29,6 +30,42 @@ const statusColor = (s: string) => {
 const sourceIcon = (s: string) => s === "Online" ? "🌐" : s === "Counter" ? "🏪" : "👤";
 
 const BookingsToday = () => {
+  const liveBookings = useSevaBookings();
+
+  const todayBookings = useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0];
+    const liveToday = liveBookings.filter(b => b.date === todayStr);
+
+    // If no bookings exist at all, fall back to mock data
+    if (liveToday.length === 0 && liveBookings.length === 0) {
+      return MOCK_TODAY_BOOKINGS;
+    }
+
+    return liveToday.map(b => ({
+      id: b.id,
+      bookingId: b.id,
+      time: b.time,
+      offering: b.sevaName,
+      type: (b.sevaCategory || "").toLowerCase().includes("darshan") ? ("Darshan" as const) : ("Ritual" as const),
+      structure: "Main Temple",
+      devotee: b.devoteeName,
+      quantity: 1,
+      amount: b.amount,
+      source: b.sourceModule === "Counter" ? ("Counter" as const) : b.sourceModule === "Online" ? ("Online" as const) : ("Admin" as const),
+      paymentStatus: b.status === "Cancelled" ? "Refunded" : "Paid",
+      bookingStatus: b.status,
+      phone: b.devoteePhone,
+      email: "",
+      gothram: "",
+      nakshatra: "",
+      priest: "Pandit Prasad",
+      paymentMode: b.paymentMode,
+      txnId: b.referenceNo || "—",
+      images: [],
+      notes: "",
+      createdAt: b.createdAt.split("T")[0],
+    }));
+  }, [liveBookings]);
   const [filterType, setFilterType] = useState("all");
   const [filterSource, setFilterSource] = useState("all");
   const [viewing, setViewing] = useState<typeof todayBookings[0] | null>(null);

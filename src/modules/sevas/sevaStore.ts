@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react";
+
 /**
  * Seva Booking Store
  * Manages seva bookings with payment info for finance integration
@@ -30,7 +32,9 @@ function notify() { listeners.forEach(l => l()); }
 
 function persist(data: SevaBooking[]) {
   cache = data;
-  localStorage.setItem(LS_KEY, JSON.stringify(data));
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+  } catch {}
   notify();
 }
 
@@ -71,3 +75,23 @@ export const sevaSelectors = {
   getBookings: () => getSevaBookings(),
   getCompletedBookings: () => getSevaBookings().filter(b => b.status === "Completed"),
 };
+
+export function useSevaBookings() {
+  return useSyncExternalStore(subscribeSevaStore, getSevaBookings, getSevaBookings);
+}
+
+export function recordSevaBookings(bookingsInput: Omit<SevaBooking, "id" | "createdAt">[]) {
+  const current = getSevaBookings();
+  const newBookings = bookingsInput.map((input, index) => {
+    const nextSeq = current.length + index + 1;
+    const id = `SVA-2026-${String(nextSeq).padStart(3, "0")}`;
+    return {
+      ...input,
+      id,
+      createdAt: new Date().toISOString()
+    } as SevaBooking;
+  });
+  persist([...newBookings, ...current]);
+  return newBookings;
+}
+
