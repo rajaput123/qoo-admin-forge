@@ -27,7 +27,7 @@ const MOCK_BOOKINGS = [
 
 const AllBookings = () => {
   const liveBookings = useSevaBookings();
-  const bookings = liveBookings.length > 0 ? liveBookings : MOCK_BOOKINGS;
+  const bookings: any[] = liveBookings.length > 0 ? liveBookings : MOCK_BOOKINGS;
 
   const [searchQuery, setSearchQuery] = useState("");
   const [timeFilter, setTimeFilter] = useState<"all" | "today" | "week">("all");
@@ -51,7 +51,7 @@ const AllBookings = () => {
 
   // Filter logic
   const filteredBookings = useMemo(() => {
-    let filtered: typeof bookings = bookings;
+    let filtered: any[] = bookings;
 
     if (timeFilter === "today") {
       const todayStr = new Date().toISOString().split("T")[0];
