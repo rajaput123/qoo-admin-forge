@@ -246,6 +246,24 @@ const moduleTables: Record<string, {
   },
 };
 
+moduleTables.devotees = {
+  title: "Devotee Tables",
+  tabs: [
+    { key: "top-engaged", label: "Top Engaged Devotees", columns: ["Rank", "Devotee", "City", "Bookings", "Donations (₹)", "Events Attended", "Last Visit", "Status"], rows: [
+      ["1", "Meena Iyer", "Bangalore", "45", "₹1,25,000", "20", "2024-03-15", "Highly Active"],
+      ["2", "Lakshmi Devi", "Mysore", "42", "₹85,000", "18", "2024-03-14", "Highly Active"],
+      ["3", "Vijay Nair", "Bangalore", "38", "₹72,000", "15", "2024-03-13", "Highly Active"],
+      ["4", "Ramesh Kumar", "Chennai", "28", "₹2,50,000", "12", "2024-03-15", "Active"],
+      ["5", "Kavita Rao", "Hyderabad", "31", "₹55,000", "14", "2024-03-12", "Active"],
+      ["6", "Suresh Reddy", "Bangalore", "22", "₹65,000", "10", "2024-03-10", "Active"],
+      ["7", "Priya Sharma", "Mumbai", "18", "₹52,000", "9", "2024-03-09", "Active"],
+      ["8", "Anand Verma", "Delhi", "20", "₹48,000", "11", "2024-03-08", "Active"],
+      ["9", "Deepa Murthy", "Bangalore", "24", "₹38,000", "20", "2024-03-11", "Active"],
+      ["10", "Sunita Bai", "Pune", "15", "₹28,000", "6", "2024-03-07", "Occasional"],
+    ]},
+  ],
+};
+
 const ReportTables = ({ moduleKey }: { moduleKey: string }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const tableData = moduleTables[moduleKey];
