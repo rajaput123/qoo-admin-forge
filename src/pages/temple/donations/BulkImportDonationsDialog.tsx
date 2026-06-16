@@ -7,7 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Upload, Clipboard, Download, CheckCircle, AlertTriangle, ArrowRight, Trash2 } from "lucide-react";
-import { recordDonation, DonationChannel, DonationNature } from "@/modules/donations/donationsStore";
+import { recordDonation } from "@/modules/donations/donationsStore";
+import type { DonationChannel, DonationNature } from "@/modules/donations/types";
 
 interface Props {
   open: boolean;
