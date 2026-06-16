@@ -51,7 +51,7 @@ const AllBookings = () => {
 
   // Filter logic
   const filteredBookings = useMemo(() => {
-    let filtered = bookings;
+    let filtered: typeof bookings = bookings;
 
     if (timeFilter === "today") {
       const todayStr = new Date().toISOString().split("T")[0];
