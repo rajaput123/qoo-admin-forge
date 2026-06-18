@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -305,5 +307,43 @@
   body.voucher-print-active .voucher-print-clone-host .cash-upi-voucher-form,
   body.voucher-print-active .voucher-print-clone-host .payroll-bulk-remittance-form {
     font-size: 10px !important;
+  }
+}
+
+/* ── Reconciliation Suite Print Styles ───────────────────────────────────── */
+@media print {
+  /* Hide the suite sidebar and toolbar when printing */
+  .recon-suite aside,
+  .recon-suite .print\:hidden,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .recon-suite main {
+    margin-left: 0 !important;
+  }
+
+  /* Print wrapper */
+  .recon-suite {
+    background: #fff !important;
+  }
+
+  /* Table borders for print register */
+  .recon-suite table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-size: 9px !important;
+  }
+
+  .recon-suite table th,
+  .recon-suite table td {
+    border: 1px solid #ccc !important;
+    padding: 4px 6px !important;
+  }
+
+  .recon-suite table thead tr {
+    background: #f0ede7 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

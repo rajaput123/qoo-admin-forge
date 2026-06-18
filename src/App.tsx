@@ -199,7 +199,8 @@ import BankManagement from "./pages/temple/finance/BankManagement";
 
 import FinanceLedgerPage from "./pages/temple/finance/FinanceLedgerPage";
 import JournalVoucherPage from "./pages/temple/finance/JournalVoucherPage";
-import ReconciliationPage from "./pages/temple/finance/ReconciliationPage";
+import TransactionsReconciliationPage from "./pages/temple/finance/TransactionsReconciliationPage";
+import BankReconciliationPage from "./pages/temple/finance/BankReconciliationPage";
 import FinancePayroll from "./pages/temple/finance/FinancePayroll";
 import FinanceReportsPage from "./pages/temple/finance/FinanceReportsPage";
 import FinancialReports from "./pages/temple/finance/FinancialReports";
@@ -430,7 +431,8 @@ const App = () => {
               
               <Route path="ledger" element={<FinanceLedgerPage />} />
               <Route path="vouchers" element={<JournalVoucherPage />} />
-              <Route path="reconciliation" element={<ReconciliationPage />} />
+              <Route path="reconciliation" element={<TransactionsReconciliationPage />} />
+              <Route path="reconciliation/bank" element={<BankReconciliationPage />} />
               <Route path="payroll" element={<FinancePayroll />} />
               <Route path="reports" element={<FinanceReportsPage />} />
               <Route path="statements" element={<FinancialReports />} />

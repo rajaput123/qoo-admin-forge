@@ -17,6 +17,8 @@ import {
   Send,
   Printer,
   Plus,
+  GitMerge,
+  Landmark,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -109,6 +111,13 @@ const sidebarGroups: SidebarGroup[] = [
     ],
   },
   {
+    title: "RECONCILIATION",
+    items: [
+      { label: "Transactions Recon", path: "/temple/finance/reconciliation", icon: GitMerge },
+      { label: "Bank Statement Recon", path: "/temple/finance/reconciliation/bank", icon: Landmark },
+    ],
+  },
+  {
     title: "ACCOUNTING",
     items: [
       {
@@ -138,6 +147,8 @@ const getPageTitle = (pathname: string) => {
   if (pathname.includes("/payroll")) return "Payroll — Priest & Staff";
   if (pathname.includes("/funds")) return "Cash & Fund Flow Statement";
   if (pathname.includes("/ledger")) return "General Ledger";
+  if (pathname.includes("/reconciliation/bank")) return "Bank Statement Reconciliation";
+  if (pathname.includes("/reconciliation")) return "Transactions Reconciliation";
   if (pathname.includes("/statements")) return "Financial Reports";
   return "Finance & Accounts";
 };
@@ -298,29 +309,31 @@ const FinanceLayout = () => {
       >
         <div className="p-6 flex-1 flex flex-col">
           {/* Topbar — matches temple Finance.jsx */}
-          <div className="flex items-center justify-between mb-5 pb-4 border-b border-border shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
-              <h1 className="text-lg font-semibold truncate">{getPageTitle(location.pathname)}</h1>
-              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] shrink-0">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse inline-block mr-1.5" />
-                Live
-              </Badge>
-            </div>
-            {!hideTopbarActions(location.pathname) && (
-              <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  size="sm"
-                  className="text-xs gap-1.5"
-                  onClick={() => navigate("/temple/finance/vouchers?action=new")}
-                >
-                  <Plus className="h-3.5 w-3.5" /> New Voucher
-                </Button>
-                <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => window.print()}>
-                  <Printer className="h-3.5 w-3.5" /> Print
-                </Button>
+          {!location.pathname.includes("/reconciliation") && (
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-border shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <h1 className="text-lg font-semibold truncate">{getPageTitle(location.pathname)}</h1>
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px] shrink-0">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse inline-block mr-1.5" />
+                  Live
+                </Badge>
               </div>
-            )}
-          </div>
+              {!hideTopbarActions(location.pathname) && (
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    className="text-xs gap-1.5"
+                    onClick={() => navigate("/temple/finance/vouchers?action=new")}
+                  >
+                    <Plus className="h-3.5 w-3.5" /> New Voucher
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={() => window.print()}>
+                    <Printer className="h-3.5 w-3.5" /> Print
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
           <Outlet />
         </div>
       </main>

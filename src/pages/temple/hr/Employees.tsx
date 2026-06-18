@@ -240,17 +240,25 @@ export default function Employees() {
   };
 
   const handleBulkImport = (importedEmployees: Partial<Employee>[]) => {
-    const newEmployees: Employee[] = importedEmployees.map((emp, index) => ({
-      id: String(employees.length + index + 1),
-      employeeId: `EMP-${String(employees.length + index + 1).padStart(4, '0')}`,
-      name: emp.name || '',
-      email: emp.email || '',
-      phone: emp.phone || '',
-      department: emp.department || '',
-      designation: emp.designation || '',
-      status: 'active' as const,
-      joiningDate: new Date().toISOString().split('T')[0],
-    }));
+    const newEmployees: Employee[] = importedEmployees.map((emp, index) => {
+      const fName = (emp as any).firstName || "";
+      const lName = (emp as any).lastName || "";
+      const name = emp.name || `${fName} ${lName}`.trim() || "Imported Employee";
+      
+      return {
+        id: String(Date.now() + index),
+        employeeId: (emp as any).employeeCode || `EMP-${String(employees.length + index + 1).padStart(4, "0")}`,
+        name,
+        email: emp.email || "",
+        phone: emp.phone || "",
+        department: emp.department || "",
+        designation: emp.designation || "",
+        status: (emp.status as any) || "active",
+        joiningDate: emp.joiningDate || new Date().toISOString().split("T")[0],
+        ...emp,
+      };
+    });
+
     const next = [...employees, ...newEmployees];
     setEmployees(next);
     setStoredEmployees(next);
