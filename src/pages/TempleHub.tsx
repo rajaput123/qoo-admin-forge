@@ -40,6 +40,7 @@ import {
   Zap,
   ArrowRight,
   Compass,
+  LayoutDashboard,
 } from "lucide-react";
 import DemoVideoModal from "@/components/DemoVideoModal";
 import UpgradeModal from "@/components/UpgradeModal";
