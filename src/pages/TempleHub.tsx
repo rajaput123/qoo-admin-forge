@@ -369,8 +369,13 @@ const TempleHub = () => {
       description: "Consolidated reports across every module with unified period filters. Drill into details from the sidebar.",
     },
     {
+      selector: '[data-tour-module="executive"]',
+      title: "23. Executive Dashboard",
+      description: "One unified screen: revenue, donations, sevas, devotees, events, projects, alerts and today's operations.",
+    },
+    {
       selector: '[data-tour-module="planner"]',
-      title: "23. Planner",
+      title: "24. Planner",
       description: "Calendar view combining events, sevas, shifts and Panchang timings.",
     },
     {
