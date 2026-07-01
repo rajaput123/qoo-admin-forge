@@ -7,10 +7,11 @@ import {
   ArrowLeft, IndianRupee, Heart, Users, Calendar, CalendarDays, FolderKanban,
   Sparkles, MessageSquare, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2,
   Package, UserCog, Building2, Bell, Wallet, Target,
+  HandHeart, Utensils, Boxes, Megaphone, Clock,
 } from "lucide-react";
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
-  PieChart, Pie, Cell, BarChart, Bar, Legend,
+  PieChart, Pie, Cell, BarChart, Bar, Legend, AreaChart, Area,
 } from "recharts";
 
 const kpis = [
@@ -82,6 +83,57 @@ const upcoming = [
   { d: "18 Feb", n: "VIP Darshan - Governor", type: "VIP Visit" },
   { d: "24 Feb", n: "Board Meeting Q4", type: "Meeting" },
   { d: "02 Mar", n: "Annadanam Drive", type: "Event" },
+];
+
+// Somnath Mandir authority requirements (Mr. Joshi Sir)
+const hourlyFootfall = [
+  { h: "5 AM", v: 320 }, { h: "7 AM", v: 940 }, { h: "9 AM", v: 1420 },
+  { h: "11 AM", v: 1180 }, { h: "1 PM", v: 760 }, { h: "3 PM", v: 640 },
+  { h: "5 PM", v: 1280 }, { h: "7 PM", v: 1520 }, { h: "9 PM", v: 780 },
+];
+
+const donationsOfferings = [
+  { l: "Hundi Collection", v: "₹1,24,850", sub: "Today · 3 boxes" },
+  { l: "Counter Donations", v: "₹86,420", sub: "142 receipts" },
+  { l: "Online / UPI", v: "₹2,14,600", sub: "318 txns" },
+  { l: "In-kind Offerings", v: "₹42,300", sub: "Gold 12g, Silver 340g" },
+];
+
+const prasadOps = [
+  { l: "Prasad Prepared", v: "4,200 plates", pct: 100 },
+  { l: "Distributed", v: "3,240 plates", pct: 77 },
+  { l: "Reserved (Sevas)", v: "620 plates", pct: 15 },
+  { l: "Wastage", v: "68 plates", pct: 2 },
+];
+
+const sevaParticipation = [
+  { s: "Abhishekam", booked: 84, done: 78 },
+  { s: "Archana", booked: 156, done: 148 },
+  { s: "Kalyanotsavam", booked: 22, done: 20 },
+  { s: "Annadanam Sponsor", booked: 38, done: 38 },
+  { s: "Homam", booked: 14, done: 12 },
+];
+
+const inventoryMovement = [
+  { item: "Camphor (kg)", inQ: 40, outQ: 28, bal: 12, low: true },
+  { item: "Ghee (L)", inQ: 120, outQ: 84, bal: 210, low: false },
+  { item: "Flowers (kg)", inQ: 85, outQ: 78, bal: 22, low: false },
+  { item: "Rice (kg)", inQ: 500, outQ: 340, bal: 1240, low: false },
+  { item: "Oil Lamps", inQ: 200, outQ: 180, bal: 45, low: true },
+];
+
+const volunteerActivity = [
+  { l: "On Duty Today", v: "84", c: "text-emerald-600" },
+  { l: "Hours Logged (Week)", v: "1,240 hrs", c: "text-blue-600" },
+  { l: "New Sign-ups (Month)", v: "28", c: "text-violet-600" },
+  { l: "Assigned to Events", v: "36", c: "text-amber-600" },
+];
+
+const communications = [
+  { t: "Maha Shivaratri Schedule", ch: "SMS + WhatsApp", reach: "42,180", when: "2h ago" },
+  { t: "Annadanam Sponsorship Drive", ch: "Email", reach: "18,420", when: "Yesterday" },
+  { t: "Darshan Timing Update", ch: "Website + App", reach: "—", when: "2 days ago" },
+  { t: "Board Announcement Q4", ch: "Notice Board", reach: "Internal", when: "3 days ago" },
 ];
 
 function ExecutiveDashboard() {
@@ -295,6 +347,208 @@ function ExecutiveDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* ============ Somnath Mandir Authority Requirements ============ */}
+        <div className="pt-2">
+          <h2 className="text-sm font-semibold text-primary uppercase tracking-wide flex items-center gap-2">
+            <Building2 className="h-4 w-4" /> Daily Operations Overview
+          </h2>
+          <p className="text-[11px] text-muted-foreground">Unified daily snapshot across all temple operations</p>
+        </div>
+
+        {/* Footfall + Donations & Offerings */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4" /> Daily Devotee Footfall
+                <Badge variant="secondary" className="text-[9px] h-4 ml-1">Today: 8,412</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={hourlyFootfall}>
+                  <defs>
+                    <linearGradient id="ff" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#c2410c" stopOpacity={0.5} />
+                      <stop offset="100%" stopColor="#c2410c" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis dataKey="h" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="v" stroke="#c2410c" strokeWidth={2} fill="url(#ff)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2"><HandHeart className="h-4 w-4" /> Donations & Offerings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {donationsOfferings.map(d => (
+                <div key={d.l} className="flex items-center justify-between p-2 rounded border">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium">{d.l}</p>
+                    <p className="text-[10px] text-muted-foreground">{d.sub}</p>
+                  </div>
+                  <span className="font-mono text-sm font-semibold text-emerald-700">{d.v}</span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Prasad + Seva Participation */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2"><Utensils className="h-4 w-4" /> Prasad Preparation & Distribution</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {prasadOps.map(p => (
+                <div key={p.l}>
+                  <div className="flex justify-between text-xs mb-1">
+                    <span className="font-medium">{p.l}</span>
+                    <span className="font-mono">{p.v}</span>
+                  </div>
+                  <Progress value={p.pct} className="h-1.5" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4" /> Seva Participation (Today)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={sevaParticipation} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <XAxis type="number" tick={{ fontSize: 11 }} />
+                  <YAxis dataKey="s" type="category" tick={{ fontSize: 11 }} width={110} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="booked" fill="#c2410c" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="done" fill="#059669" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Inventory + Volunteers + Communications */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2"><Boxes className="h-4 w-4" /> Inventory Movement (Today)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] text-muted-foreground uppercase border-b">
+                    <th className="text-left py-1.5">Item</th>
+                    <th className="text-right py-1.5">In</th>
+                    <th className="text-right py-1.5">Out</th>
+                    <th className="text-right py-1.5">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {inventoryMovement.map(i => (
+                    <tr key={i.item} className="border-b last:border-0">
+                      <td className="py-1.5">{i.item}</td>
+                      <td className="text-right font-mono text-emerald-700">+{i.inQ}</td>
+                      <td className="text-right font-mono text-rose-700">-{i.outQ}</td>
+                      <td className={`text-right font-mono font-semibold ${i.low ? "text-orange-600" : ""}`}>
+                        {i.bal}{i.low && " ⚠"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2"><UserCog className="h-4 w-4" /> Volunteer Activities</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                {volunteerActivity.map(v => (
+                  <div key={v.l} className="p-2 rounded border text-center">
+                    <p className={`text-lg font-bold ${v.c}`}>{v.v}</p>
+                    <p className="text-[10px] text-muted-foreground leading-tight">{v.l}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-2 border-t space-y-1.5">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase">Active Assignments</p>
+                {[
+                  { n: "Crowd Management", c: 24 },
+                  { n: "Annadanam Serving", c: 18 },
+                  { n: "Shoe Stand & Cloak", c: 12 },
+                  { n: "Queue & Darshan", c: 30 },
+                ].map(a => (
+                  <div key={a.n} className="flex justify-between text-xs">
+                    <span>{a.n}</span>
+                    <span className="font-mono">{a.c}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2"><Megaphone className="h-4 w-4" /> Communications & Announcements</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {communications.map(c => (
+                <div key={c.t} className="p-2 rounded border">
+                  <div className="flex justify-between items-start gap-2">
+                    <p className="text-xs font-medium">{c.t}</p>
+                    <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-0.5">
+                      <Clock className="h-3 w-3" /> {c.when}
+                    </span>
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <Badge variant="secondary" className="text-[9px] h-4">{c.ch}</Badge>
+                    <span className="text-[10px] text-muted-foreground">Reach: <span className="font-mono">{c.reach}</span></span>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Events & Operations */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2"><CalendarDays className="h-4 w-4" /> Temple Events & Operations</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+              {[
+                { l: "Events This Week", v: "7", c: "text-violet-600" },
+                { l: "Ongoing Now", v: "2", c: "text-emerald-600" },
+                { l: "Priests On Duty", v: "18 / 22", c: "text-amber-600" },
+                { l: "Halls Occupied", v: "4 / 6", c: "text-blue-600" },
+                { l: "Security Staff", v: "34", c: "text-rose-600" },
+                { l: "VIP Visits Today", v: "3", c: "text-indigo-600" },
+              ].map(x => (
+                <div key={x.l} className="p-3 rounded-lg border text-center">
+                  <p className={`text-xl font-bold ${x.c}`}>{x.v}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{x.l}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
