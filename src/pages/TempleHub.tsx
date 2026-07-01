@@ -380,12 +380,12 @@ const TempleHub = () => {
     },
     {
       selector: '[data-tour-module="settings"]',
-      title: "24. Settings",
+      title: "25. Settings",
       description: "Temple profile, users & roles, permission matrix, subscription and module toggles. Finish onboarding here.",
     },
     {
       selector: '[data-tour-module="help"]',
-      title: "25. Help & Support",
+      title: "26. Help & Support",
       description: "FAQs, video guides and direct support. You can re-launch this tour any time from the 'Take a tour' button above.",
     },
   ];
