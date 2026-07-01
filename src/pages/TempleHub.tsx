@@ -40,6 +40,7 @@ import {
   Zap,
   ArrowRight,
   Compass,
+  LayoutDashboard,
 } from "lucide-react";
 import DemoVideoModal from "@/components/DemoVideoModal";
 import UpgradeModal from "@/components/UpgradeModal";
@@ -169,6 +170,9 @@ const allModules = [
   { id: "reports", title: "Reports Center", icon: BarChart3, enabled: true, path: "/temple/reports",
     description: "Consolidated reports across all modules", category: "management",
     gradient: "from-[hsl(270,55%,55%)] to-[hsl(270,50%,42%)]", bgTint: "bg-[hsl(270,45%,96%)]" },
+  { id: "executive", title: "Executive Dashboard", icon: LayoutDashboard, enabled: true, path: "/temple/executive",
+    description: "Unified single-screen view of all temple data", category: "management",
+    gradient: "from-[hsl(220,75%,45%)] to-[hsl(220,70%,35%)]", bgTint: "bg-[hsl(220,60%,96%)]" },
   { id: "planner", title: "Planner", icon: Calendar, enabled: true, path: "/temple/planner",
     description: "Calendar and scheduling planner", category: "growth",
     gradient: "from-[hsl(200,50%,50%)] to-[hsl(200,45%,38%)]", bgTint: "bg-[hsl(200,40%,95%)]" },
@@ -365,18 +369,23 @@ const TempleHub = () => {
       description: "Consolidated reports across every module with unified period filters. Drill into details from the sidebar.",
     },
     {
+      selector: '[data-tour-module="executive"]',
+      title: "23. Executive Dashboard",
+      description: "One unified screen: revenue, donations, sevas, devotees, events, projects, alerts and today's operations.",
+    },
+    {
       selector: '[data-tour-module="planner"]',
-      title: "23. Planner",
+      title: "24. Planner",
       description: "Calendar view combining events, sevas, shifts and Panchang timings.",
     },
     {
       selector: '[data-tour-module="settings"]',
-      title: "24. Settings",
+      title: "25. Settings",
       description: "Temple profile, users & roles, permission matrix, subscription and module toggles. Finish onboarding here.",
     },
     {
       selector: '[data-tour-module="help"]',
-      title: "25. Help & Support",
+      title: "26. Help & Support",
       description: "FAQs, video guides and direct support. You can re-launch this tour any time from the 'Take a tour' button above.",
     },
   ];
@@ -692,6 +701,37 @@ const TempleHub = () => {
                   <Zap className="h-3 w-3" /> Upgrade
                 </Button>
               )}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Executive Dashboard quick card */}
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6"
+        >
+          <div className="relative overflow-hidden rounded-2xl border border-blue-200/70 bg-gradient-to-r from-blue-50 via-indigo-50/50 to-blue-50 p-4 sm:p-5">
+            <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-blue-300/20 blur-2xl" />
+            <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-sm shrink-0">
+                <LayoutDashboard className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-semibold text-foreground">Executive Dashboard</h3>
+                <p className="text-sm text-muted-foreground">
+                  Unified single-screen view of all temple data — revenue, donations, sevas, devotees, events, projects, alerts and today's operations.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="h-9 gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white border-0 shrink-0"
+                onClick={() => navigate("/temple/executive")}
+              >
+                Open Dashboard
+                <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </motion.div>
