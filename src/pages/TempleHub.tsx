@@ -705,6 +705,37 @@ const TempleHub = () => {
           </div>
         </motion.div>
 
+        {/* Executive Dashboard quick card */}
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mb-6"
+        >
+          <div className="relative overflow-hidden rounded-2xl border border-blue-200/70 bg-gradient-to-r from-blue-50 via-indigo-50/50 to-blue-50 p-4 sm:p-5">
+            <div className="pointer-events-none absolute -top-10 -right-10 h-32 w-32 rounded-full bg-blue-300/20 blur-2xl" />
+            <div className="relative flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-sm shrink-0">
+                <LayoutDashboard className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-semibold text-foreground">Executive Dashboard</h3>
+                <p className="text-sm text-muted-foreground">
+                  Unified single-screen view of all temple data — revenue, donations, sevas, devotees, events, projects, alerts and today's operations.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                className="h-9 gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white border-0 shrink-0"
+                onClick={() => navigate("/temple/executive")}
+              >
+                Open Dashboard
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Module Categories */}
         {!isSuspended && (
           <div className="space-y-7">
