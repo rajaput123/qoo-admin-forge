@@ -223,6 +223,7 @@ import ProjectsArchive from "./pages/temple/projects/Archive";
 // Reports Center Module
 import ReportsLayout from "./pages/temple/ReportsLayout";
 import ReportsDashboard from "./pages/temple/reports/ReportsDashboard";
+import ExecutiveDashboard from "./pages/temple/ExecutiveDashboard";
 import ReportOverview from "./pages/temple/reports/ReportOverview";
 import DonationTables from "./pages/temple/reports/tables/DonationTables";
 import BookingTables from "./pages/temple/reports/tables/BookingTables";
@@ -288,6 +289,7 @@ const App = () => {
 
             {/* Temple Admin Routes */}
             <Route path="/temple-hub" element={<TempleHub />} />
+            <Route path="/temple/executive" element={<ExecutiveDashboard />} />
             <Route path="/temple/ui-kit" element={<UIKit />} />
 
             {/* Temple Info Module */}
