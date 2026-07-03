@@ -259,6 +259,13 @@ const ReceiptPreviewContent = ({ template, form }: { template: ReceiptTemplate; 
 const ReceiptTemplates = () => {
   const navigate = useNavigate();
   const templates = useSyncExternalStore(subscribeTemplates, getReceiptTemplates, getReceiptTemplates);
+  const assignments = useSyncExternalStore(subscribeAssignments, getTemplateAssignments, getTemplateAssignments);
+  const events = useEvents();
+  const sevaBookings = useSevaBookings();
+  const sevaNames = Array.from(new Set(sevaBookings.map(s => s.sevaName))).sort();
+  const donationPurposes = ["General", "Project", "Events", "Others"];
+  const sevaTemplates = templates.filter(t => t.type === "Seva");
+  const donationTemplates = templates.filter(t => t.type === "Donation");
   const [activeTab, setActiveTab] = useState("Seva");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
