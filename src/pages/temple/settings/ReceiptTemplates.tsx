@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -15,7 +15,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   FileText, Pencil, Eye, Plus, Copy, Trash2, Upload, Image as ImageIcon,
-  Printer, Star, Check, Settings2, Palette, Type, LayoutTemplate, Globe, Stamp
+  Printer, Star, Check, Settings2, Palette, Type, LayoutTemplate, Globe, Stamp,
+  Calendar, FolderKanban, ArrowRight, SkipForward
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -26,6 +27,8 @@ import {
   getReceiptTemplates, subscribeTemplates,
   addReceiptTemplate, updateReceiptTemplate, deleteReceiptTemplate, setDefaultTemplate,
 } from "@/data/receiptTemplateData";
+import { useEvents } from "@/modules/events/hooks";
+import { projects } from "@/data/projectData";
 
 interface PreviewFormData {
   showDeityImage?: boolean;
@@ -263,6 +266,46 @@ const ReceiptTemplates = () => {
   const [editSection, setEditSection] = useState("basic");
   const [showEditPreview, setShowEditPreview] = useState(false);
 
+  // ── New Template Picker ────────────────────────────────────────────────────
+  const [newTemplateOpen, setNewTemplateOpen] = useState(false);
+  const [pickerTab, setPickerTab] = useState<"event" | "project">("event");
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [selectedContextId, setSelectedContextId] = useState<string | null>(null);
+  const allEvents = useEvents();
+  const activeProjects = useMemo(() => projects.filter(p => p.status === "Active"), []);
+
+  const filteredEvents = useMemo(() => {
+    const q = pickerSearch.toLowerCase();
+    return allEvents.filter(e =>
+      !q || e.name.toLowerCase().includes(q) || (e.category || "").toLowerCase().includes(q)
+    );
+  }, [allEvents, pickerSearch]);
+
+  const filteredProjects = useMemo(() => {
+    const q = pickerSearch.toLowerCase();
+    return activeProjects.filter(p =>
+      !q || p.title.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q)
+    );
+  }, [activeProjects, pickerSearch]);
+
+  const openNewTemplatePicker = () => {
+    setPickerTab("event");
+    setPickerSearch("");
+    setSelectedContextId(null);
+    setNewTemplateOpen(true);
+  };
+
+  const proceedToBuilder = (contextType?: "event" | "project", contextId?: string) => {
+    setNewTemplateOpen(false);
+    const params = new URLSearchParams();
+    if (contextType && contextId) {
+      params.set("contextType", contextType);
+      params.set("contextId", contextId);
+    }
+    const qs = params.toString();
+    navigate(`/temple/settings/templates/builder${qs ? `?${qs}` : ""}`);
+  };
+
   const [form, setForm] = useState({
     name: "", type: "Seva" as "Seva" | "Donation",
     paperSize: "A5" as ReceiptTemplate["paperSize"],
@@ -420,7 +463,7 @@ const ReceiptTemplates = () => {
               Design and manage receipt layouts for Seva and Donation transactions. Templates can be assigned per offering or donation type.
             </p>
           </div>
-          <Button onClick={() => navigate("/temple/settings/templates/builder")} className="gap-2">
+          <Button onClick={openNewTemplatePicker} className="gap-2">
             <Plus className="h-4 w-4" />New Template
           </Button>
         </div>
@@ -514,18 +557,122 @@ const ReceiptTemplates = () => {
               {/* Add New Card */}
               <Card
                 className="border-dashed border-2 border-muted-foreground/20 hover:border-primary/40 cursor-pointer transition-colors flex items-center justify-center min-h-[200px]"
-                onClick={() => navigate("/temple/settings/templates/builder")}
+                onClick={openNewTemplatePicker}
               >
                 <div className="text-center text-muted-foreground">
                   <Plus className="h-8 w-8 mx-auto mb-2 opacity-40" />
                   <p className="text-sm font-medium">Create New Template</p>
-                  <p className="text-xs opacity-60">Start from scratch</p>
+                  <p className="text-xs opacity-60">Link to an event or project</p>
                 </div>
               </Card>
             </div>
           </TabsContent>
         </Tabs>
       </motion.div>
+
+      {/* ──── New Template Picker Dialog ──── */}
+      <Dialog open={newTemplateOpen} onOpenChange={setNewTemplateOpen}>
+        <DialogContent className="sm:max-w-[560px] max-h-[80vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-5 pb-3 border-b shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5 text-primary" />
+              Create New Receipt Template
+            </DialogTitle>
+            <DialogDescription>
+              Optionally link this template to an Event or Project so it applies automatically when printing receipts for that item.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="px-6 pt-4 pb-2 shrink-0">
+            <Input
+              placeholder="Search events or projects…"
+              value={pickerSearch}
+              onChange={e => setPickerSearch(e.target.value)}
+              className="h-9"
+            />
+          </div>
+
+          <Tabs value={pickerTab} onValueChange={v => { setPickerTab(v as any); setSelectedContextId(null); setPickerSearch(""); }} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="mx-6 mb-2 shrink-0">
+              <TabsTrigger value="event" className="gap-1.5 flex-1">
+                <Calendar className="h-3.5 w-3.5" />Events ({allEvents.length})
+              </TabsTrigger>
+              <TabsTrigger value="project" className="gap-1.5 flex-1">
+                <FolderKanban className="h-3.5 w-3.5" />Projects ({activeProjects.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <ScrollArea className="flex-1 min-h-0 px-6">
+              <TabsContent value="event" className="mt-0 space-y-2 pb-4">
+                {filteredEvents.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">No events found</p>
+                ) : filteredEvents.map(ev => (
+                  <button
+                    key={ev.id}
+                    onClick={() => setSelectedContextId(selectedContextId === ev.id ? null : ev.id)}
+                    className={`w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                      selectedContextId === ev.id
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-border hover:border-primary/40 hover:bg-muted/40"
+                    }`}
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                      <Calendar className="h-4 w-4 text-amber-700" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{ev.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{ev.date} {ev.category ? `· ${ev.category}` : ""}</p>
+                    </div>
+                    {selectedContextId === ev.id && (
+                      <Check className="h-4 w-4 text-primary shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </TabsContent>
+
+              <TabsContent value="project" className="mt-0 space-y-2 pb-4">
+                {filteredProjects.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">No active projects found</p>
+                ) : filteredProjects.map(proj => (
+                  <button
+                    key={proj.id}
+                    onClick={() => setSelectedContextId(selectedContextId === proj.id ? null : proj.id)}
+                    className={`w-full text-left flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${
+                      selectedContextId === proj.id
+                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                        : "border-border hover:border-primary/40 hover:bg-muted/40"
+                    }`}
+                  >
+                    <div className="h-9 w-9 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                      <FolderKanban className="h-4 w-4 text-blue-700" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{proj.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">{proj.description || "Active project"}</p>
+                    </div>
+                    {selectedContextId === proj.id && (
+                      <Check className="h-4 w-4 text-primary shrink-0" />
+                    )}
+                  </button>
+                ))}
+              </TabsContent>
+            </ScrollArea>
+          </Tabs>
+
+          <DialogFooter className="px-6 py-4 border-t shrink-0 flex-row gap-2">
+            <Button variant="outline" className="gap-1.5" onClick={() => proceedToBuilder()}>
+              <SkipForward className="h-4 w-4" />Skip — General Template
+            </Button>
+            <Button
+              className="gap-1.5 ml-auto"
+              disabled={!selectedContextId}
+              onClick={() => proceedToBuilder(pickerTab, selectedContextId!)}
+            >
+              Continue <ArrowRight className="h-4 w-4" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ──── Edit/Create Template Dialog ──── */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
