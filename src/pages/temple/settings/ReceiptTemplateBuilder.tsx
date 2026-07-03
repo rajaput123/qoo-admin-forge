@@ -225,6 +225,39 @@ const ReceiptTemplateBuilder: React.FC = () => {
   const canvasWrapRef = useRef<HTMLDivElement>(null);
 
   const [templateName, setTemplateName] = useState("Untitled Receipt Template");
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saveType, setSaveType] = useState<"Seva" | "Donation">("Seva");
+  const [assignEventIds, setAssignEventIds] = useState<string[]>([]);
+  const [assignSevaNames, setAssignSevaNames] = useState<string[]>([]);
+  const [assignPurposes, setAssignPurposes] = useState<string[]>([]);
+  const events = useEvents();
+  const sevaBookings = useSevaBookings();
+  const uniqueSevaNames = Array.from(new Set(sevaBookings.map(s => s.sevaName))).sort();
+  const donationPurposes = ["General", "Project", "Events", "Others"];
+
+  const toggleIn = (arr: string[], val: string) =>
+    arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
+
+  const confirmSave = () => {
+    const id = `T${Date.now()}`;
+    addReceiptTemplate({
+      id, name: templateName || "Untitled Template", type: saveType,
+      paperSize: "A5", orientation: "Portrait",
+      showLogo: true, logoUrl: "", logoPosition: "center", showQR: true,
+      headerText: "", footerText: "", isDefault: false,
+      fields: saveType === "Seva" ? [...defaultSevaFields] : [...defaultDonationFields],
+      fontSize: "Medium", borderStyle: "Simple",
+      createdAt: new Date().toISOString().split("T")[0],
+    });
+    assignEventIds.forEach(eid => setTemplateAssignment("event", eid, id));
+    assignSevaNames.forEach(n => setTemplateAssignment("seva", n, id));
+    assignPurposes.forEach(p => setTemplateAssignment("donation", p, id));
+    const total = assignEventIds.length + assignSevaNames.length + assignPurposes.length;
+    toast.success(`Template saved${total ? ` and assigned to ${total} item${total > 1 ? "s" : ""}` : ""}`);
+    setSaveDialogOpen(false);
+    navigate("/temple/settings/templates");
+  };
+
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isPreview, setIsPreview] = useState(false);
