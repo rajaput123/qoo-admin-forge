@@ -27,9 +27,6 @@ import {
   addReceiptTemplate, updateReceiptTemplate, deleteReceiptTemplate, setDefaultTemplate,
   getTemplateAssignments, setTemplateAssignment, subscribeAssignments,
 } from "@/data/receiptTemplateData";
-import { useEvents } from "@/modules/events/hooks";
-import { useSevaBookings } from "@/modules/sevas/sevaStore";
-import { Link2 } from "lucide-react";
 
 interface PreviewFormData {
   showDeityImage?: boolean;
