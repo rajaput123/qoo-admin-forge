@@ -167,7 +167,7 @@ const AllBookings = () => {
             />
           </div>
           {/* Source filter */}
-          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+          <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as typeof sourceFilter)}>
             <SelectTrigger className="w-[145px] bg-background">
               <SelectValue placeholder="All Sources" />
             </SelectTrigger>
