@@ -148,3 +148,46 @@ export const subscribeTemplates = (listener: () => void) => {
   _listeners = [..._listeners, listener];
   return () => { _listeners = _listeners.filter(l => l !== listener); };
 };
+
+// ─────────────────────────────────────────────────────────
+// Receipt Template Assignments
+// Map a specific entity (event / seva / donation purpose) to a template id.
+// Scope keys: `event:<eventId>`, `seva:<sevaName>`, `donation:<purpose>`
+// ─────────────────────────────────────────────────────────
+
+const LS_ASSIGN_KEY = "qoo.receipt.assignments";
+let _assignments: Record<string, string> = (() => {
+  if (typeof window === "undefined") return {};
+  try { return JSON.parse(localStorage.getItem(LS_ASSIGN_KEY) || "{}"); } catch { return {}; }
+})();
+let _assignListeners: (() => void)[] = [];
+
+const persistAssignments = () => {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(LS_ASSIGN_KEY, JSON.stringify(_assignments));
+  }
+  _assignListeners.forEach(fn => fn());
+};
+
+export const getTemplateAssignments = () => _assignments;
+
+export const getAssignedTemplate = (scope: "event" | "seva" | "donation", key: string) => {
+  const id = _assignments[`${scope}:${key}`];
+  return id ? _templates.find(t => t.id === id) : undefined;
+};
+
+export const setTemplateAssignment = (scope: "event" | "seva" | "donation", key: string, templateId: string | null) => {
+  const k = `${scope}:${key}`;
+  if (!templateId) {
+    const { [k]: _, ...rest } = _assignments;
+    _assignments = rest;
+  } else {
+    _assignments = { ..._assignments, [k]: templateId };
+  }
+  persistAssignments();
+};
+
+export const subscribeAssignments = (listener: () => void) => {
+  _assignListeners = [..._assignListeners, listener];
+  return () => { _assignListeners = _assignListeners.filter(l => l !== listener); };
+};
