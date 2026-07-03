@@ -25,11 +25,7 @@ import {
   allSevaFields, allDonationFields,
   getReceiptTemplates, subscribeTemplates,
   addReceiptTemplate, updateReceiptTemplate, deleteReceiptTemplate, setDefaultTemplate,
-  getTemplateAssignments, setTemplateAssignment, subscribeAssignments,
 } from "@/data/receiptTemplateData";
-import { useEvents } from "@/modules/events/hooks";
-import { useSevaBookings } from "@/modules/sevas/sevaStore";
-import { Link2 } from "lucide-react";
 
 interface PreviewFormData {
   showDeityImage?: boolean;
@@ -259,13 +255,6 @@ const ReceiptPreviewContent = ({ template, form }: { template: ReceiptTemplate; 
 const ReceiptTemplates = () => {
   const navigate = useNavigate();
   const templates = useSyncExternalStore(subscribeTemplates, getReceiptTemplates, getReceiptTemplates);
-  const assignments = useSyncExternalStore(subscribeAssignments, getTemplateAssignments, getTemplateAssignments);
-  const events = useEvents();
-  const sevaBookings = useSevaBookings();
-  const sevaNames = Array.from(new Set(sevaBookings.map(s => s.sevaName))).sort();
-  const donationPurposes = ["General", "Project", "Events", "Others"];
-  const sevaTemplates = templates.filter(t => t.type === "Seva");
-  const donationTemplates = templates.filter(t => t.type === "Donation");
   const [activeTab, setActiveTab] = useState("Seva");
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -442,97 +431,9 @@ const ReceiptTemplates = () => {
           <TabsList className="mb-4">
             <TabsTrigger value="Seva" className="gap-1.5"><Printer className="h-3.5 w-3.5" />Seva Receipts</TabsTrigger>
             <TabsTrigger value="Donation" className="gap-1.5"><FileText className="h-3.5 w-3.5" />Donation Receipts</TabsTrigger>
-            <TabsTrigger value="Assignments" className="gap-1.5"><Link2 className="h-3.5 w-3.5" />Assignments</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="Assignments">
-            <div className="space-y-6">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" />Events
-                  </CardTitle>
-                  <CardDescription>Assign a donation receipt template to each event. If unset, the default donation template is used.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {events.length === 0 && <p className="text-sm text-muted-foreground">No events configured.</p>}
-                  {events.map(e => {
-                    const val = assignments[`event:${e.id}`] || "default";
-                    return (
-                      <div key={e.id} className="flex items-center justify-between gap-3 py-2 border-b last:border-b-0">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{e.name}</p>
-                          <p className="text-xs text-muted-foreground">{e.type} · {e.status}</p>
-                        </div>
-                        <Select value={val} onValueChange={v => { setTemplateAssignment("event", e.id, v === "default" ? null : v); toast.success("Assignment saved"); }}>
-                          <SelectTrigger className="w-[260px] bg-background"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-popover">
-                            <SelectItem value="default">— Use default —</SelectItem>
-                            {donationTemplates.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Printer className="h-4 w-4 text-primary" />Sevas
-                  </CardTitle>
-                  <CardDescription>Assign a seva receipt template per seva. Falls back to the default seva template.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {sevaNames.length === 0 && <p className="text-sm text-muted-foreground">No sevas found.</p>}
-                  {sevaNames.map(name => {
-                    const val = assignments[`seva:${name}`] || "default";
-                    return (
-                      <div key={name} className="flex items-center justify-between gap-3 py-2 border-b last:border-b-0">
-                        <p className="text-sm font-medium truncate">{name}</p>
-                        <Select value={val} onValueChange={v => { setTemplateAssignment("seva", name, v === "default" ? null : v); toast.success("Assignment saved"); }}>
-                          <SelectTrigger className="w-[260px] bg-background"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-popover">
-                            <SelectItem value="default">— Use default —</SelectItem>
-                            {sevaTemplates.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" />Donation Purposes
-                  </CardTitle>
-                  <CardDescription>Assign a donation receipt template for each donation purpose category.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {donationPurposes.map(p => {
-                    const val = assignments[`donation:${p}`] || "default";
-                    return (
-                      <div key={p} className="flex items-center justify-between gap-3 py-2 border-b last:border-b-0">
-                        <p className="text-sm font-medium">{p}</p>
-                        <Select value={val} onValueChange={v => { setTemplateAssignment("donation", p, v === "default" ? null : v); toast.success("Assignment saved"); }}>
-                          <SelectTrigger className="w-[260px] bg-background"><SelectValue /></SelectTrigger>
-                          <SelectContent className="bg-popover">
-                            <SelectItem value="default">— Use default —</SelectItem>
-                            {donationTemplates.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value={activeTab === "Assignments" ? "__none" : activeTab}>
+          <TabsContent value={activeTab}>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filtered.map(t => (
                 <Card key={t.id} className="relative overflow-hidden hover:shadow-md transition-all group border-border/60">
