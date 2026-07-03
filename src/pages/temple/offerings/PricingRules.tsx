@@ -89,7 +89,10 @@ const PricingRules = () => {
     if (form.advanceBookingDays < 0) errs.advanceBookingDays = "Advance booking days cannot be negative.";
     if (form.maxPerDevotee < 1) errs.maxPerDevotee = "Max per devotee must be at least 1.";
     if (!form.cancellationPolicy.trim()) errs.cancellationPolicy = "Cancellation policy is required.";
+    else if (form.cancellationPolicy.trim().length > 1000) errs.cancellationPolicy = "Cancellation policy cannot exceed 1000 characters.";
+
     if (!form.refundPolicy.trim()) errs.refundPolicy = "Refund policy is required.";
+    else if (form.refundPolicy.trim().length > 1000) errs.refundPolicy = "Refund policy cannot exceed 1000 characters.";
 
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
@@ -277,6 +280,7 @@ const PricingRules = () => {
                     value={form.cancellationPolicy}
                     onChange={e => { setForm({ ...form, cancellationPolicy: e.target.value }); if (errors.cancellationPolicy) setErrors(p => ({ ...p, cancellationPolicy: "" })); }}
                     rows={2}
+                    maxLength={1000}
                     className={errors.cancellationPolicy ? "border-destructive" : ""}
                   />
                   {errors.cancellationPolicy && <p className="text-xs text-destructive mt-1">{errors.cancellationPolicy}</p>}
@@ -287,6 +291,7 @@ const PricingRules = () => {
                     value={form.refundPolicy}
                     onChange={e => { setForm({ ...form, refundPolicy: e.target.value }); if (errors.refundPolicy) setErrors(p => ({ ...p, refundPolicy: "" })); }}
                     rows={2}
+                    maxLength={1000}
                     className={errors.refundPolicy ? "border-destructive" : ""}
                   />
                   {errors.refundPolicy && <p className="text-xs text-destructive mt-1">{errors.refundPolicy}</p>}

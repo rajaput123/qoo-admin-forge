@@ -187,8 +187,11 @@ const OfferingsList = () => {
 
     // Basic details
     if (!form.name.trim()) errs.name = "Offering name is required.";
+    else if (form.name.trim().length > 100) errs.name = "Offering name cannot exceed 100 characters.";
+
     if (!form.category) errs.category = "Category is required.";
     if (!form.structure) errs.structure = "Location / Structure is required.";
+    if (form.description.trim().length > 500) errs.description = "Description cannot exceed 500 characters.";
 
     // Scheduling
     if (!form.defaultTime) errs.defaultTime = "Start time is required.";
@@ -219,6 +222,7 @@ const OfferingsList = () => {
     if (form.prasadamIncluded) {
       form.prasadamItems.forEach((item, idx) => {
         if (!item.name.trim()) errs[`prasadam_${idx}`] = "Prasadam name is required.";
+        else if (item.name.trim().length > 100) errs[`prasadam_${idx}`] = "Prasadam name cannot exceed 100 characters.";
         if (item.quantity < 1) errs[`prasadamQty_${idx}`] = "Quantity must be at least 1.";
       });
     }
@@ -554,6 +558,7 @@ const OfferingsList = () => {
                     onChange={e => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors(p => ({ ...p, name: "" })); }}
                     placeholder="e.g. Suprabhatam"
                     className={errors.name ? "border-destructive" : ""}
+                    maxLength={100}
                   />
                   {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
                 </div>
@@ -590,7 +595,18 @@ const OfferingsList = () => {
                   />
                   {errors.structure && <p className="text-xs text-destructive mt-1">{errors.structure}</p>}
                 </div>
-                <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Describe this offering" rows={2} /></div>
+                <div>
+                  <Label>Description</Label>
+                  <Textarea
+                    value={form.description}
+                    onChange={e => { setForm({ ...form, description: e.target.value }); if (errors.description) setErrors(p => ({ ...p, description: "" })); }}
+                    placeholder="Describe this offering"
+                    rows={2}
+                    maxLength={500}
+                    className={errors.description ? "border-destructive" : ""}
+                  />
+                  {errors.description && <p className="text-xs text-destructive mt-1">{errors.description}</p>}
+                </div>
                 <div>
                   <Label>Assign Priest</Label>
                   <SearchableSelect
@@ -974,6 +990,7 @@ const OfferingsList = () => {
                                 }}
                                 placeholder="e.g. Laddu"
                                 className={`mt-1 ${errors[`prasadam_${idx}`] ? "border-destructive" : ""}`}
+                                maxLength={100}
                               />
                               {errors[`prasadam_${idx}`] && <p className="text-xs text-destructive mt-1">{errors[`prasadam_${idx}`]}</p>}
                             </div>
