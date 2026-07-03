@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Save, Eye, Download, Undo2, Redo2, Type, Image, Minus, Square,
   GripVertical, Bold, Italic, AlignLeft, AlignCenter, AlignRight,
@@ -17,6 +18,12 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import {
+  addReceiptTemplate, setTemplateAssignment,
+  defaultSevaFields, defaultDonationFields,
+} from "@/data/receiptTemplateData";
+import { useEvents } from "@/modules/events/hooks";
+import { useSevaBookings } from "@/modules/sevas/sevaStore";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
