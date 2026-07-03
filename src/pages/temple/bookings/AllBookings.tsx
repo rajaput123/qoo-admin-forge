@@ -32,6 +32,7 @@ const AllBookings = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [timeFilter, setTimeFilter] = useState<"all" | "today" | "week">("all");
   const [frequencyFilter, setFrequencyFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "Online" | "Counter">("all");
   const [importOpen, setImportOpen] = useState(false);
 
   // Stats calculation
@@ -68,6 +69,12 @@ const AllBookings = () => {
       );
     }
 
+    if (sourceFilter !== "all") {
+      filtered = filtered.filter(b =>
+        (b.sourceModule ?? b.source ?? "").toLowerCase() === sourceFilter.toLowerCase()
+      );
+    }
+
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -79,7 +86,7 @@ const AllBookings = () => {
     }
 
     return filtered;
-  }, [bookings, searchQuery, timeFilter, frequencyFilter]);
+  }, [bookings, searchQuery, timeFilter, frequencyFilter, sourceFilter]);
 
   const handleExport = () => {
     const headers = "ID,Devotee Name,Seva Name,Category,Date,Time,Amount,Payment Method,Payment Mode,Reference No,Status\n";
@@ -159,6 +166,17 @@ const AllBookings = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          {/* Source filter */}
+          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+            <SelectTrigger className="w-[145px] bg-background">
+              <SelectValue placeholder="All Sources" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Sources</SelectItem>
+              <SelectItem value="Online">🌐 Online</SelectItem>
+              <SelectItem value="Counter">🏪 Counter</SelectItem>
+            </SelectContent>
+          </Select>
           {/* Frequency filter */}
           <Select value={frequencyFilter} onValueChange={setFrequencyFilter}>
             <SelectTrigger className="w-[155px] bg-background">
@@ -186,8 +204,8 @@ const AllBookings = () => {
           >
             This Week
           </Button>
-          {(frequencyFilter !== "all" || timeFilter !== "all" || searchQuery) && (
-            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => { setFrequencyFilter("all"); setTimeFilter("all"); setSearchQuery(""); }}>
+          {(frequencyFilter !== "all" || timeFilter !== "all" || searchQuery || sourceFilter !== "all") && (
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => { setFrequencyFilter("all"); setTimeFilter("all"); setSearchQuery(""); setSourceFilter("all"); }}>
               Clear filters
             </Button>
           )}

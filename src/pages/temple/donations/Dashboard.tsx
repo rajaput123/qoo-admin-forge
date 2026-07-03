@@ -338,7 +338,7 @@ const Dashboard = () => {
                     recentDonations.map((donation) => {
                       if (!donation || !donation.donationId) return null;
                       return (
-                        <TableRow key={donation.donationId} className="cursor-pointer" onClick={() => navigate(`/temple/donations/list`)}>
+                        <TableRow key={donation.donationId} className="cursor-pointer" onClick={() => navigate(donation.nature === "Non-Cash" ? "/temple/donations/non-cash" : "/temple/donations/list")}>
                           <TableCell className="text-sm">
                             {donation.date ? new Date(donation.date).toLocaleDateString('en-IN', {
                               day: '2-digit',
@@ -347,7 +347,12 @@ const Dashboard = () => {
                             }) : "—"}
                           </TableCell>
                           <TableCell className="font-medium">{getDonorName(donation.donorId) || "—"}</TableCell>
-                          <TableCell className="font-semibold">{formatCurrency(donation.amount)}</TableCell>
+                          <TableCell className="font-semibold">
+                            {formatCurrency(donation.amount)}
+                            {donation.nature === "Non-Cash" && (
+                              <span className="text-[10px] block font-normal text-amber-600 font-sans">In-Kind</span>
+                            )}
+                          </TableCell>
                         <TableCell>
                           <Badge variant="outline" style={{ borderColor: donationTypeColors[getDonationType(donation)] || "#6b7280" }}>
                             {getDonationType(donation)}

@@ -159,7 +159,9 @@ export default function BulkImportDonationsDialog({ open, onOpenChange }: Props)
 
       // PAN Validation if wants 80G
       if (wants80G) {
-        if (!pan) {
+        if (channel === "In-Kind") {
+          errors.push("In-Kind (Non-Cash) donations are not eligible for 80G tax exemption.");
+        } else if (!pan) {
           errors.push("PAN number is required for 80G tax exemption.");
         } else {
           const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;

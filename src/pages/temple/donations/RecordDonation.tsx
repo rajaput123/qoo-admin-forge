@@ -69,6 +69,8 @@ const RecordDonation = () => {
       purpose: form.purpose,
       channel: form.channel,
       mode: form.mode.trim(),
+      nature: form.channel === "In-Kind" ? "Non-Cash" : "Cash",
+      wants80G: form.channel !== "In-Kind",
       referenceNo: form.referenceNo.trim() || undefined,
       remarks: form.remarks.trim() || undefined,
       sourceModule: (form.sourceModule as any) || "Manual",
@@ -269,6 +271,12 @@ const RecordDonation = () => {
                 </Select>
               </div>
             </div>
+            {form.channel === "In-Kind" && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-800 flex gap-2">
+                <span className="font-bold shrink-0">⚠️ Notice:</span>
+                <span>In-Kind (Non-Cash) donations are not eligible for 80G tax exemption. No 80G receipt will be generated.</span>
+              </div>
+            )}
             <div><Label>Purpose</Label>
               <Select value={form.purpose} onValueChange={(v) => setForm(p => ({ ...p, purpose: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select purpose" /></SelectTrigger>

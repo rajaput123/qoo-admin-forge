@@ -8,14 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus, Download, FileDown, User, Phone, Mail, MapPin, CreditCard, Hash, Banknote, Receipt, X, Award, Upload } from "lucide-react";
-import { useDonations, useDonors, useReceipts80G } from "@/modules/donations/hooks";
+import { Search, Plus, Download, User, Phone, Mail, MapPin, Hash, Package, Receipt, X, Info } from "lucide-react";
+import { useDonations, useDonors } from "@/modules/donations/hooks";
 import { downloadReceiptPdf } from "@/lib/pdfDocs";
-import { download80GReceiptPdf } from "@/lib/eightyGReceipt";
 import { downloadCsv } from "@/lib/csvExport";
 import { useToast } from "@/hooks/use-toast";
-import AddDonationDialog from "./AddDonationDialog";
-import BulkImportDonationsDialog from "./BulkImportDonationsDialog";
 
 const formatCurrency = (val: number | undefined | null): string => {
   try {
@@ -26,20 +23,16 @@ const formatCurrency = (val: number | undefined | null): string => {
 
 type DonationType = "All" | "General" | "Projects" | "Events" | "Other";
 
-const DonationsList = () => {
+const NonCashDonationsList = () => {
   const navigate = useNavigate();
-  const [addOpen, setAddOpen] = useState(false);
-  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const donations = useDonations();
   const donors = useDonors();
-  const receipts80G = useReceipts80G();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<DonationType>("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [fromDate, setFromDate] = useState<string>("");
   const [toDate, setToDate] = useState<string>("");
-  const [taxFilter, setTaxFilter] = useState<"all" | "80g" | "no-80g">("all");
-  const [sourceFilter, setSourceFilter] = useState<"all" | "Online" | "Counter">("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "Counter" | "Campaign" | "Manual">("all");
   const [selectedDonation, setSelectedDonation] = useState<(typeof donations)[number] | null>(null);
 
   const getDonationType = (donation: any): DonationType => {
@@ -48,8 +41,6 @@ const DonationsList = () => {
     if (
       donation.sourceModule === "Counter" ||
       donation.counterId ||
-      donation.sourceModule === "Online Portal" ||
-      donation.sourceModule === "Booking" ||
       donation.purpose === "Counter Donation" ||
       donation.purpose === "General"
     ) {
@@ -59,36 +50,26 @@ const DonationsList = () => {
   };
 
   const filteredDonations = useMemo(() => {
-    let filtered = donations.filter(d => d.nature === "Cash");
+    let filtered = donations.filter(d => d.nature === "Non-Cash");
     if (activeTab !== "All") {
       filtered = filtered.filter(d => getDonationType(d) === activeTab);
-    }
-    if (taxFilter === "80g") {
-      filtered = filtered.filter(d => d?.is80G === true);
-    } else if (taxFilter === "no-80g") {
-      filtered = filtered.filter(d => d?.is80G !== true);
     }
     if (fromDate) filtered = filtered.filter(d => d?.date && d.date >= fromDate);
     if (toDate) filtered = filtered.filter(d => d?.date && d.date <= toDate);
     if (sourceFilter !== "all") {
-      filtered = filtered.filter(d => {
-        const ch = (d?.channel ?? "").toLowerCase();
-        const sm = (d?.sourceModule ?? "").toLowerCase();
-        if (sourceFilter === "Online") return ch === "online" || sm === "online portal" || sm === "online";
-        if (sourceFilter === "Counter") return ch === "counter" || sm === "counter" || !!d?.counterId;
-        if (sourceFilter === "Admin") return sm === "admin" || sm === "manual";
-        return true;
-      });
+      filtered = filtered.filter(d => d?.sourceModule === sourceFilter);
     }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(d => {
         if (!d) return false;
+        const details = d.nonCashDetails;
         return (
           (d.donorName && d.donorName.toLowerCase().includes(query)) ||
           (d.donationId && d.donationId.toLowerCase().includes(query)) ||
           (d.receiptNo && d.receiptNo.toLowerCase().includes(query)) ||
-          (d.purpose && d.purpose.toLowerCase().includes(query))
+          (d.purpose && d.purpose.toLowerCase().includes(query)) ||
+          (details?.assetName && details.assetName.toLowerCase().includes(query))
         );
       });
     }
@@ -96,12 +77,9 @@ const DonationsList = () => {
       try { return new Date(b?.date ?? 0).getTime() - new Date(a?.date ?? 0).getTime(); }
       catch { return 0; }
     });
-  }, [donations, activeTab, searchQuery, fromDate, toDate, taxFilter, sourceFilter]);
+  }, [donations, activeTab, searchQuery, fromDate, toDate, sourceFilter]);
 
   const getDonorInfo = (donorId: string) => donors.find(d => d.donorId === donorId);
-
-  const get80GReceipt = (donationId: string) =>
-    receipts80G.find((r) => r.donationId === donationId && r.status === "Generated");
 
   const handleDownloadReceipt = (donation: (typeof donations)[number]) => {
     try {
@@ -112,7 +90,7 @@ const DonationsList = () => {
         donorAddress: donor?.city && donor.city !== "-" ? donor.city : undefined,
         amount: donation.amount, mode: donation.mode || donation.channel,
         donationType: (donation.purpose || "").toLowerCase().includes("corpus") ? "Corpus" : "General",
-        remarks: donation.remarks, is80G: donation.is80G,
+        remarks: donation.remarks, is80G: false,
       });
       toast({ title: "Receipt downloaded", description: `${donation.receiptNo}.pdf saved` });
     } catch (error: any) {
@@ -120,56 +98,35 @@ const DonationsList = () => {
     }
   };
 
-  const handleDownload80G = (donation: (typeof donations)[number]) => {
-    try {
-      const receipt = get80GReceipt(donation.donationId);
-      if (!receipt) {
-        toast({ title: "80G not available", description: "Certificate not generated for this donation", variant: "destructive" });
-        return;
-      }
-      const donor = getDonorInfo(donation.donorId);
-      download80GReceiptPdf(receipt, donor?.city && donor.city !== "-" ? donor.city : undefined);
-      toast({ title: "80G receipt downloaded", description: `${receipt.receipt80GId}.pdf — for IT portal` });
-    } catch (error: unknown) {
-      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to download 80G", variant: "destructive" });
-    }
-  };
-
   const handleExport = () => {
     const rows = filteredDonations.map(d => {
       const donor = getDonorInfo(d.donorId);
+      const details = d.nonCashDetails;
       return {
         "Donation ID": d.donationId,
         "Receipt No": d.receiptNo || "—",
         "Date": d.date,
         "Time": d.time || "—",
-        "Amount": d.amount,
+        "Material Item": details?.assetName || "—",
+        "Quantity": details?.quantity || "—",
+        "Unit": details?.unit || "—",
+        "Estimated Value": d.amount,
         "Fund / Purpose": d.purpose || "—",
         "Category / Type": getDonationType(d),
         "Payment Channel": d.channel || "—",
-        "Payment Mode": d.mode || "—",
-        "Ref No / Txn ID": d.referenceNo || "—",
-        "Nature": d.nature || "—",
         "Source Module": d.sourceModule || "—",
-        "Source Record ID": d.sourceRecordId || "—",
-        "Counter ID": d.counterId || "—",
-        "80G Eligible": d.is80G ? "Yes" : "No",
-        "80G Receipt ID": d.receipt80GId || "—",
-        "Settlement ID": d.settlementId || "—",
         "Remarks": d.remarks || "—",
-        "Created At": d.createdAt || "—",
-        "Donor ID": d.donorId,
         "Donor Name": d.donorName,
         "Donor Phone": donor?.phone && donor.phone !== "-" ? donor.phone : "—",
-        "Donor Email": donor?.email && donor.email !== "-" ? donor.email : "—",
         "Donor City": donor?.city && donor.city !== "-" ? donor.city : "—",
-        "Donor PAN": donor?.pan && donor.pan !== "-" ? donor.pan : "—",
-        "Donor Category": donor?.category || "—",
-        "Donor 80G Consent": donor?.eligible80G ? "Yes" : "No"
       };
     });
-    downloadCsv(rows as any[], `donation-register-${activeTab.toLowerCase()}-${new Date().toISOString().split("T")[0]}.csv`);
+    downloadCsv(rows as any[], `non-cash-donations-${activeTab.toLowerCase()}-${new Date().toISOString().split("T")[0]}.csv`);
     toast({ title: "CSV exported", description: `${rows.length} donation${rows.length !== 1 ? "s" : ""} downloaded` });
+  };
+
+  const handleAddDonation = () => {
+    navigate("/temple/donations/add", { state: { nature: "Non-Cash" } });
   };
 
   const sel = selectedDonation;
@@ -188,8 +145,8 @@ const DonationsList = () => {
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div className="shrink-0">
-          <h1 className="text-2xl font-bold">Cash & Online Donations</h1>
-          <p className="text-sm text-muted-foreground mt-1">View and manage cash, UPI, bank transfer, and cheque donations</p>
+          <h1 className="text-2xl font-bold">Non-Cash Donations</h1>
+          <p className="text-sm text-muted-foreground mt-1">Track material and in-kind contributions like gold, grains, clothes, and assets</p>
         </div>
         <div className="flex items-center gap-2 ml-auto flex-wrap justify-end">
           <div className="flex items-center gap-1.5">
@@ -204,50 +161,46 @@ const DonationsList = () => {
             <Button variant="ghost" size="sm" onClick={() => { setFromDate(""); setToDate(""); }}>Clear</Button>
           )}
           <Button variant="outline" onClick={handleExport}><Download className="h-4 w-4 mr-2" />Export</Button>
-          <Button variant="outline" onClick={() => setBulkImportOpen(true)} className="gap-2 border-emerald-300 hover:bg-emerald-50 hover:text-emerald-800">
-            <Upload className="h-4 w-4" />Bulk Import
-          </Button>
-          <Button onClick={() => setAddOpen(true)}><Plus className="h-4 w-4 mr-2" />Add Donation</Button>
+          <Button onClick={handleAddDonation} className="bg-amber-600 hover:bg-amber-700 text-white"><Plus className="h-4 w-4 mr-2" />Add In-Kind Donation</Button>
         </div>
       </div>
-      <AddDonationDialog open={addOpen} onOpenChange={setAddOpen} />
-      <BulkImportDonationsDialog open={bulkImportOpen} onOpenChange={setBulkImportOpen} />
+
+      {/* Indian IT Act Warning Banner */}
+      <div className="bg-amber-50/50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 text-sm text-amber-800">
+        <Info className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+        <div>
+          <p className="font-semibold">Compliance Note (Section 80G)</p>
+          <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+            Please note that under current Indian Income Tax regulations, In-Kind (Non-Cash) donations are strictly not eligible for Section 80G tax exemptions. 
+            All receipts generated here are ordinary donation receipts, and no 80G certificates will be created.
+          </p>
+        </div>
+      </div>
 
       {/* Search & Filters */}
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search by donor name, receipt number, or donation ID..."
+          <Input placeholder="Search by donor, receipt, or material item name..."
             value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
         </div>
-        <Select value={taxFilter} onValueChange={(v) => setTaxFilter(v as any)}>
-          <SelectTrigger className="w-[180px] shrink-0">
-            <SelectValue placeholder="80G Eligibility" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All (80G & Non-80G)</SelectItem>
-            <SelectItem value="80g">80G Tax Exemption</SelectItem>
-            <SelectItem value="no-80g">Non-80G / Direct</SelectItem>
-          </SelectContent>
-        </Select>
         <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as any)}>
-          <SelectTrigger className="w-[150px] shrink-0">
+          <SelectTrigger className="w-[180px] shrink-0">
             <SelectValue placeholder="All Sources" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Sources</SelectItem>
-            <SelectItem value="Online">🌐 Online</SelectItem>
-            <SelectItem value="Counter">🏪 Counter</SelectItem>
+            <SelectItem value="Counter">🏪 Counter Entry</SelectItem>
+            <SelectItem value="Campaign">📢 Campaign</SelectItem>
+            <SelectItem value="Manual">✍️ Manual Entry</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-
-
-      {/* Tabs + Table (UNCHANGED) */}
+      {/* Tabs + Table */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DonationType)}>
         <TabsList>
-          <TabsTrigger value="All">All</TabsTrigger>
+          <TabsTrigger value="All">All Items</TabsTrigger>
           <TabsTrigger value="General">General</TabsTrigger>
           <TabsTrigger value="Projects">Projects</TabsTrigger>
           <TabsTrigger value="Events">Events</TabsTrigger>
@@ -264,24 +217,24 @@ const DonationsList = () => {
                       <TableHead>Date</TableHead>
                       <TableHead>Donation ID</TableHead>
                       <TableHead>Donor Name</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Fund</TableHead>
-                      <TableHead>Donation Type</TableHead>
-                      <TableHead>Ref No / Txn ID</TableHead>
-                      <TableHead>Donation Receipt</TableHead>
-                      <TableHead>80G Receipt</TableHead>
-                      <TableHead>PAN No</TableHead>
+                      <TableHead>Material / Item</TableHead>
+                      <TableHead className="text-right">Qty / Count</TableHead>
+                      <TableHead className="text-right">Est. Value</TableHead>
+                      <TableHead>Fund / Purpose</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead>Receipt</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredDonations.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center text-muted-foreground py-8">No donations found</TableCell>
+                        <TableCell colSpan={10} className="text-center text-muted-foreground py-8">No non-cash donations found</TableCell>
                       </TableRow>
                     ) : filteredDonations.map((donation) => {
                       const donationType = getDonationType(donation);
                       const isSelected = sel?.donationId === donation.donationId;
-                      const receipt80G = get80GReceipt(donation.donationId);
+                      const details = donation.nonCashDetails;
                       return (
                         <TableRow
                           key={donation.donationId}
@@ -293,37 +246,20 @@ const DonationsList = () => {
                           </TableCell>
                           <TableCell className="font-mono text-xs">{donation.donationId || "—"}</TableCell>
                           <TableCell className="font-medium">{donation.donorName || "—"}</TableCell>
-                          <TableCell className="text-right font-semibold">{formatCurrency(donation.amount)}</TableCell>
+                          <TableCell className="font-semibold text-amber-800">{details?.assetName || "—"}</TableCell>
+                          <TableCell className="text-right font-medium">{details ? `${details.quantity} ${details.unit}` : "—"}</TableCell>
+                          <TableCell className="text-right font-semibold text-muted-foreground">{formatCurrency(donation.amount)}</TableCell>
                           <TableCell>{donation.purpose || "—"}</TableCell>
                           <TableCell>
                             <Badge className={typeColors[donationType] || "bg-gray-100 text-gray-700"}>{donationType}</Badge>
                           </TableCell>
-                          <TableCell className="font-mono text-xs">{donation.referenceNo || "—"}</TableCell>
+                          <TableCell className="text-xs">{donation.sourceModule || "Manual"}</TableCell>
                           <TableCell className="font-mono text-xs">
                             <Button variant="link" size="sm"
                               className="h-auto p-0 text-xs text-primary hover:underline"
                               onClick={(e) => { e.stopPropagation(); handleDownloadReceipt(donation); }}>
                               <Receipt className="h-3 w-3 mr-1" />{donation.receiptNo}
                             </Button>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {receipt80G ? (
-                              <Button variant="link" size="sm"
-                                className="h-auto p-0 text-xs text-green-700 hover:underline"
-                                onClick={(e) => { e.stopPropagation(); handleDownload80G(donation); }}>
-                                <Award className="h-3 w-3 mr-1" />{receipt80G.receipt80GId}
-                              </Button>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {(() => {
-                              const amount = typeof donation?.amount === "number" && Number.isFinite(donation.amount) ? donation.amount : 0;
-                              if (amount < 10000) return "—";
-                              const donor = getDonorInfo(donation.donorId);
-                              return donor?.pan && donor.pan !== "-" ? donor.pan : "—";
-                            })()}
                           </TableCell>
                         </TableRow>
                       );
@@ -336,21 +272,17 @@ const DonationsList = () => {
 
           {filteredDonations.length > 0 && (
             <div className="mt-4 text-sm text-muted-foreground">
-              Showing {filteredDonations.length} donation{filteredDonations.length !== 1 ? "s" : ""} •{" "}
-              Total: <span className="font-semibold text-foreground">
-                {formatCurrency(filteredDonations.reduce((sum, d) => {
-                  const a = typeof d?.amount === "number" && Number.isFinite(d.amount) ? d.amount : 0;
-                  return sum + a;
-                }, 0))}
+              Showing {filteredDonations.length} material donation{filteredDonations.length !== 1 ? "s" : ""} •{" "}
+              Total Est. Value: <span className="font-semibold text-foreground">
+                {formatCurrency(filteredDonations.reduce((sum, d) => sum + (d.amount || 0), 0))}
               </span>
             </div>
           )}
         </TabsContent>
       </Tabs>
 
-      {/* ── Detail panel — fixed to right side of viewport, no scroll ── */}
+      {/* Detail panel */}
       {sel && (
-        /* Backdrop: clicking outside closes the panel */
         <div
           className="fixed inset-0 z-30"
           onClick={() => setSelectedDonation(null)}
@@ -363,14 +295,14 @@ const DonationsList = () => {
             {/* Header */}
             <div className="flex items-center justify-between mb-3 shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <span className="font-bold text-primary">{sel.donorName?.charAt(0)?.toUpperCase() ?? "D"}</span>
+                <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                  <Package className="h-5 w-5 text-amber-700" />
                 </div>
                 <div>
                   <p className="font-semibold text-sm leading-tight">{sel.donorName}</p>
                   <div className="flex items-center gap-1 mt-0.5">
                     <Badge className={`text-[10px] px-1.5 py-0 ${typeColors[selType] || ""}`}>{selType}</Badge>
-                    {sel.is80G && <Badge className="text-[10px] px-1.5 py-0 bg-green-100 text-green-700">80G</Badge>}
+                    <Badge className="text-[10px] px-1.5 py-0 bg-amber-100 text-amber-800">In-Kind</Badge>
                   </div>
                 </div>
               </div>
@@ -379,25 +311,28 @@ const DonationsList = () => {
               </Button>
             </div>
 
-            {/* Amount */}
-            <div className="rounded-xl bg-primary/5 border border-primary/15 px-4 py-3 text-center mb-4 shrink-0">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Donation Amount</p>
-              <p className="text-3xl font-bold text-primary mt-0.5">{formatCurrency(sel.amount)}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {sel.date ? new Date(sel.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}
+            {/* Material Summary */}
+            <div className="rounded-xl bg-amber-50/50 border border-amber-200 px-4 py-3 text-center mb-4 shrink-0">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Material & Value</p>
+              <p className="text-xl font-bold text-amber-900 mt-0.5">{sel.nonCashDetails?.assetName}</p>
+              <p className="text-sm font-semibold text-amber-700 mt-0.5">
+                {sel.nonCashDetails?.quantity} {sel.nonCashDetails?.unit}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Est. Value: {formatCurrency(sel.amount)}
               </p>
             </div>
 
             {/* Donation details */}
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1 shrink-0">Donation</p>
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1 shrink-0">In-Kind Details</p>
             <Separator className="mb-2 shrink-0" />
             <div className="grid grid-cols-2 gap-x-3 shrink-0">
               {[
                 { icon: Hash, label: "Donation ID", value: sel.donationId },
-                { icon: Banknote, label: "Purpose", value: sel.purpose },
-                { icon: CreditCard, label: "Payment", value: sel.mode || sel.channel },
-                ...(sel.referenceNo ? [{ icon: Hash, label: "Ref No", value: sel.referenceNo }] : []),
-                ...(sel.counterId ? [{ icon: Hash, label: "Counter", value: sel.counterId }] : []),
+                { icon: Receipt, label: "Receipt No", value: sel.receiptNo },
+                { icon: Package, label: "Purpose / Fund", value: sel.purpose },
+                { icon: Info, label: "Source", value: sel.sourceModule },
+                { icon: Info, label: "Date", value: sel.date },
               ].map(({ icon: Icon, label, value }) => value ? (
                 <div key={label} className="flex items-start gap-2 py-1.5">
                   <div className="h-6 w-6 rounded bg-muted flex items-center justify-center shrink-0 mt-0.5">
@@ -419,7 +354,6 @@ const DonationsList = () => {
                 { icon: User, label: "Name", value: selDonor?.name || sel.donorName },
                 { icon: Phone, label: "Mobile", value: selDonor?.phone },
                 { icon: Mail, label: "Email", value: selDonor?.email && selDonor.email !== "-" ? selDonor.email : undefined },
-                { icon: CreditCard, label: "PAN", value: selDonor?.pan && selDonor.pan !== "-" ? selDonor.pan : undefined },
                 { icon: MapPin, label: "City", value: selDonor?.city && selDonor.city !== "-" ? selDonor.city : undefined },
               ].map(({ icon: Icon, label, value }) => value ? (
                 <div key={label} className="flex items-start gap-2 py-1.5">
@@ -434,6 +368,17 @@ const DonationsList = () => {
               ) : null)}
             </div>
 
+            {/* Remarks */}
+            {sel.remarks && (
+              <>
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mt-3 mb-1 shrink-0">Remarks</p>
+                <Separator className="mb-2 shrink-0" />
+                <div className="bg-muted p-2 rounded text-xs text-muted-foreground shrink-0 leading-relaxed max-h-24 overflow-y-auto">
+                  {sel.remarks}
+                </div>
+              </>
+            )}
+
             {/* Spacer */}
             <div className="flex-1" />
           </CardContent>
@@ -443,4 +388,4 @@ const DonationsList = () => {
   );
 };
 
-export default DonationsList;
+export default NonCashDonationsList;

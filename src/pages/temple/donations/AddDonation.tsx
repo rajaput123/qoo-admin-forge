@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Check, Receipt, MessageCircle, Save, ArrowLeft, ArrowRight, Search, UserPlus, User, Award } from "lucide-react";
+import { Check, Receipt, MessageCircle, Save, ArrowLeft, ArrowRight, Search, UserPlus, User, Award, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { recordDonation, getReceipt80GForDonation } from "@/modules/donations/donationsStore";
 import { useDonationConfig, useDonors } from "@/modules/donations/hooks";
@@ -148,7 +148,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
   // ── Derived ──
   const amt = parseFloat(isCash ? amount : ncValue) || 0;
   const suggests80G = amt >= donationConfig.eightyGThreshold;
-  const effective80G = wants80G === "" ? (suggests80G ? "Yes" : "") : wants80G;
+  const effective80G = !isCash ? "No" : (wants80G === "" ? (suggests80G ? "Yes" : "") : wants80G);
   const is80GSelected = effective80G === "Yes";
   const panRequired  = false;
   const panValid     = !pan.trim() || PAN_REGEX.test(pan.toUpperCase());
@@ -165,7 +165,7 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
   // Cash:     Step 0 = Amount, 80G & Purpose | Step 1 = Donor Info | Step 2 = Payment | Step 3 = Review
   // Non-cash: Step 0 = Material | Step 1 = 80G, PAN & Purpose | Step 2 = Donor Info | Step 3 = Review
   const cashSteps   = ["Amount & Purpose", "Donor Info", "Payment", "Review"];
-  const ncashSteps  = ["Material", "80G & Purpose", "Donor Info", "Review"];
+  const ncashSteps  = ["Material", "Purpose & Remarks", "Donor Info", "Review"];
   const stepLabels  = isCash ? cashSteps : ncashSteps;
 
   // ── Step validity ──
@@ -316,32 +316,45 @@ const AddDonation = ({ embedded = false, initialNature, onSaved, onClose }: Prop
       <div className="space-y-6">
         {/* Amount + 80G + PAN row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {isCash && (
-            <div className="space-y-2">
-              <Label>Donation Amount (₹) *</Label>
-              <Input type="number" placeholder="0" value={amount} onChange={e=>setAmount(e.target.value)} />
-              {suggests80G && <p className="text-[11px] text-amber-600">Amount ≥ ₹{donationConfig.eightyGThreshold.toLocaleString("en-IN")} — 80G recommended.</p>}
-              {!minOk && amt > 0 && <FieldError t={`Minimum donation amount is ₹${donationConfig.minDonationAmount.toLocaleString("en-IN")}.`} />}
+          {isCash ? (
+            <>
+              <div className="space-y-2">
+                <Label>Donation Amount (₹) *</Label>
+                <Input type="number" placeholder="0" value={amount} onChange={e=>setAmount(e.target.value)} />
+                {suggests80G && <p className="text-[11px] text-amber-600">Amount ≥ ₹{donationConfig.eightyGThreshold.toLocaleString("en-IN")} — 80G recommended.</p>}
+                {!minOk && amt > 0 && <FieldError t={`Minimum donation amount is ₹${donationConfig.minDonationAmount.toLocaleString("en-IN")}.`} />}
+              </div>
+              <div className="space-y-2">
+                <Label>80G Tax Exemption *</Label>
+                <Select value={effective80G} onValueChange={v=>setWants80G(v as "Yes"|"No")}>
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Yes">Yes — I want 80G</SelectItem>
+                    <SelectItem value="No">No — Skip 80G</SelectItem>
+                  </SelectContent>
+                </Select>
+                {suggests80G && effective80G === "Yes" && <FieldInfo t={`Auto-suggested (amount ≥ ₹${donationConfig.eightyGThreshold.toLocaleString("en-IN")}). You can change this.`} />}
+              </div>
+              <div className="space-y-2">
+                <Label>PAN Number {panRequired && <span className="text-destructive">*</span>}</Label>
+                <Input placeholder="ABCDE1234F" maxLength={10} value={pan} onChange={e=>setPan(e.target.value.toUpperCase())} />
+                {panRequired && pan.trim().length === 0
+                  ? <FieldError t="PAN is required." />
+                  : (pan.trim().length > 0 && !panValid ? <FieldError t="Invalid PAN. Format: AAAAA9999A" /> : <FieldInfo t="Format: AAAAA9999A" />)}
+              </div>
+            </>
+          ) : (
+            <div className="md:col-span-3 bg-amber-50/50 border border-amber-200 rounded-xl p-4 flex items-start gap-3 text-sm text-amber-800">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+              <div>
+                <p className="font-semibold">80G Tax Exemption Not Applicable</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                  Under Section 80G of the Income Tax Act, in-kind (non-cash) donations such as gold, grain, or assets are strictly not eligible for tax exemption. 
+                  An ordinary donation receipt will be generated, but no 80G certificate can be issued.
+                </p>
+              </div>
             </div>
           )}
-          <div className="space-y-2">
-            <Label>80G Tax Exemption *</Label>
-            <Select value={effective80G} onValueChange={v=>setWants80G(v as "Yes"|"No")}>
-              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Yes">Yes — I want 80G</SelectItem>
-                <SelectItem value="No">No — Skip 80G</SelectItem>
-              </SelectContent>
-            </Select>
-            {suggests80G && effective80G === "Yes" && <FieldInfo t={`Auto-suggested (amount ≥ ₹${donationConfig.eightyGThreshold.toLocaleString("en-IN")}). You can change this.`} />}
-          </div>
-          <div className="space-y-2">
-            <Label>PAN Number {panRequired && <span className="text-destructive">*</span>}</Label>
-            <Input placeholder="ABCDE1234F" maxLength={10} value={pan} onChange={e=>setPan(e.target.value.toUpperCase())} />
-            {panRequired && pan.trim().length === 0
-              ? <FieldError t="PAN is required." />
-              : (pan.trim().length > 0 && !panValid ? <FieldError t="Invalid PAN. Format: AAAAA9999A" /> : <FieldInfo t="Format: AAAAA9999A" />)}
-          </div>
         </div>
 
         {/* Donation Purpose — inline in step 1 */}

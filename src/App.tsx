@@ -159,6 +159,7 @@ import TempleWebsite from "./pages/temple/communication/TempleWebsite";
 import DonationsLayout from "./pages/temple/DonationsLayout";
 import DonationDashboard from "./pages/temple/donations/Dashboard";
 import DonationsList from "./pages/temple/donations/DonationsList";
+import NonCashDonationsList from "./pages/temple/donations/NonCashDonationsList";
 import AddDonation from "./pages/temple/donations/AddDonation";
 import DonorRegistry from "./pages/temple/donations/DonorRegistry";
 import Funds from "./pages/temple/donations/Funds";
@@ -406,6 +407,7 @@ const App = () => {
             }>
               <Route index element={<ErrorBoundary><DonationDashboard /></ErrorBoundary>} />
               <Route path="list" element={<ErrorBoundary><DonationsList /></ErrorBoundary>} />
+              <Route path="non-cash" element={<ErrorBoundary><NonCashDonationsList /></ErrorBoundary>} />
               <Route path="add" element={<ErrorBoundary><AddDonation /></ErrorBoundary>} />
               <Route path="donors" element={<ErrorBoundary><DonorRegistry /></ErrorBoundary>} />
               <Route path="config" element={<ErrorBoundary><DonationConfiguration /></ErrorBoundary>} />

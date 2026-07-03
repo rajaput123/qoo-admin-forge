@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,13 @@ const sourceIcon = (s: string) => s === "Online" ? "🌐" : s === "Counter" ? "�
 
 const BookingsToday = () => {
   const liveBookings = useSevaBookings();
+  const [mockBookings, setMockBookings] = useState(MOCK_TODAY_BOOKINGS);
+
+  const handleMarkCompleted = useCallback((id: string) => {
+    setMockBookings(prev =>
+      prev.map(b => b.id === id ? { ...b, bookingStatus: "Completed" } : b)
+    );
+  }, []);
 
   const todayBookings = useMemo(() => {
     const todayStr = new Date().toISOString().split("T")[0];
@@ -38,7 +45,7 @@ const BookingsToday = () => {
 
     // If no bookings exist at all, fall back to mock data
     if (liveToday.length === 0 && liveBookings.length === 0) {
-      return MOCK_TODAY_BOOKINGS;
+      return mockBookings;
     }
 
     return liveToday.map(b => ({
@@ -114,7 +121,21 @@ const BookingsToday = () => {
             <div className="flex gap-2">
               <Button variant="outline" size="sm" className="gap-2"><Printer className="h-4 w-4" />Print Receipt</Button>
               <Button variant="outline" size="sm" className="gap-2"><MessageSquare className="h-4 w-4" />SMS</Button>
-              {b.bookingStatus === "Confirmed" && <Button size="sm">Mark Completed</Button>}
+              {b.bookingStatus === "Confirmed" && (
+                <Button
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white gap-2"
+                  onClick={() => {
+                    handleMarkCompleted(b.id);
+                    setViewing(prev => prev ? { ...prev, bookingStatus: "Completed" } : prev);
+                  }}
+                >
+                  ✓ Mark Completed
+                </Button>
+              )}
+              {b.bookingStatus === "Completed" && (
+                <Badge className="bg-blue-100 text-blue-700 border-blue-200 px-3 py-1.5 text-sm">✓ Completed</Badge>
+              )}
             </div>
           </div>
 
@@ -243,7 +264,7 @@ const BookingsToday = () => {
           </Select>
           <Select value={filterSource} onValueChange={setFilterSource}>
             <SelectTrigger className="w-[140px] bg-background"><SelectValue /></SelectTrigger>
-            <SelectContent className="bg-popover"><SelectItem value="all">All Sources</SelectItem><SelectItem value="Online">Online</SelectItem><SelectItem value="Counter">Counter</SelectItem><SelectItem value="Admin">Admin</SelectItem></SelectContent>
+            <SelectContent className="bg-popover"><SelectItem value="all">All Sources</SelectItem><SelectItem value="Online">🌐 Online</SelectItem><SelectItem value="Counter">🏪 Counter</SelectItem></SelectContent>
           </Select>
           <Badge variant="secondary" className="ml-auto">{filtered.length} bookings</Badge>
         </div>

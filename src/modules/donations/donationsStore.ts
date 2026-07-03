@@ -598,7 +598,7 @@ export function recordDonation(input: {
 
   const ids = nextDonationIds(afterDonor, nature, date);
   const hasPan = input.pan !== undefined && input.pan !== "-" && input.pan.length >= 10;
-  const is80G = getTempleConfig().eightyGEnabled && input.wants80G !== false && hasPan;
+  const is80G = nature === "Cash" && getTempleConfig().eightyGEnabled && input.wants80G !== false && hasPan;
   const receiptFilePath = `/receipts/${ids.receiptNo}.pdf`;
 
   const donation: Donation = {
