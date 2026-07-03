@@ -47,7 +47,6 @@ const PricingRules = () => {
   const [form, setForm] = useState({
     offering: "", type: "Ritual" as "Ritual" | "Darshan", basePrice: 0, price: 0, festivalPrice: 0, advanceBookingDays: 30, cancellationPolicy: "", refundPolicy: "", maxPerDevotee: 2,
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const availableOfferings = [
     "Suprabhatam", "Archana", "Abhishekam", "Morning Darshan", "VIP Darshan", "Sahasranama", "Special Puja", "Ashtottara", "Ekantha Seva"
@@ -65,7 +64,6 @@ const PricingRules = () => {
     setForm({ offering: "", type: "Ritual", basePrice: 0, price: 0, festivalPrice: 0, advanceBookingDays: 30, cancellationPolicy: "", refundPolicy: "", maxPerDevotee: 2 });
     setEditing(null);
     setCustomFields([]);
-    setErrors({});
   };
 
   const openAdd = () => {
@@ -80,31 +78,14 @@ const PricingRules = () => {
   };
 
   const handleSave = () => {
-    const errs: Record<string, string> = {};
-
-    if (!editing && !form.offering) errs.offering = "Please select an offering.";
-    if (form.basePrice < 0) errs.basePrice = "Base price cannot be negative.";
-    if (form.price < 0) errs.price = "Price cannot be negative.";
-    if (form.festivalPrice < 0) errs.festivalPrice = "Festival price cannot be negative.";
-    if (form.advanceBookingDays < 0) errs.advanceBookingDays = "Advance booking days cannot be negative.";
-    if (form.maxPerDevotee < 1) errs.maxPerDevotee = "Max per devotee must be at least 1.";
-    if (!form.cancellationPolicy.trim()) errs.cancellationPolicy = "Cancellation policy is required.";
-    else if (form.cancellationPolicy.trim().length > 1000) errs.cancellationPolicy = "Cancellation policy cannot exceed 1000 characters.";
-
-    if (!form.refundPolicy.trim()) errs.refundPolicy = "Refund policy is required.";
-    else if (form.refundPolicy.trim().length > 1000) errs.refundPolicy = "Refund policy cannot exceed 1000 characters.";
-
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      toast.error("Please fix the highlighted errors before saving.");
-      return;
-    }
-    setErrors({});
-
     if (editing) {
       setRules(rules.map(r => r.id === editing.id ? { ...r, ...form } : r));
       toast.success("Pricing updated");
     } else {
+      if (!form.offering) {
+        toast.error("Please select an offering");
+        return;
+      }
       const newRule: PricingRule = {
         id: Date.now().toString(),
         ...form,
@@ -191,7 +172,7 @@ const PricingRules = () => {
               <>
                 <div>
                   <Label>Offering</Label>
-                  <Select value={form.offering} onValueChange={v => { setForm({ ...form, offering: v }); if (errors.offering) setErrors(p => ({ ...p, offering: "" })); }}>
+                  <Select value={form.offering} onValueChange={v => setForm({ ...form, offering: v })}>
                     <SelectTrigger className="bg-background"><SelectValue placeholder="Select offering" /></SelectTrigger>
                     <SelectContent className="bg-popover">
                       {availableOfferings.filter(o => !rules.some(r => r.offering === o)).map(o => (
@@ -199,7 +180,6 @@ const PricingRules = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {errors.offering && <p className="text-xs text-destructive mt-1">{errors.offering}</p>}
                 </div>
                 <div>
                   <Label>Type</Label>
@@ -217,16 +197,8 @@ const PricingRules = () => {
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Pricing</p>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Base Price (₹)</Label>
-                  <Input type="number" min={0} value={form.basePrice} onChange={e => { setForm({ ...form, basePrice: +e.target.value }); if (errors.basePrice) setErrors(p => ({ ...p, basePrice: "" })); }} className={errors.basePrice ? "border-destructive" : ""} />
-                  {errors.basePrice && <p className="text-xs text-destructive mt-1">{errors.basePrice}</p>}
-                </div>
-                <div>
-                  <Label>Price (₹)</Label>
-                  <Input type="number" min={0} value={form.price} onChange={e => { setForm({ ...form, price: +e.target.value }); if (errors.price) setErrors(p => ({ ...p, price: "" })); }} className={errors.price ? "border-destructive" : ""} />
-                  {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
-                </div>
+                <div><Label>Base Price (₹)</Label><Input type="number" value={form.basePrice} onChange={e => setForm({ ...form, basePrice: +e.target.value })} /></div>
+                <div><Label>Price (₹)</Label><Input type="number" value={form.price} onChange={e => setForm({ ...form, price: +e.target.value })} /></div>
               </div>
               {form.basePrice > 0 && (
                 <div className="mt-3">
@@ -253,49 +225,20 @@ const PricingRules = () => {
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Other Settings</p>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Festival Price (₹)</Label>
-                  <Input type="number" min={0} value={form.festivalPrice} onChange={e => { setForm({ ...form, festivalPrice: +e.target.value }); if (errors.festivalPrice) setErrors(p => ({ ...p, festivalPrice: "" })); }} className={errors.festivalPrice ? "border-destructive" : ""} />
-                  {errors.festivalPrice && <p className="text-xs text-destructive mt-1">{errors.festivalPrice}</p>}
-                </div>
-                <div>
-                  <Label>Advance Booking (Days)</Label>
-                  <Input type="number" min={0} value={form.advanceBookingDays} onChange={e => { setForm({ ...form, advanceBookingDays: +e.target.value }); if (errors.advanceBookingDays) setErrors(p => ({ ...p, advanceBookingDays: "" })); }} className={errors.advanceBookingDays ? "border-destructive" : ""} />
-                  {errors.advanceBookingDays && <p className="text-xs text-destructive mt-1">{errors.advanceBookingDays}</p>}
-                </div>
+                <div><Label>Festival Price (₹)</Label><Input type="number" value={form.festivalPrice} onChange={e => setForm({ ...form, festivalPrice: +e.target.value })} /></div>
+                <div><Label>Advance Booking (Days)</Label><Input type="number" value={form.advanceBookingDays} onChange={e => setForm({ ...form, advanceBookingDays: +e.target.value })} /></div>
               </div>
               <div className="mt-3">
                 <Label>Max per Devotee</Label>
-                <Input type="number" min={1} value={form.maxPerDevotee} onChange={e => { setForm({ ...form, maxPerDevotee: +e.target.value }); if (errors.maxPerDevotee) setErrors(p => ({ ...p, maxPerDevotee: "" })); }} className={errors.maxPerDevotee ? "border-destructive" : ""} />
-                {errors.maxPerDevotee && <p className="text-xs text-destructive mt-1">{errors.maxPerDevotee}</p>}
+                <Input type="number" value={form.maxPerDevotee} onChange={e => setForm({ ...form, maxPerDevotee: +e.target.value })} />
               </div>
             </div>
             <Separator />
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Policies</p>
               <div className="space-y-3">
-                <div>
-                  <Label>Cancellation Policy <span className="text-destructive">*</span></Label>
-                  <Textarea
-                    value={form.cancellationPolicy}
-                    onChange={e => { setForm({ ...form, cancellationPolicy: e.target.value }); if (errors.cancellationPolicy) setErrors(p => ({ ...p, cancellationPolicy: "" })); }}
-                    rows={2}
-                    maxLength={1000}
-                    className={errors.cancellationPolicy ? "border-destructive" : ""}
-                  />
-                  {errors.cancellationPolicy && <p className="text-xs text-destructive mt-1">{errors.cancellationPolicy}</p>}
-                </div>
-                <div>
-                  <Label>Refund Policy <span className="text-destructive">*</span></Label>
-                  <Textarea
-                    value={form.refundPolicy}
-                    onChange={e => { setForm({ ...form, refundPolicy: e.target.value }); if (errors.refundPolicy) setErrors(p => ({ ...p, refundPolicy: "" })); }}
-                    rows={2}
-                    maxLength={1000}
-                    className={errors.refundPolicy ? "border-destructive" : ""}
-                  />
-                  {errors.refundPolicy && <p className="text-xs text-destructive mt-1">{errors.refundPolicy}</p>}
-                </div>
+                <div><Label>Cancellation Policy</Label><Textarea value={form.cancellationPolicy} onChange={e => setForm({ ...form, cancellationPolicy: e.target.value })} rows={2} /></div>
+                <div><Label>Refund Policy</Label><Textarea value={form.refundPolicy} onChange={e => setForm({ ...form, refundPolicy: e.target.value })} rows={2} /></div>
               </div>
             </div>
             <Separator />

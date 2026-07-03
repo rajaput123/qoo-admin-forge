@@ -67,6 +67,8 @@ interface Offering {
   prasadamItems?: PrasadamItem[];
   images: string[];
   createdAt: string;
+  assignedPriest?: string;
+  receiptTemplate?: string;
 }
 
 const mockOfferings: Offering[] = [
@@ -131,6 +133,7 @@ const OfferingsList = () => {
     prasadamIncluded: false,
     prasadamItems: [] as PrasadamItem[],
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -160,6 +163,7 @@ const OfferingsList = () => {
     setForm({ name: "", type: "Ritual", category: "", structure: "", description: "", defaultTime: "", endTime: "", frequency: "Daily" as FrequencyType, dateRange: "", capacity: 50, maxPerDevotee: 2, groupBooking: false, free: false, basePrice: 0, price: 0, priestRequired: true, sankalpam: true, gothram: true, nakshatra: false, walkinTracking: false, vipEnabled: false, availableOnline: true, availableCounter: true, assignedPriest: "", receiptTemplate: "", prasadamIncluded: false, prasadamItems: [] });
     setEditing(null);
     setCustomFields([]);
+    setErrors({});
   };
 
   const getDiscount = () => {
@@ -173,12 +177,63 @@ const OfferingsList = () => {
   const openModal = (o?: Offering) => {
     if (o) {
       setEditing(o);
-      setForm({ name: o.name, type: o.type, category: o.category, structure: o.structure, description: o.description, defaultTime: o.defaultTime, endTime: o.endTime, frequency: o.frequency as FrequencyType, dateRange: o.dateRange, capacity: o.capacity, maxPerDevotee: o.maxPerDevotee, groupBooking: o.groupBooking, free: o.free, basePrice: o.basePrice, price: o.price || o.basePrice, priestRequired: o.priestRequired, sankalpam: o.sankalpam, gothram: o.gothram, nakshatra: o.nakshatra, walkinTracking: o.walkinTracking, vipEnabled: o.vipEnabled, availableOnline: o.availableOnline ?? true, availableCounter: o.availableCounter ?? true, assignedPriest: (o as any).assignedPriest || "", receiptTemplate: (o as any).receiptTemplate || "", prasadamIncluded: o.prasadamIncluded || false, prasadamItems: (o.prasadamItems || []).map(item => ({ ...item, showOnline: item.showOnline ?? true })) });
+      setForm({ name: o.name, type: o.type, category: o.category, structure: o.structure, description: o.description, defaultTime: o.defaultTime, endTime: o.endTime, frequency: o.frequency as FrequencyType, dateRange: o.dateRange, capacity: o.capacity, maxPerDevotee: o.maxPerDevotee, groupBooking: o.groupBooking, free: o.free, basePrice: o.basePrice, price: o.price || o.basePrice, priestRequired: o.priestRequired, sankalpam: o.sankalpam, gothram: o.gothram, nakshatra: o.nakshatra, walkinTracking: o.walkinTracking, vipEnabled: o.vipEnabled, availableOnline: o.availableOnline ?? true, availableCounter: o.availableCounter ?? true, assignedPriest: o.assignedPriest || "", receiptTemplate: o.receiptTemplate || "", prasadamIncluded: o.prasadamIncluded || false, prasadamItems: (o.prasadamItems || []).map(item => ({ ...item, showOnline: item.showOnline ?? true })) });
     } else resetForm();
     setIsModalOpen(true);
   };
 
   const handleSave = () => {
+    const errs: Record<string, string> = {};
+
+    // Basic details
+    if (!form.name.trim()) errs.name = "Offering name is required.";
+    else if (form.name.trim().length > 100) errs.name = "Offering name cannot exceed 100 characters.";
+
+    if (!form.category) errs.category = "Category is required.";
+    if (!form.structure) errs.structure = "Location / Structure is required.";
+    if (form.description.trim().length > 500) errs.description = "Description cannot exceed 500 characters.";
+
+    // Scheduling
+    if (!form.defaultTime) errs.defaultTime = "Start time is required.";
+    if (!form.endTime) errs.endTime = "End time is required.";
+    if (form.defaultTime && form.endTime && form.endTime <= form.defaultTime)
+      errs.endTime = "End time must be after start time.";
+    if (form.frequency === "Weekly" && selectedDays.length === 0)
+      errs.weeklyDays = "Select at least one day of the week.";
+    if (form.frequency === "Monthly" && monthlyScope === "specific" && selectedMonths.length === 0)
+      errs.selectedMonths = "Select at least one month.";
+
+    // Capacity
+    if (!form.capacity || form.capacity < 1) errs.capacity = "Capacity must be at least 1.";
+    if (!form.maxPerDevotee || form.maxPerDevotee < 1) errs.maxPerDevotee = "Max per devotee must be at least 1.";
+
+    // Pricing
+    if (!form.free) {
+      if (form.basePrice < 0) errs.basePrice = "Base price cannot be negative.";
+      if (form.price < 0) errs.price = "Price cannot be negative.";
+      if (!form.basePrice && form.basePrice !== 0) errs.basePrice = "Base price is required.";
+    }
+
+    // Booking channels
+    if (!form.availableOnline && !form.availableCounter)
+      errs.channels = "At least one booking channel (Online or Counter) must be enabled.";
+
+    // Prasadam
+    if (form.prasadamIncluded) {
+      form.prasadamItems.forEach((item, idx) => {
+        if (!item.name.trim()) errs[`prasadam_${idx}`] = "Prasadam name is required.";
+        else if (item.name.trim().length > 100) errs[`prasadam_${idx}`] = "Prasadam name cannot exceed 100 characters.";
+        if (item.quantity < 1) errs[`prasadamQty_${idx}`] = "Quantity must be at least 1.";
+      });
+    }
+
+    if (Object.keys(errs).length > 0) {
+      setErrors(errs);
+      toast.error("Please fix the highlighted errors before saving.");
+      return;
+    }
+    setErrors({});
+
     if (editing) {
       setOfferings(offerings.map(o => o.id === editing.id ? { ...o, ...form } : o));
       toast.success("Offering updated");
@@ -496,25 +551,62 @@ const OfferingsList = () => {
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Basic Details</p>
               <div className="space-y-3">
-                <div><Label>Offering Name</Label><Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Suprabhatam" /></div>
+                <div>
+                  <Label>Offering Name <span className="text-destructive">*</span></Label>
+                  <Input
+                    value={form.name}
+                    onChange={e => { setForm({ ...form, name: e.target.value }); if (errors.name) setErrors(p => ({ ...p, name: "" })); }}
+                    placeholder="e.g. Suprabhatam"
+                    className={errors.name ? "border-destructive" : ""}
+                    maxLength={100}
+                  />
+                  {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Offering Type</Label>
-                    <Select value={form.type} onValueChange={v => setForm({ ...form, type: v as any })}>
+                    <Select value={form.type} onValueChange={v => setForm({ ...form, type: v as "Ritual" | "Darshan" })}>
                       <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-popover"><SelectItem value="Ritual">Ritual</SelectItem><SelectItem value="Darshan">Darshan</SelectItem></SelectContent>
                     </Select>
                   </div>
                   <div>
-                    <Label>Category</Label>
-                    <SearchableSelect options={categoryOptions} value={form.category} onValueChange={v => setForm({ ...form, category: v })} placeholder="Select category" onAddNew={() => setIsAddCategoryOpen(true)} addNewLabel="Add Category" />
+                    <Label>Category <span className="text-destructive">*</span></Label>
+                    <SearchableSelect
+                      options={categoryOptions}
+                      value={form.category}
+                      onValueChange={v => { setForm({ ...form, category: v }); if (errors.category) setErrors(p => ({ ...p, category: "" })); }}
+                      placeholder="Select category"
+                      onAddNew={() => setIsAddCategoryOpen(true)}
+                      addNewLabel="Add Category"
+                    />
+                    {errors.category && <p className="text-xs text-destructive mt-1">{errors.category}</p>}
                   </div>
                 </div>
                 <div>
-                  <Label>Location (Structure)</Label>
-                  <SearchableSelect options={structureOptions} value={form.structure} onValueChange={v => setForm({ ...form, structure: v })} placeholder="Select structure" onAddNew={() => setIsAddStructureOpen(true)} addNewLabel="Add Structure" />
+                  <Label>Location (Structure) <span className="text-destructive">*</span></Label>
+                  <SearchableSelect
+                    options={structureOptions}
+                    value={form.structure}
+                    onValueChange={v => { setForm({ ...form, structure: v }); if (errors.structure) setErrors(p => ({ ...p, structure: "" })); }}
+                    placeholder="Select structure"
+                    onAddNew={() => setIsAddStructureOpen(true)}
+                    addNewLabel="Add Structure"
+                  />
+                  {errors.structure && <p className="text-xs text-destructive mt-1">{errors.structure}</p>}
                 </div>
-                <div><Label>Description</Label><Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Describe this offering" rows={2} /></div>
+                <div>
+                  <Label>Description</Label>
+                  <Textarea
+                    value={form.description}
+                    onChange={e => { setForm({ ...form, description: e.target.value }); if (errors.description) setErrors(p => ({ ...p, description: "" })); }}
+                    placeholder="Describe this offering"
+                    rows={2}
+                    maxLength={500}
+                    className={errors.description ? "border-destructive" : ""}
+                  />
+                  {errors.description && <p className="text-xs text-destructive mt-1">{errors.description}</p>}
+                </div>
                 <div>
                   <Label>Assign Priest</Label>
                   <SearchableSelect
@@ -550,18 +642,30 @@ const OfferingsList = () => {
                 {/* Time Pickers */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label>Default Start Time</Label>
+                    <Label>Default Start Time <span className="text-destructive">*</span></Label>
                     <div className="relative">
                       <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input type="time" value={form.defaultTime} onChange={e => setForm({ ...form, defaultTime: e.target.value })} className="pl-10" />
+                      <Input
+                        type="time"
+                        value={form.defaultTime}
+                        onChange={e => { setForm({ ...form, defaultTime: e.target.value }); if (errors.defaultTime) setErrors(p => ({ ...p, defaultTime: "", endTime: "" })); }}
+                        className={`pl-10 ${errors.defaultTime ? "border-destructive" : ""}`}
+                      />
                     </div>
+                    {errors.defaultTime && <p className="text-xs text-destructive">{errors.defaultTime}</p>}
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Default End Time</Label>
+                    <Label>Default End Time <span className="text-destructive">*</span></Label>
                     <div className="relative">
                       <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input type="time" value={form.endTime} onChange={e => setForm({ ...form, endTime: e.target.value })} className="pl-10" />
+                      <Input
+                        type="time"
+                        value={form.endTime}
+                        onChange={e => { setForm({ ...form, endTime: e.target.value }); if (errors.endTime) setErrors(p => ({ ...p, endTime: "" })); }}
+                        className={`pl-10 ${errors.endTime ? "border-destructive" : ""}`}
+                      />
                     </div>
+                    {errors.endTime && <p className="text-xs text-destructive">{errors.endTime}</p>}
                   </div>
                 </div>
 
@@ -635,13 +739,14 @@ const OfferingsList = () => {
                               key={day}
                               variant={active ? "default" : "outline"}
                               className={cn("cursor-pointer select-none px-3 py-1.5 text-sm transition-colors", active ? "bg-primary text-primary-foreground hover:bg-primary/90" : "hover:bg-muted")}
-                              onClick={() => toggleDay(day)}
+                              onClick={() => { toggleDay(day); if (errors.weeklyDays) setErrors(p => ({ ...p, weeklyDays: "" })); }}
                             >
                               {day}
                             </Badge>
                           );
                         })}
                       </div>
+                      {errors.weeklyDays && <p className="text-xs text-destructive mt-1">{errors.weeklyDays}</p>}
                     </motion.div>
                   )}
 
@@ -688,7 +793,7 @@ const OfferingsList = () => {
                                 );
                               })}
                             </div>
-                            {selectedMonths.length === 0 && <p className="text-xs text-destructive">Select at least one month.</p>}
+                            {selectedMonths.length === 0 && <p className="text-xs text-destructive">{errors.selectedMonths || "Select at least one month."}</p>}
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -748,8 +853,28 @@ const OfferingsList = () => {
             <div>
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Capacity</p>
               <div className="grid grid-cols-3 gap-3">
-                <div><Label>Default Capacity</Label><Input type="number" value={form.capacity} onChange={e => setForm({ ...form, capacity: +e.target.value })} /></div>
-                <div><Label>Max per Devotee</Label><Input type="number" value={form.maxPerDevotee} onChange={e => setForm({ ...form, maxPerDevotee: +e.target.value })} /></div>
+                <div>
+                  <Label>Default Capacity <span className="text-destructive">*</span></Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.capacity}
+                    onChange={e => { setForm({ ...form, capacity: +e.target.value }); if (errors.capacity) setErrors(p => ({ ...p, capacity: "" })); }}
+                    className={errors.capacity ? "border-destructive" : ""}
+                  />
+                  {errors.capacity && <p className="text-xs text-destructive mt-1">{errors.capacity}</p>}
+                </div>
+                <div>
+                  <Label>Max per Devotee <span className="text-destructive">*</span></Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.maxPerDevotee}
+                    onChange={e => { setForm({ ...form, maxPerDevotee: +e.target.value }); if (errors.maxPerDevotee) setErrors(p => ({ ...p, maxPerDevotee: "" })); }}
+                    className={errors.maxPerDevotee ? "border-destructive" : ""}
+                  />
+                  {errors.maxPerDevotee && <p className="text-xs text-destructive mt-1">{errors.maxPerDevotee}</p>}
+                </div>
                 <div className="flex items-end gap-2 pb-1"><Switch checked={form.groupBooking} onCheckedChange={v => setForm({ ...form, groupBooking: v })} /><Label>Group Booking</Label></div>
               </div>
             </div>
@@ -764,8 +889,28 @@ const OfferingsList = () => {
                 {!form.free && (
                   <>
                     <div className="grid grid-cols-2 gap-3">
-                      <div><Label>Base Price (₹)</Label><Input type="number" value={form.basePrice} onChange={e => setForm({ ...form, basePrice: +e.target.value })} /></div>
-                      <div><Label>Price (₹)</Label><Input type="number" value={form.price} onChange={e => setForm({ ...form, price: +e.target.value })} /></div>
+                      <div>
+                        <Label>Base Price (₹) <span className="text-destructive">*</span></Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.basePrice}
+                          onChange={e => { setForm({ ...form, basePrice: +e.target.value }); if (errors.basePrice) setErrors(p => ({ ...p, basePrice: "" })); }}
+                          className={errors.basePrice ? "border-destructive" : ""}
+                        />
+                        {errors.basePrice && <p className="text-xs text-destructive mt-1">{errors.basePrice}</p>}
+                      </div>
+                      <div>
+                        <Label>Price (₹) <span className="text-destructive">*</span></Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={form.price}
+                          onChange={e => { setForm({ ...form, price: +e.target.value }); if (errors.price) setErrors(p => ({ ...p, price: "" })); }}
+                          className={errors.price ? "border-destructive" : ""}
+                        />
+                        {errors.price && <p className="text-xs text-destructive mt-1">{errors.price}</p>}
+                      </div>
                     </div>
                     {!form.free && form.basePrice > 0 && (
                       <div>
@@ -807,8 +952,8 @@ const OfferingsList = () => {
                   <Label>Available at Counter</Label>
                 </div>
               </div>
-              {!form.availableOnline && !form.availableCounter && (
-                <p className="text-xs text-destructive mt-2">At least one channel should be enabled.</p>
+              {(!form.availableOnline && !form.availableCounter) && (
+                <p className="text-xs text-destructive mt-2">{errors.channels || "At least one channel should be enabled."}</p>
               )}
             </div>
 
@@ -835,8 +980,19 @@ const OfferingsList = () => {
                           </div>
                           <div className="grid grid-cols-3 gap-3">
                             <div>
-                              <Label className="text-xs">Prasadam Name</Label>
-                              <Input value={item.name} onChange={e => { const items = [...form.prasadamItems]; items[idx] = { ...items[idx], name: e.target.value }; setForm({ ...form, prasadamItems: items }); }} placeholder="e.g. Laddu" className="mt-1" />
+                              <Label className="text-xs">Prasadam Name <span className="text-destructive">*</span></Label>
+                              <Input
+                                value={item.name}
+                                onChange={e => {
+                                  const items = [...form.prasadamItems]; items[idx] = { ...items[idx], name: e.target.value };
+                                  setForm({ ...form, prasadamItems: items });
+                                  if (errors[`prasadam_${idx}`]) setErrors(p => ({ ...p, [`prasadam_${idx}`]: "" }));
+                                }}
+                                placeholder="e.g. Laddu"
+                                className={`mt-1 ${errors[`prasadam_${idx}`] ? "border-destructive" : ""}`}
+                                maxLength={100}
+                              />
+                              {errors[`prasadam_${idx}`] && <p className="text-xs text-destructive mt-1">{errors[`prasadam_${idx}`]}</p>}
                             </div>
                             <div>
                               <Label className="text-xs">Quantity</Label>
@@ -871,12 +1027,17 @@ const OfferingsList = () => {
               </p>
               {form.type === "Ritual" ? (
                 <div className="grid grid-cols-2 gap-3">
-                  {[["Priest Required", "priestRequired"], ["Sankalpam Required", "sankalpam"], ["Gothram Required", "gothram"], ["Nakshatra Required", "nakshatra"]].map(([label, key]) => (
-                    <div key={key} className="flex items-center gap-2 p-3 border rounded-lg">
-                      <Switch checked={(form as any)[key]} onCheckedChange={v => setForm({ ...form, [key]: v })} />
-                      <Label>{label}</Label>
-                    </div>
-                  ))}
+                  {(["priestRequired", "sankalpam", "gothram", "nakshatra"] as const).map((key) => {
+                    const label = key === "priestRequired" ? "Priest Required" :
+                                  key === "sankalpam" ? "Sankalpam Required" :
+                                  key === "gothram" ? "Gothram Required" : "Nakshatra Required";
+                    return (
+                      <div key={key} className="flex items-center gap-2 p-3 border rounded-lg">
+                        <Switch checked={form[key]} onCheckedChange={v => setForm({ ...form, [key]: v })} />
+                        <Label>{label}</Label>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
