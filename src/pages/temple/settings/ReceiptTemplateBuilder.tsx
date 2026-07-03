@@ -1199,6 +1199,86 @@ const ReceiptTemplateBuilder: React.FC = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+
+      {/* Save & Assign Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent className="sm:max-w-[560px] max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Save className="h-4 w-4 text-primary" />Save Template</DialogTitle>
+            <DialogDescription>Choose the receipt type and (optionally) assign this template to specific items. Unassigned items will keep using the default template.</DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 pr-3">
+            <div className="space-y-4">
+              <div>
+                <Label className="text-xs">Template Name</Label>
+                <Input value={templateName} onChange={e => setTemplateName(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Receipt Type</Label>
+                <Select value={saveType} onValueChange={v => setSaveType(v as "Seva" | "Donation")}>
+                  <SelectTrigger className="mt-1 bg-background"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-popover">
+                    <SelectItem value="Seva">Seva Receipt</SelectItem>
+                    <SelectItem value="Donation">Donation Receipt</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {saveType === "Donation" && (
+                <>
+                  <div>
+                    <Label className="text-xs font-semibold">Assign to Events</Label>
+                    <p className="text-[11px] text-muted-foreground mb-2">Use this template for donations recorded under these events.</p>
+                    <div className="border rounded-md max-h-40 overflow-y-auto divide-y">
+                      {events.length === 0 && <p className="text-xs text-muted-foreground p-3">No events available.</p>}
+                      {events.map(e => (
+                        <label key={e.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50">
+                          <Checkbox checked={assignEventIds.includes(e.id)} onCheckedChange={() => setAssignEventIds(a => toggleIn(a, e.id))} />
+                          <span className="flex-1 truncate">{e.name}</span>
+                          <span className="text-[10px] text-muted-foreground">{e.status}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-semibold">Assign to Donation Purposes</Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {donationPurposes.map(p => (
+                        <label key={p} className="flex items-center gap-2 px-3 py-1.5 border rounded-md text-sm cursor-pointer hover:bg-muted/50">
+                          <Checkbox checked={assignPurposes.includes(p)} onCheckedChange={() => setAssignPurposes(a => toggleIn(a, p))} />
+                          {p}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {saveType === "Seva" && (
+                <div>
+                  <Label className="text-xs font-semibold">Assign to Sevas</Label>
+                  <p className="text-[11px] text-muted-foreground mb-2">Use this template for these specific sevas.</p>
+                  <div className="border rounded-md max-h-52 overflow-y-auto divide-y">
+                    {uniqueSevaNames.length === 0 && <p className="text-xs text-muted-foreground p-3">No sevas available.</p>}
+                    {uniqueSevaNames.map(n => (
+                      <label key={n} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50">
+                        <Checkbox checked={assignSevaNames.includes(n)} onCheckedChange={() => setAssignSevaNames(a => toggleIn(a, n))} />
+                        <span className="flex-1 truncate">{n}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>Cancel</Button>
+            <Button onClick={confirmSave}><Save className="h-3.5 w-3.5 mr-1.5" />Save Template</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
