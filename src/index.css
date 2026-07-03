@@ -1,0 +1,349 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 9%;
+
+    --primary: 16 85% 30%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 9%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 35%;
+
+    --accent: 16 85% 30%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 16 85% 30%;
+
+    --radius: 0.75rem;
+
+    --brown-deep: 16 75% 18%;
+    --brown-darkest: 16 80% 12%;
+    --brown-light: 30 20% 96%;
+    --brown-gradient: linear-gradient(135deg, hsl(16 85% 30%), hsl(16 75% 22%));
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 9%;
+    --sidebar-primary: 16 85% 30%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 9%;
+    --sidebar-border: 0 0% 92%;
+    --sidebar-ring: 16 85% 30%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 9%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+
+    /* Elite pricing palette — deep green + vibrant orange */
+    --elite-green: 154 51% 15%;       /* #1b4332 */
+    --elite-green-mid: 158 41% 24%;   /* deeper accent */
+    --elite-green-soft: 154 30% 96%;  /* surface tint */
+    --elite-orange: 22 96% 54%;       /* vibrant orange */
+    --elite-orange-soft: 22 96% 96%;
+    --elite-gold: 42 96% 56%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer utilities {
+  /* Gradient backgrounds */
+  .bg-gradient-subtle {
+    background: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(30 30% 98%) 100%);
+  }
+  
+  .bg-gradient-radial {
+    background: radial-gradient(ellipse at top, hsl(30 30% 99%) 0%, hsl(0 0% 100%) 70%);
+  }
+
+  /* Glassmorphism */
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  .glass-card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+  }
+  
+  .glass-sidebar {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-right: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  /* Brown gradient */
+  .brown-gradient {
+    background: linear-gradient(135deg, hsl(16 85% 23%), hsl(16 65% 35%));
+  }
+  
+  .brown-gradient-soft {
+    background: linear-gradient(135deg, hsl(30 40% 95%), hsl(30 30% 92%));
+  }
+
+  /* Shadows */
+  .card-shadow {
+    box-shadow: 0 1px 3px 0 rgba(105, 46, 13, 0.04), 0 1px 2px -1px rgba(105, 46, 13, 0.04);
+  }
+  
+  .card-shadow-hover {
+    box-shadow: 0 20px 40px -15px rgba(105, 46, 13, 0.1), 0 8px 20px -10px rgba(105, 46, 13, 0.06);
+  }
+  
+  .card-shadow-lg {
+    box-shadow: 0 25px 50px -12px rgba(105, 46, 13, 0.12);
+  }
+  
+  .glass-shadow {
+    box-shadow: 0 8px 32px rgba(105, 46, 13, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  /* Animations */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .hover-lift:hover {
+    @apply -translate-y-1;
+  }
+  
+  .animate-fade-up {
+    animation: fadeUp 0.5s ease-out forwards;
+  }
+  
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out forwards;
+  }
+  
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .animate-slide-in {
+    animation: slideIn 0.4s ease-out forwards;
+  }
+  
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* NEFT/RTGS & Cash/UPI voucher — print layout (A4 landscape, template only) */
+  @media print {
+    @page {
+      size: A4 landscape;
+      margin: 8mm;
+    }
+
+    aside,
+    .print\\:hidden,
+    [data-sidebar],
+    button,
+    [role="dialog"] > *:not(.voucher-print-root),
+    nav,
+    header {
+      display: none !important;
+    }
+
+    body.voucher-print-active > *:not(.voucher-print-clone-host) {
+      display: none !important;
+    }
+
+    body.voucher-print-active .voucher-print-clone-host {
+      display: block !important;
+      position: static !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    main {
+      margin-left: 0 !important;
+    }
+
+    .neft-rtgs-form input,
+    .cash-upi-voucher-form input {
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+      height: auto !important;
+      background: transparent !important;
+    }
+
+    .voucher-print-sheet,
+    .neft-rtgs-form,
+    .cash-upi-voucher-form {
+      width: 100% !important;
+      max-width: none !important;
+    }
+
+    .voucher-print-copies-row {
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: nowrap !important;
+      align-items: stretch !important;
+      gap: 0 !important;
+      width: 100% !important;
+    }
+
+    .voucher-print-copies-row > div {
+      flex: 1 1 50% !important;
+      max-width: 50% !important;
+      min-width: 0 !important;
+      page-break-inside: avoid !important;
+      box-sizing: border-box !important;
+    }
+  }
+}
+
+/* Voucher print — outside @layer for reliable PDF / Save as PDF */
+@media print {
+  @page voucher-a4-landscape {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body.voucher-print-active {
+    page: voucher-a4-landscape;
+  }
+
+  body.voucher-print-active .voucher-print-clone-host {
+    page: voucher-a4-landscape;
+  }
+
+  body.voucher-print-active .voucher-print-clone-host .voucher-print-copies-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+  }
+
+  body.voucher-print-active .voucher-print-clone-host .voucher-print-copies-row > div {
+    flex: 0 0 50% !important;
+    width: 50% !important;
+    max-width: 50% !important;
+    page-break-inside: avoid !important;
+  }
+
+  body.voucher-print-active .voucher-print-clone-host .neft-rtgs-form,
+  body.voucher-print-active .voucher-print-clone-host .cash-upi-voucher-form,
+  body.voucher-print-active .voucher-print-clone-host .payroll-bulk-remittance-form {
+    font-size: 10px !important;
+  }
+}
+
+/* ── Reconciliation Suite Print Styles ───────────────────────────────────── */
+@media print {
+  /* Hide the suite sidebar and toolbar when printing */
+  .recon-suite aside,
+  .recon-suite .print\:hidden,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .recon-suite main {
+    margin-left: 0 !important;
+  }
+
+  /* Print wrapper */
+  .recon-suite {
+    background: #fff !important;
+  }
+
+  /* Table borders for print register */
+  .recon-suite table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-size: 9px !important;
+  }
+
+  .recon-suite table th,
+  .recon-suite table td {
+    border: 1px solid #ccc !important;
+    padding: 4px 6px !important;
+  }
+
+  .recon-suite table thead tr {
+    background: #f0ede7 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
