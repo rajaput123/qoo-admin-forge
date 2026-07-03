@@ -67,6 +67,8 @@ interface Offering {
   prasadamItems?: PrasadamItem[];
   images: string[];
   createdAt: string;
+  assignedPriest?: string;
+  receiptTemplate?: string;
 }
 
 const mockOfferings: Offering[] = [
@@ -175,7 +177,7 @@ const OfferingsList = () => {
   const openModal = (o?: Offering) => {
     if (o) {
       setEditing(o);
-      setForm({ name: o.name, type: o.type, category: o.category, structure: o.structure, description: o.description, defaultTime: o.defaultTime, endTime: o.endTime, frequency: o.frequency as FrequencyType, dateRange: o.dateRange, capacity: o.capacity, maxPerDevotee: o.maxPerDevotee, groupBooking: o.groupBooking, free: o.free, basePrice: o.basePrice, price: o.price || o.basePrice, priestRequired: o.priestRequired, sankalpam: o.sankalpam, gothram: o.gothram, nakshatra: o.nakshatra, walkinTracking: o.walkinTracking, vipEnabled: o.vipEnabled, availableOnline: o.availableOnline ?? true, availableCounter: o.availableCounter ?? true, assignedPriest: (o as any).assignedPriest || "", receiptTemplate: (o as any).receiptTemplate || "", prasadamIncluded: o.prasadamIncluded || false, prasadamItems: (o.prasadamItems || []).map(item => ({ ...item, showOnline: item.showOnline ?? true })) });
+      setForm({ name: o.name, type: o.type, category: o.category, structure: o.structure, description: o.description, defaultTime: o.defaultTime, endTime: o.endTime, frequency: o.frequency as FrequencyType, dateRange: o.dateRange, capacity: o.capacity, maxPerDevotee: o.maxPerDevotee, groupBooking: o.groupBooking, free: o.free, basePrice: o.basePrice, price: o.price || o.basePrice, priestRequired: o.priestRequired, sankalpam: o.sankalpam, gothram: o.gothram, nakshatra: o.nakshatra, walkinTracking: o.walkinTracking, vipEnabled: o.vipEnabled, availableOnline: o.availableOnline ?? true, availableCounter: o.availableCounter ?? true, assignedPriest: o.assignedPriest || "", receiptTemplate: o.receiptTemplate || "", prasadamIncluded: o.prasadamIncluded || false, prasadamItems: (o.prasadamItems || []).map(item => ({ ...item, showOnline: item.showOnline ?? true })) });
     } else resetForm();
     setIsModalOpen(true);
   };
@@ -558,7 +560,7 @@ const OfferingsList = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label>Offering Type</Label>
-                    <Select value={form.type} onValueChange={v => setForm({ ...form, type: v as any })}>
+                    <Select value={form.type} onValueChange={v => setForm({ ...form, type: v as "Ritual" | "Darshan" })}>
                       <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
                       <SelectContent className="bg-popover"><SelectItem value="Ritual">Ritual</SelectItem><SelectItem value="Darshan">Darshan</SelectItem></SelectContent>
                     </Select>
@@ -1008,12 +1010,17 @@ const OfferingsList = () => {
               </p>
               {form.type === "Ritual" ? (
                 <div className="grid grid-cols-2 gap-3">
-                  {[["Priest Required", "priestRequired"], ["Sankalpam Required", "sankalpam"], ["Gothram Required", "gothram"], ["Nakshatra Required", "nakshatra"]].map(([label, key]) => (
-                    <div key={key} className="flex items-center gap-2 p-3 border rounded-lg">
-                      <Switch checked={(form as any)[key]} onCheckedChange={v => setForm({ ...form, [key]: v })} />
-                      <Label>{label}</Label>
-                    </div>
-                  ))}
+                  {(["priestRequired", "sankalpam", "gothram", "nakshatra"] as const).map((key) => {
+                    const label = key === "priestRequired" ? "Priest Required" :
+                                  key === "sankalpam" ? "Sankalpam Required" :
+                                  key === "gothram" ? "Gothram Required" : "Nakshatra Required";
+                    return (
+                      <div key={key} className="flex items-center gap-2 p-3 border rounded-lg">
+                        <Switch checked={form[key]} onCheckedChange={v => setForm({ ...form, [key]: v })} />
+                        <Label>{label}</Label>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
