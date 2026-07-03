@@ -915,7 +915,7 @@ const ReceiptTemplateBuilder: React.FC = () => {
           <Button variant="outline" size="sm" className="h-8" onClick={() => setShowTemplateGallery(true)}>
             <LayoutTemplate className="h-3.5 w-3.5 mr-1.5" /> Templates
           </Button>
-          <Button size="sm" className="h-8" onClick={() => toast.success("Template saved!")}>
+          <Button size="sm" className="h-8" onClick={() => setSaveDialogOpen(true)}>
             <Save className="h-3.5 w-3.5 mr-1.5" /> Save
           </Button>
         </div>
