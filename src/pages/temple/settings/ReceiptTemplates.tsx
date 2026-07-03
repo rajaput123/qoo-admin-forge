@@ -25,7 +25,6 @@ import {
   allSevaFields, allDonationFields,
   getReceiptTemplates, subscribeTemplates,
   addReceiptTemplate, updateReceiptTemplate, deleteReceiptTemplate, setDefaultTemplate,
-  getTemplateAssignments, setTemplateAssignment, subscribeAssignments,
 } from "@/data/receiptTemplateData";
 
 interface PreviewFormData {
