@@ -127,6 +127,9 @@ import Payroll from "./pages/temple/hr/Payroll";
 import Panchang from "./pages/temple/hr/Panchang";
 import EmployeeOnboarding from "./pages/temple/hr/EmployeeOnboarding";
 import SalaryCompensation from "./pages/temple/hr/SalaryCompensation";
+import PolicyGroups from "./pages/temple/hr/PolicyGroups";
+import LateLoginEngine from "./pages/temple/hr/LateLoginEngine";
+import LeavePolicyEditor from "./pages/temple/hr/LeavePolicyEditor";
 // Institution Management Module
 import InstitutionLayout from "./pages/temple/InstitutionLayout";
 import InstitutionDashboard from "./pages/temple/institutions/Dashboard";
@@ -520,6 +523,9 @@ const App = () => {
               <Route path="expenses" element={<Expenses />} />
               <Route path="salary" element={<SalaryCompensation />} />
               <Route path="onboarding" element={<EmployeeOnboarding />} />
+              <Route path="policy-groups" element={<PolicyGroups />} />
+              <Route path="late-login-engine" element={<LateLoginEngine />} />
+              <Route path="leave-policy" element={<LeavePolicyEditor />} />
             </Route>
             <Route
               path="/temple/assets"
