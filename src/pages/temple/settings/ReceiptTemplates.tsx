@@ -277,7 +277,7 @@ const ReceiptTemplates = () => {
   const filteredEvents = useMemo(() => {
     const q = pickerSearch.toLowerCase();
     return allEvents.filter(e =>
-      !q || e.name.toLowerCase().includes(q) || (e.category || "").toLowerCase().includes(q)
+      !q || e.name.toLowerCase().includes(q) || (e.type || "").toLowerCase().includes(q)
     );
   }, [allEvents, pickerSearch]);
 
@@ -621,7 +621,7 @@ const ReceiptTemplates = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm truncate">{ev.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{ev.date} {ev.category ? `· ${ev.category}` : ""}</p>
+                      <p className="text-xs text-muted-foreground truncate">{ev.startDate} {ev.type ? `· ${ev.type}` : ""}</p>
                     </div>
                     {selectedContextId === ev.id && (
                       <Check className="h-4 w-4 text-primary shrink-0" />
