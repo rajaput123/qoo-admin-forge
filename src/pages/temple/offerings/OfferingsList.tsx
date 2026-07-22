@@ -125,6 +125,7 @@ const OfferingsList = () => {
 
   const [form, setForm] = useState({
     name: "", type: "Ritual" as "Ritual" | "Darshan", category: "", structure: "", description: "",
+    spiritualSignificance: "", benefits: "", tags: "",
     defaultTime: "", endTime: "", frequency: "Daily" as FrequencyType, dateRange: "",
     capacity: 50, maxPerDevotee: 2, groupBooking: false,
     free: false, basePrice: 0, price: 0,
