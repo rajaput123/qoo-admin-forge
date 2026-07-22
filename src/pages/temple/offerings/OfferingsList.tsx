@@ -615,6 +615,35 @@ const OfferingsList = () => {
                   {errors.description && <p className="text-xs text-destructive mt-1">{errors.description}</p>}
                 </div>
                 <div>
+                  <Label>Spiritual Significance</Label>
+                  <Textarea
+                    value={form.spiritualSignificance}
+                    onChange={e => setForm({ ...form, spiritualSignificance: e.target.value })}
+                    placeholder="Explain the spiritual meaning and cultural context of this seva"
+                    rows={2}
+                    maxLength={500}
+                  />
+                </div>
+                <div>
+                  <Label>Benefits (Phala Shruti)</Label>
+                  <Textarea
+                    value={form.benefits}
+                    onChange={e => setForm({ ...form, benefits: e.target.value })}
+                    placeholder="e.g. Removes obstacles, bestows prosperity, grants health"
+                    rows={2}
+                    maxLength={500}
+                  />
+                </div>
+                <div>
+                  <Label>Tags</Label>
+                  <Input
+                    value={form.tags}
+                    onChange={e => setForm({ ...form, tags: e.target.value })}
+                    placeholder="Comma-separated e.g. Ganesha, Homam, Prosperity"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">Separate tags with commas. Used for search & filtering.</p>
+                </div>
+                <div>
                   <Label>Assign Priest</Label>
                   <SearchableSelect
                     options={[
