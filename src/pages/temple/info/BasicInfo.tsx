@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Building2, MapPin, Clock, Phone, Mail, Globe, Edit, Camera } from "lucide-react";
+import { Building2, MapPin, Clock, Phone, Mail, Globe, Edit, Camera, BookOpen, Scroll, Sparkles, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -57,6 +57,79 @@ const BasicInfo = () => {
                   Est. 1509
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Content Sections */}
+        <div className="grid grid-cols-1 gap-6 mb-6">
+          {/* Description */}
+          <div className="glass-card rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <BookOpen className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold text-foreground">Description</h3>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Sri Venkateswara Temple, perched atop the seven hills of Tirumala, is one of the most revered
+              Hindu shrines in the world. Dedicated to Lord Venkateswara, an incarnation of Lord Vishnu, the
+              temple attracts millions of devotees annually seeking blessings, prosperity, and spiritual solace.
+              It stands as a beacon of Sanatana Dharma and Vaishnavite tradition.
+            </p>
+          </div>
+
+          {/* History */}
+          <div className="glass-card rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Scroll className="h-5 w-5 text-amber-600" />
+              <h3 className="font-semibold text-foreground">History</h3>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              The origins of the temple date back over a millennium, with references in ancient Puranas and
+              inscriptions from the Pallava, Chola, Pandya, and Vijayanagara dynasties. Sri Krishnadevaraya
+              of the Vijayanagara Empire contributed significantly to its renovation in 1509. Legend holds
+              that Lord Vishnu descended here in Kali Yuga to save mankind, and the temple has since been
+              a continuous seat of worship, undergoing several restorations while preserving its Agamic sanctity.
+            </p>
+          </div>
+
+          {/* Spiritual Significance */}
+          <div className="glass-card rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="h-5 w-5 text-orange-500" />
+              <h3 className="font-semibold text-foreground">Spiritual Significance</h3>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Regarded as Bhuloka Vaikuntham (Vishnu's abode on Earth), the temple is mentioned in the
+              Varaha Purana and Bhavishyottara Purana. Darshan of Lord Venkateswara is believed to absolve
+              devotees of sins accumulated over lifetimes and grant moksha. Offerings such as hair tonsure,
+              tulabharam, and hundi contributions symbolize surrender of ego and material attachments to
+              the Lord of the Seven Hills.
+            </p>
+          </div>
+
+          {/* Tags */}
+          <div className="glass-card rounded-2xl p-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Tag className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold text-foreground">Tags</h3>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                "Vaishnavite",
+                "Vishnu",
+                "Tirumala",
+                "Divya Desam",
+                "Pilgrimage",
+                "Kaliyuga Vaikuntham",
+                "Balaji",
+                "Sanatana Dharma",
+                "Hill Temple",
+                "Agama",
+              ].map((tag) => (
+                <Badge key={tag} variant="secondary" className="rounded-full">
+                  {tag}
+                </Badge>
+              ))}
             </div>
           </div>
         </div>
