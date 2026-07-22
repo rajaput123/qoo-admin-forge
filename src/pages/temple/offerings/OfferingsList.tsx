@@ -469,6 +469,28 @@ const OfferingsList = () => {
                 </div>
               )}
               <p className="text-sm text-muted-foreground">{viewing?.description}</p>
+              {viewing?.spiritualSignificance && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Spiritual Significance</p>
+                  <p className="text-sm">{viewing.spiritualSignificance}</p>
+                </div>
+              )}
+              {viewing?.benefits && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Benefits (Phala Shruti)</p>
+                  <p className="text-sm">{viewing.benefits}</p>
+                </div>
+              )}
+              {viewing?.tags && viewing.tags.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Tags</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {viewing.tags.map((t, i) => (
+                      <Badge key={i} variant="outline" className="text-[11px]">{t}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground">Category</p><p className="font-medium">{viewing?.category}</p></div>
                 <div className="p-3 bg-muted/50 rounded-lg"><p className="text-xs text-muted-foreground">Frequency</p><p className="font-medium">{viewing?.frequency}</p></div>
