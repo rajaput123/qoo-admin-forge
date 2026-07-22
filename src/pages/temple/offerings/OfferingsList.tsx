@@ -47,6 +47,9 @@ interface Offering {
   capacity: number;
   status: "Active" | "Inactive" | "Draft";
   description: string;
+  spiritualSignificance?: string;
+  benefits?: string;
+  tags?: string[];
   endTime: string;
   frequency: string;
   dateRange: string;
