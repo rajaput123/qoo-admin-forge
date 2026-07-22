@@ -164,7 +164,7 @@ const OfferingsList = () => {
   };
 
   const resetForm = () => {
-    setForm({ name: "", type: "Ritual", category: "", structure: "", description: "", defaultTime: "", endTime: "", frequency: "Daily" as FrequencyType, dateRange: "", capacity: 50, maxPerDevotee: 2, groupBooking: false, free: false, basePrice: 0, price: 0, priestRequired: true, sankalpam: true, gothram: true, nakshatra: false, walkinTracking: false, vipEnabled: false, availableOnline: true, availableCounter: true, assignedPriest: "", receiptTemplate: "", prasadamIncluded: false, prasadamItems: [] });
+    setForm({ name: "", type: "Ritual", category: "", structure: "", description: "", spiritualSignificance: "", benefits: "", tags: "", defaultTime: "", endTime: "", frequency: "Daily" as FrequencyType, dateRange: "", capacity: 50, maxPerDevotee: 2, groupBooking: false, free: false, basePrice: 0, price: 0, priestRequired: true, sankalpam: true, gothram: true, nakshatra: false, walkinTracking: false, vipEnabled: false, availableOnline: true, availableCounter: true, assignedPriest: "", receiptTemplate: "", prasadamIncluded: false, prasadamItems: [] });
     setEditing(null);
     setCustomFields([]);
     setErrors({});
@@ -181,7 +181,7 @@ const OfferingsList = () => {
   const openModal = (o?: Offering) => {
     if (o) {
       setEditing(o);
-      setForm({ name: o.name, type: o.type, category: o.category, structure: o.structure, description: o.description, defaultTime: o.defaultTime, endTime: o.endTime, frequency: o.frequency as FrequencyType, dateRange: o.dateRange, capacity: o.capacity, maxPerDevotee: o.maxPerDevotee, groupBooking: o.groupBooking, free: o.free, basePrice: o.basePrice, price: o.price || o.basePrice, priestRequired: o.priestRequired, sankalpam: o.sankalpam, gothram: o.gothram, nakshatra: o.nakshatra, walkinTracking: o.walkinTracking, vipEnabled: o.vipEnabled, availableOnline: o.availableOnline ?? true, availableCounter: o.availableCounter ?? true, assignedPriest: o.assignedPriest || "", receiptTemplate: o.receiptTemplate || "", prasadamIncluded: o.prasadamIncluded || false, prasadamItems: (o.prasadamItems || []).map(item => ({ ...item, showOnline: item.showOnline ?? true })) });
+      setForm({ name: o.name, type: o.type, category: o.category, structure: o.structure, description: o.description, spiritualSignificance: o.spiritualSignificance || "", benefits: o.benefits || "", tags: (o.tags || []).join(", "), defaultTime: o.defaultTime, endTime: o.endTime, frequency: o.frequency as FrequencyType, dateRange: o.dateRange, capacity: o.capacity, maxPerDevotee: o.maxPerDevotee, groupBooking: o.groupBooking, free: o.free, basePrice: o.basePrice, price: o.price || o.basePrice, priestRequired: o.priestRequired, sankalpam: o.sankalpam, gothram: o.gothram, nakshatra: o.nakshatra, walkinTracking: o.walkinTracking, vipEnabled: o.vipEnabled, availableOnline: o.availableOnline ?? true, availableCounter: o.availableCounter ?? true, assignedPriest: o.assignedPriest || "", receiptTemplate: o.receiptTemplate || "", prasadamIncluded: o.prasadamIncluded || false, prasadamItems: (o.prasadamItems || []).map(item => ({ ...item, showOnline: item.showOnline ?? true })) });
     } else resetForm();
     setIsModalOpen(true);
   };
@@ -238,11 +238,14 @@ const OfferingsList = () => {
     }
     setErrors({});
 
+    const tagsArr = form.tags.split(",").map(t => t.trim()).filter(Boolean);
+    const { tags: _tagsStr, ...rest } = form;
+    const formPayload = { ...rest, tags: tagsArr };
     if (editing) {
-      setOfferings(offerings.map(o => o.id === editing.id ? { ...o, ...form } : o));
+      setOfferings(offerings.map(o => o.id === editing.id ? { ...o, ...formPayload } : o));
       toast.success("Offering updated");
     } else {
-      setOfferings([...offerings, { id: Date.now().toString(), ...form, refundable: false, status: "Active", images: [], createdAt: new Date().toISOString().split("T")[0] }]);
+      setOfferings([...offerings, { id: Date.now().toString(), ...formPayload, refundable: false, status: "Active" as const, images: [], createdAt: new Date().toISOString().split("T")[0] }]);
       toast.success("Offering created");
     }
     setIsModalOpen(false);
