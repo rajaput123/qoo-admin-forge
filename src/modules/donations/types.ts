@@ -37,6 +37,16 @@ export type DonationPurpose =
 
 export type DonationSourceModule = "Manual" | "Booking" | "Event" | "Online Portal" | "Campaign" | "Seva" | "Counter";
 
+/** Audit trail entry recorded each time a receipt is (re)sent to a devotee */
+export interface ReceiptResend {
+  id: string;
+  sentAt: string; // ISO datetime
+  channel: "SMS" | "WhatsApp" | "Email";
+  destination: string; // mobile number or email
+  usedRegistered: boolean;
+  sentBy: string;
+}
+
 export interface NonCashAssetDetails {
   assetName: string;
   quantity: number;
