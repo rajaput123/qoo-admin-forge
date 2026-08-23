@@ -607,6 +607,14 @@ export function recordDonation(input: {
   const is80G = nature === "Cash" && getTempleConfig().eightyGEnabled && input.wants80G !== false && hasPan;
   const receiptFilePath = `/receipts/${ids.receiptNo}.pdf`;
 
+  // Cash transactions always carry a unique Cash Reference No for reconciliation
+  const isCash = nature === "Cash" && isCashPayment(input.channel);
+  const cashReferenceNo = isCash
+    ? (input.cashReferenceNo || generateCashReference("DON", date))
+    : input.cashReferenceNo;
+
+  const mapping = resolveDonationAccount(input.channel, nature, input.purpose);
+
   const donation: Donation = {
     donationId: ids.donationId,
     receiptNo: ids.receiptNo,
