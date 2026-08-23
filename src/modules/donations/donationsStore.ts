@@ -577,6 +577,10 @@ export function recordDonation(input: {
   sourceModule?: DonationSourceModule;
   sourceRecordId?: string;
   counterId?: string;
+  counterName?: string;
+  employeeId?: string;
+  employeeName?: string;
+  cashReferenceNo?: string;
   templeId?: string;
   branchId?: string;
   date?: string;
