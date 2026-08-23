@@ -37,6 +37,16 @@ export type DonationPurpose =
 
 export type DonationSourceModule = "Manual" | "Booking" | "Event" | "Online Portal" | "Campaign" | "Seva" | "Counter";
 
+/** Audit trail entry recorded each time a receipt is (re)sent to a devotee */
+export interface ReceiptResend {
+  id: string;
+  sentAt: string; // ISO datetime
+  channel: "SMS" | "WhatsApp" | "Email";
+  destination: string; // mobile number or email
+  usedRegistered: boolean;
+  sentBy: string;
+}
+
 export interface NonCashAssetDetails {
   assetName: string;
   quantity: number;
@@ -58,11 +68,20 @@ export interface Donation {
   channel: DonationChannel;
   mode: string; // e.g. NEFT, Cash, GPay
   referenceNo?: string;
+  cashReferenceNo?: string; // Cash/Transaction Reference No — mandatory for cash transactions
   remarks?: string;
   nonCashDetails?: NonCashAssetDetails; // Only for Non-Cash donations
   sourceModule: DonationSourceModule; // origin of the donation
   sourceRecordId?: string; // e.g. BKG-001, EVT-005
   counterId?: string; // counter where recorded (if applicable)
+  counterName?: string; // snapshot of counter name
+  employeeId?: string; // staff member who performed the transaction
+  employeeName?: string; // snapshot of staff name
+  ledgerAccountId?: string; // mapped finance account (e.g. ACC-001)
+  ledgerAccountName?: string;
+  lastEditedAt?: string;
+  lastEditedBy?: string;
+  receiptResends?: ReceiptResend[]; // audit of receipt resends
   date: string; // ISO date (yyyy-mm-dd)
   time: string; // display time
   status: "Recorded";

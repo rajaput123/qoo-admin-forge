@@ -1,5 +1,7 @@
-import { DonationsState, Donor, Donation, Allocation, Certificate80G, Donation80GReceipt, DonationAuditEntry, DonationChannel, DonationSourceModule, DonationNature, NonCashAssetDetails, Fund, FundExpense, DonorCategory, DonorVipInfo, Settlement } from "./types";
+import { DonationsState, Donor, Donation, Allocation, Certificate80G, Donation80GReceipt, DonationAuditEntry, DonationChannel, DonationSourceModule, DonationNature, NonCashAssetDetails, Fund, FundExpense, DonorCategory, DonorVipInfo, Settlement, ReceiptResend } from "./types";
 import { getTempleConfig } from "@/lib/templeConfig";
+import { generateCashReference, isCashPayment } from "@/lib/cashReference";
+import { resolveDonationAccount } from "@/modules/finance/accountMapping";
 
 const LS_KEY = "qoo.donations.v3";
 
@@ -575,6 +577,10 @@ export function recordDonation(input: {
   sourceModule?: DonationSourceModule;
   sourceRecordId?: string;
   counterId?: string;
+  counterName?: string;
+  employeeId?: string;
+  employeeName?: string;
+  cashReferenceNo?: string;
   templeId?: string;
   branchId?: string;
   date?: string;
@@ -600,6 +606,14 @@ export function recordDonation(input: {
   const hasPan = input.pan !== undefined && input.pan !== "-" && input.pan.length >= 10;
   const is80G = nature === "Cash" && getTempleConfig().eightyGEnabled && input.wants80G !== false && hasPan;
   const receiptFilePath = `/receipts/${ids.receiptNo}.pdf`;
+
+  // Cash transactions always carry a unique Cash Reference No for reconciliation
+  const isCash = nature === "Cash" && isCashPayment(input.channel);
+  const cashReferenceNo = isCash
+    ? (input.cashReferenceNo || generateCashReference("DON", date))
+    : input.cashReferenceNo;
+
+  const mapping = resolveDonationAccount(input.channel, nature, input.purpose);
 
   const donation: Donation = {
     donationId: ids.donationId,
