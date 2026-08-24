@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Upload, Clipboard, Download, CheckCircle, AlertTriangle, ArrowRight, Trash2, Info } from "lucide-react";
 import { recordSevaBookings } from "@/modules/sevas/sevaStore";
+import { resolveSevaAccount } from "@/modules/finance/accountMapping";
+import { financeIntegration } from "@/modules/finance/integration";
 
 interface Props {
   open: boolean;
@@ -27,6 +29,9 @@ interface ParsedRow {
   paymentMode: string;
   referenceNo: string;
   status: "Confirmed" | "Completed" | "Cancelled";
+  ledgerAccountId: string;
+  ledgerAccountName: string;
+  ledgerMapped: boolean;
   errors: string[];
 }
 
@@ -214,8 +219,13 @@ export default function BulkImportBookingsDialog({ open, onOpenChange }: Props) 
       const { date, error: dateErr } = parseDate(dateRaw);
       if (dateErr) errors.push(dateErr);
 
+      const mapping = resolveSevaAccount(paymentMethod, paymentMode);
+      if (!mapping.mapped) errors.push(mapping.reason || "Ledger account mapping missing.");
+
       rows.push({ index: i + 1, devoteeName, devoteePhone, sevaName, sevaCategory,
-        date, time, amount: isNaN(amount) ? 0 : amount, paymentMethod, paymentMode, referenceNo, status, errors });
+        date, time, amount: isNaN(amount) ? 0 : amount, paymentMethod, paymentMode, referenceNo, status,
+        ledgerAccountId: mapping.accountId, ledgerAccountName: mapping.accountName, ledgerMapped: mapping.mapped,
+        errors });
     }
 
     setParsedRows(rows);
@@ -234,7 +244,15 @@ export default function BulkImportBookingsDialog({ open, onOpenChange }: Props) 
       referenceNo: r.referenceNo, status: r.status, sourceModule: "Counter" as const,
     })));
 
-    toast.success(`Imported ${valid.length} booking${valid.length !== 1 ? "s" : ""} successfully!`);
+    // Post the imported transactions straight into the General Ledger
+    let posted = 0;
+    try { posted = financeIntegration.postImportedBookings(); }
+    catch (e) { console.error("Ledger posting failed", e); }
+
+    toast.success(
+      `Imported ${valid.length} booking${valid.length !== 1 ? "s" : ""} successfully!`,
+      { description: `${posted} transaction${posted !== 1 ? "s" : ""} posted to the General Ledger.` },
+    );
     onOpenChange(false);
     resetState();
   };
@@ -353,6 +371,7 @@ export default function BulkImportBookingsDialog({ open, onOpenChange }: Props) 
                           <TableHead>Date</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
                           <TableHead>Payment</TableHead>
+                          <TableHead>Ledger Account</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead>Validation</TableHead>
                         </TableRow>
@@ -374,6 +393,16 @@ export default function BulkImportBookingsDialog({ open, onOpenChange }: Props) 
                             <TableCell>
                               <p className="text-xs font-medium leading-none">{row.paymentMode}</p>
                               <span className="text-[10px] text-muted-foreground">{row.paymentMethod}</span>
+                            </TableCell>
+                            <TableCell>
+                              {row.ledgerMapped ? (
+                                <>
+                                  <p className="text-xs font-medium leading-none">{row.ledgerAccountName}</p>
+                                  <span className="text-[10px] font-mono text-muted-foreground">{row.ledgerAccountId}</span>
+                                </>
+                              ) : (
+                                <Badge variant="destructive" className="text-[10px] px-1 py-0 h-auto">Unmapped</Badge>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Badge variant={row.status === "Completed" ? "secondary" : row.status === "Confirmed" ? "outline" : "destructive"}

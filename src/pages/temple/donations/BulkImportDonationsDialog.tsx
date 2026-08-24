@@ -9,6 +9,8 @@ import { toast } from "sonner";
 import { Upload, Clipboard, Download, CheckCircle, AlertTriangle, ArrowRight, Trash2 } from "lucide-react";
 import { recordDonation } from "@/modules/donations/donationsStore";
 import type { DonationChannel, DonationNature } from "@/modules/donations/types";
+import { resolveDonationAccount } from "@/modules/finance/accountMapping";
+import { financeIntegration } from "@/modules/finance/integration";
 
 interface Props {
   open: boolean;
@@ -31,6 +33,9 @@ interface ParsedRow {
   time: string;
   remarks: string;
   wants80G: boolean;
+  ledgerAccountId: string;
+  ledgerAccountName: string;
+  ledgerMapped: boolean;
   errors: string[];
 }
 
@@ -171,6 +176,10 @@ export default function BulkImportDonationsDialog({ open, onOpenChange }: Props)
         }
       }
 
+      const nature: DonationNature = channel === "In-Kind" ? "Non-Cash" : "Cash";
+      const mapping = resolveDonationAccount(channel, nature, purpose);
+      if (!mapping.mapped) errors.push(mapping.reason || "Ledger account mapping missing.");
+
       rows.push({
         index: i + 1,
         donorName,
@@ -187,6 +196,9 @@ export default function BulkImportDonationsDialog({ open, onOpenChange }: Props)
         time,
         remarks,
         wants80G,
+        ledgerAccountId: mapping.accountId,
+        ledgerAccountName: mapping.accountName,
+        ledgerMapped: mapping.mapped,
         errors,
       });
     }
@@ -225,7 +237,13 @@ export default function BulkImportDonationsDialog({ open, onOpenChange }: Props)
       });
     });
 
-    toast.success(`Successfully imported ${validRows.length} donations!`);
+    let posted = 0;
+    try { posted = financeIntegration.postImportedDonations(); }
+    catch (e) { console.error("Ledger posting failed", e); }
+
+    toast.success(`Successfully imported ${validRows.length} donations!`, {
+      description: `${posted} transaction${posted !== 1 ? "s" : ""} posted to the General Ledger.`,
+    });
     onOpenChange(false);
     resetState();
   };
@@ -343,6 +361,7 @@ export default function BulkImportDonationsDialog({ open, onOpenChange }: Props)
                           <TableHead>Date</TableHead>
                           <TableHead className="text-right">Amount</TableHead>
                           <TableHead>Payment</TableHead>
+                          <TableHead>Ledger Account</TableHead>
                           <TableHead className="text-center">80G</TableHead>
                           <TableHead>Validation</TableHead>
                         </TableRow>
@@ -369,6 +388,16 @@ export default function BulkImportDonationsDialog({ open, onOpenChange }: Props)
                             <TableCell>
                               <p className="text-xs leading-none font-medium">{row.mode}</p>
                               <span className="text-[9px] font-mono text-muted-foreground">{row.channel}</span>
+                            </TableCell>
+                            <TableCell>
+                              {row.ledgerMapped ? (
+                                <>
+                                  <p className="text-xs font-medium leading-none">{row.ledgerAccountName}</p>
+                                  <span className="text-[9px] font-mono text-muted-foreground">{row.ledgerAccountId}</span>
+                                </>
+                              ) : (
+                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-auto">Unmapped</Badge>
+                              )}
                             </TableCell>
                             <TableCell className="text-center">
                               <Badge variant={row.wants80G ? "default" : "secondary"} className={`text-[10px] px-1.5 py-0 h-auto ${row.wants80G ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}`}>
