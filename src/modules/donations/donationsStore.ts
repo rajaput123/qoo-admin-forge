@@ -1240,3 +1240,116 @@ export function recordSettlement(input: {
 
   return settlement;
 }
+// ─── Admin Edit (amount locked for cash) ──────────────────────────────────
+
+/** Fields an authorised admin may edit AFTER a donation is recorded. */
+export interface DonationEditableFields {
+  donorName?: string;
+  purpose?: string;
+  remarks?: string;
+  referenceNo?: string;
+  mode?: string;
+  counterId?: string;
+  counterName?: string;
+  employeeId?: string;
+  employeeName?: string;
+  /** Only honoured for NON-cash donations — cash amounts are immutable. */
+  amount?: number;
+}
+
+export function isAmountLocked(donation: Donation): boolean {
+  return donation.nature === "Cash" && isCashPayment(donation.channel);
+}
+
+export function updateDonation(
+  donationId: string,
+  changes: DonationEditableFields,
+  editedBy = "Admin",
+): { ok: boolean; donation?: Donation; error?: string } {
+  const st = getDonationsState();
+  const existing = st.donations.find(d => d.donationId === donationId);
+  if (!existing) return { ok: false, error: "Donation not found" };
+
+  const locked = isAmountLocked(existing);
+  if (locked && changes.amount !== undefined && changes.amount !== existing.amount) {
+    return { ok: false, error: "Cash transaction amount is fixed and cannot be edited." };
+  }
+
+  const updated: Donation = {
+    ...existing,
+    donorName: changes.donorName?.trim() || existing.donorName,
+    purpose: changes.purpose ?? existing.purpose,
+    remarks: changes.remarks ?? existing.remarks,
+    referenceNo: changes.referenceNo ?? existing.referenceNo,
+    mode: changes.mode ?? existing.mode,
+    counterId: changes.counterId ?? existing.counterId,
+    counterName: changes.counterName ?? existing.counterName,
+    employeeId: changes.employeeId ?? existing.employeeId,
+    employeeName: changes.employeeName ?? existing.employeeName,
+    amount: locked ? existing.amount : (changes.amount ?? existing.amount),
+    lastEditedAt: nowIso(),
+    lastEditedBy: editedBy,
+  };
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "Donation Edited",
+    entity: donationId,
+    user: editedBy,
+    details: locked
+      ? "Non-financial details updated (cash amount locked)"
+      : "Donation details updated",
+  };
+
+  setState({
+    ...st,
+    donations: st.donations.map(d => (d.donationId === donationId ? updated : d)),
+    audit: [audit, ...st.audit],
+  });
+  return { ok: true, donation: updated };
+}
+
+// ─── Resend Receipt ────────────────────────────────────────────────────────
+
+export function resendDonationReceipt(input: {
+  donationId: string;
+  channel: ReceiptResend["channel"];
+  destination: string;
+  usedRegistered: boolean;
+  sentBy?: string;
+}): { ok: boolean; error?: string } {
+  const st = getDonationsState();
+  const existing = st.donations.find(d => d.donationId === input.donationId);
+  if (!existing) return { ok: false, error: "Donation not found" };
+  if (!input.destination?.trim()) return { ok: false, error: "Destination is required" };
+
+  const entry: ReceiptResend = {
+    id: `RSN-${Date.now()}`,
+    sentAt: nowIso(),
+    channel: input.channel,
+    destination: input.destination.trim(),
+    usedRegistered: input.usedRegistered,
+    sentBy: input.sentBy ?? "Admin",
+  };
+
+  const audit: DonationAuditEntry = {
+    id: nextAuditId(st),
+    timestamp: displayTimestamp(),
+    action: "Receipt Resent",
+    entity: existing.receiptNo,
+    user: entry.sentBy,
+    details: `${entry.channel} → ${entry.destination}${input.usedRegistered ? " (registered)" : " (alternate)"}`,
+  };
+
+  setState({
+    ...st,
+    donations: st.donations.map(d =>
+      d.donationId === input.donationId
+        ? { ...d, receiptResends: [entry, ...(d.receiptResends ?? [])] }
+        : d,
+    ),
+    audit: [audit, ...st.audit],
+  });
+  return { ok: true };
+}
