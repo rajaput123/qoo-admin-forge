@@ -5,6 +5,7 @@ import { getEvents } from "@/modules/events/eventStore";
 import { projects } from "@/data/projectData";
 import { sevaSelectors } from "@/modules/sevas/sevaStore";
 import type { DonationPurpose } from "@/modules/donations/types";
+import { resolveDonationAccount, resolveSevaAccount } from "./accountMapping";
 
 // ─── Donation Purpose → Finance Category ───
 const purposeToCategoryMap: Record<string, string> = {
@@ -22,21 +23,15 @@ function mapDonationCategory(purpose: DonationPurpose | string, nature: string):
   return purposeToCategoryMap[purpose] || "General Donation";
 }
 
-function mapDonationAccount(channel: string, nature: string) {
-  if (nature === "Non-Cash") {
-    return { account: "ACC-010", accountName: "Donation Income", paymentMethod: "Cash" as const };
+function mapDonationAccount(channel: string, nature: string, purpose?: string) {
+  // Uses the SHARED resolver so manual entry, bulk import and this sync all
+  // land on exactly the same configured ledger account.
+  const m = resolveDonationAccount(channel, nature, purpose);
+  if (!m.mapped) {
+    console.warn("[Finance] Unmapped donation channel, defaulting to Cash on Hand:", channel);
+    return { account: "ACC-001", accountName: "Cash on Hand", paymentMethod: "Cash" as const };
   }
-  switch (channel) {
-    case "Bank Transfer":
-    case "Online":
-      return { account: "ACC-002", accountName: "SBI Main Account", paymentMethod: "Bank" as const };
-    case "UPI":
-      return { account: "ACC-004", accountName: "UPI Wallet", paymentMethod: "UPI" as const };
-    case "Cheque":
-      return { account: "ACC-002", accountName: "SBI Main Account", paymentMethod: "Cheque" as const };
-    default:
-      return { account: "ACC-001", accountName: "Cash on Hand", paymentMethod: "Cash" as const };
-  }
+  return { account: m.accountId, accountName: m.accountName, paymentMethod: m.paymentMethod };
 }
 
 function buildDonationDescription(d: {
@@ -59,16 +54,13 @@ function buildDonationDescription(d: {
 }
 
 // ─── Seva Payment → Account mapping ───
-function mapSevaAccount(method: string) {
-  switch (method) {
-    case "UPI":
-      return { account: "ACC-004", accountName: "UPI Wallet", paymentMethod: "UPI" as const };
-    case "Bank":
-    case "Online":
-      return { account: "ACC-002", accountName: "SBI Main Account", paymentMethod: "Bank" as const };
-    default:
-      return { account: "ACC-001", accountName: "Cash on Hand", paymentMethod: "Cash" as const };
+function mapSevaAccount(method: string, mode?: string) {
+  const m = resolveSevaAccount(method, mode);
+  if (!m.mapped) {
+    console.warn("[Finance] Unmapped seva payment method, defaulting to Cash on Hand:", method);
+    return { account: "ACC-001", accountName: "Cash on Hand", paymentMethod: "Cash" as const };
   }
+  return { account: m.accountId, accountName: m.accountName, paymentMethod: m.paymentMethod };
 }
 
 // ─── Event Expense Category → Finance Category ───
@@ -103,7 +95,7 @@ export const financeIntegration = {
     let count = 0;
     newDonations.forEach(donation => {
       const category = mapDonationCategory(donation.purpose, donation.nature);
-      const { account, accountName, paymentMethod } = mapDonationAccount(donation.channel, donation.nature);
+      const { account, accountName, paymentMethod } = mapDonationAccount(donation.channel, donation.nature, donation.purpose);
       const suggestedFund = financeSelectors.getSuggestedFund(category);
 
       financeActions.createTransaction({
@@ -131,7 +123,9 @@ export const financeIntegration = {
 
   // ─── Sync Seva Bookings ───
   syncSevaBookings: () => {
-    const bookings = sevaSelectors.getCompletedBookings();
+    // Every non-cancelled booking (incl. bulk-imported ones, which land as
+    // "Confirmed") must reach the General Ledger — not just Completed ones.
+    const bookings = sevaSelectors.getBookings().filter(b => b.status !== "Cancelled");
     const processedIds = new Set(financeSelectors.getTransactions().map(t => t.referenceId));
 
     const newBookings = bookings.filter(b => !processedIds.has(b.id));
@@ -139,7 +133,7 @@ export const financeIntegration = {
 
     let count = 0;
     newBookings.forEach(booking => {
-      const { account, accountName, paymentMethod } = mapSevaAccount(booking.paymentMethod);
+      const { account, accountName, paymentMethod } = mapSevaAccount(booking.paymentMethod, booking.paymentMode);
       const suggestedFund = financeSelectors.getSuggestedFund("Seva Revenue");
 
       financeActions.createTransaction({
@@ -276,6 +270,10 @@ export const financeIntegration = {
 
     return count;
   },
+
+  /** Post newly bulk-imported records to the General Ledger immediately. */
+  postImportedDonations: () => financeIntegration.syncDonationsToLedger(),
+  postImportedBookings: () => financeIntegration.syncSevaBookings(),
 
   // ─── Sync All ───
   syncAll: () => {

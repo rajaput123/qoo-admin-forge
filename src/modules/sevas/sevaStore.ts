@@ -1,4 +1,16 @@
 import { useSyncExternalStore } from "react";
+import { generateCashReference, isCashPayment } from "@/lib/cashReference";
+import { resolveSevaAccount } from "@/modules/finance/accountMapping";
+
+/** Audit entry recorded each time a booking receipt is (re)sent */
+export interface BookingReceiptResend {
+  id: string;
+  sentAt: string;
+  channel: "SMS" | "WhatsApp" | "Email";
+  destination: string;
+  usedRegistered: boolean;
+  sentBy: string;
+}
 
 /**
  * Seva Booking Store
@@ -19,6 +31,16 @@ export interface SevaBooking {
   referenceNo: string;
   status: "Confirmed" | "Completed" | "Cancelled";
   counterId?: string;
+  counterName?: string;
+  employeeId?: string;
+  employeeName?: string;
+  /** Cash / Transaction Reference No — auto-generated for every cash booking */
+  cashReferenceNo?: string;
+  ledgerAccountId?: string;
+  ledgerAccountName?: string;
+  receiptResends?: BookingReceiptResend[];
+  lastEditedAt?: string;
+  lastEditedBy?: string;
   sourceModule: "Counter" | "Online" | "Booking";
   createdAt: string;
 }
@@ -85,9 +107,15 @@ export function recordSevaBookings(bookingsInput: Omit<SevaBooking, "id" | "crea
   const newBookings = bookingsInput.map((input, index) => {
     const nextSeq = current.length + index + 1;
     const id = `SVA-2026-${String(nextSeq).padStart(3, "0")}`;
+    const isCash = isCashPayment(input.paymentMethod) || isCashPayment(input.paymentMode);
+    const mapping = resolveSevaAccount(input.paymentMethod, input.paymentMode);
     return {
       ...input,
       id,
+      cashReferenceNo: input.cashReferenceNo || (isCash ? generateCashReference("SVA", input.date) : undefined),
+      ledgerAccountId: mapping.mapped ? mapping.accountId : undefined,
+      ledgerAccountName: mapping.mapped ? mapping.accountName : undefined,
+      receiptResends: [],
       createdAt: new Date().toISOString()
     } as SevaBooking;
   });
@@ -95,3 +123,79 @@ export function recordSevaBookings(bookingsInput: Omit<SevaBooking, "id" | "crea
   return newBookings;
 }
 
+
+/** Fields an authorised admin may edit after a booking is recorded. */
+export interface BookingEditableFields {
+  devoteeName?: string;
+  devoteePhone?: string;
+  date?: string;
+  time?: string;
+  referenceNo?: string;
+  paymentMode?: string;
+  counterId?: string;
+  counterName?: string;
+  employeeId?: string;
+  employeeName?: string;
+  status?: SevaBooking["status"];
+  /** Only honoured for non-cash bookings — cash amounts are immutable. */
+  amount?: number;
+}
+
+export function isBookingAmountLocked(booking: SevaBooking): boolean {
+  return isCashPayment(booking.paymentMethod) || isCashPayment(booking.paymentMode);
+}
+
+export function updateSevaBooking(
+  id: string,
+  changes: BookingEditableFields,
+  editedBy = "Admin",
+): { ok: boolean; booking?: SevaBooking; error?: string } {
+  const current = getSevaBookings();
+  const existing = current.find(b => b.id === id);
+  if (!existing) return { ok: false, error: "Booking not found" };
+
+  const locked = isBookingAmountLocked(existing);
+  if (locked && changes.amount !== undefined && changes.amount !== existing.amount) {
+    return { ok: false, error: "Cash transaction amount is fixed and cannot be edited." };
+  }
+
+  const updated: SevaBooking = {
+    ...existing,
+    ...Object.fromEntries(Object.entries(changes).filter(([, v]) => v !== undefined)),
+    amount: locked ? existing.amount : (changes.amount ?? existing.amount),
+    lastEditedAt: new Date().toISOString(),
+    lastEditedBy: editedBy,
+  } as SevaBooking;
+
+  persist(current.map(b => (b.id === id ? updated : b)));
+  return { ok: true, booking: updated };
+}
+
+export function resendBookingReceipt(input: {
+  bookingId: string;
+  channel: BookingReceiptResend["channel"];
+  destination: string;
+  usedRegistered: boolean;
+  sentBy?: string;
+}): { ok: boolean; error?: string } {
+  const current = getSevaBookings();
+  const existing = current.find(b => b.id === input.bookingId);
+  if (!existing) return { ok: false, error: "Booking not found" };
+  if (!input.destination?.trim()) return { ok: false, error: "Destination is required" };
+
+  const entry: BookingReceiptResend = {
+    id: `RSN-${Date.now()}`,
+    sentAt: new Date().toISOString(),
+    channel: input.channel,
+    destination: input.destination.trim(),
+    usedRegistered: input.usedRegistered,
+    sentBy: input.sentBy ?? "Admin",
+  };
+
+  persist(current.map(b =>
+    b.id === input.bookingId
+      ? { ...b, receiptResends: [entry, ...(b.receiptResends ?? [])] }
+      : b,
+  ));
+  return { ok: true };
+}
